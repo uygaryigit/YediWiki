@@ -1,0 +1,56 @@
+{
+  "ad": "Fizik",
+  "at": 1790300000000,
+  "bid": 451,
+  "dil": "İngilizce",
+  "fakulte": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "kaynak": "Yeditepe AKTS Bilgi Paketi",
+  "pid": 521,
+  "plan": {
+    "1": [
+      "CHEM101",
+      "PHIL128",
+      "PHYS101",
+      "MATH131",
+      "ACM221"
+    ],
+    "2": [
+      "PHYS104",
+      "MATH132"
+    ],
+    "3": [
+      "HTR301",
+      "PHYS203",
+      "MATH241",
+      "MATH221",
+      "PHYS102"
+    ],
+    "4": [
+      "PHYS206",
+      "PHYS205",
+      "HTR302",
+      "PHYS204",
+      "HUM103"
+    ],
+    "5": [
+      "EE211",
+      "PHYS317",
+      "PHYS319"
+    ],
+    "6": [
+      "PHYS310",
+      "PHYS311",
+      "EE232"
+    ],
+    "7": [
+      "PHYS401",
+      "PHYS418"
+    ],
+    "8": [
+      "PHYS492",
+      "PHYS409",
+      "PHYS412"
+    ]
+  },
+  "tur": "lisans"
+}

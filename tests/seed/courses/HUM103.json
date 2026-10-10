@@ -1,0 +1,19 @@
+{
+  "at": 1790300000000,
+  "bolumler": [
+    "psikoloji",
+    "fizik",
+    "elektrik-elektronik-muhendisligi",
+    "bilgisayar-muhendisligi",
+    "isletme",
+    "makine-muhendisligi",
+    "endustri-muhendisligi"
+  ],
+  "by": "akts",
+  "code": "HUM 103",
+  "dept": "İnsan ve Toplum Bilimleri Fakültesi",
+  "dists": {},
+  "ects": 3,
+  "grades": {},
+  "name": "Uygarlık Tarihi"
+}

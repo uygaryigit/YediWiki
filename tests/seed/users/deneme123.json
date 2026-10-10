@@ -1,0 +1,23 @@
+{
+  "at": 1790537635332,
+  "bolum": "",
+  "bonus": 50,
+  "color": "#E3E7F2",
+  "email": "deneme123@std.yeditepe.edu.tr",
+  "emoji": "🧪",
+  "first": "Deneme",
+  "items": {},
+  "last": "Hesabı",
+  "login": {
+    "hash": "7a9233290a1842c7ed25",
+    "salt": "yw-deneme"
+  },
+  "pic": "",
+  "shared": true,
+  "showName": false,
+  "showYil": false,
+  "spent": 0,
+  "username": "deneme123",
+  "verifiedAt": 1790537635332,
+  "yil": 0
+}

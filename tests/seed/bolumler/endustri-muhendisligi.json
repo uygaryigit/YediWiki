@@ -1,0 +1,60 @@
+{
+  "ad": "Endüstri Mühendisliği",
+  "at": 1790300000000,
+  "bid": 460,
+  "dil": "İngilizce",
+  "fakulte": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "kaynak": "Yeditepe AKTS Bilgi Paketi",
+  "pid": 530,
+  "plan": {
+    "1": [
+      "PHYS101",
+      "CHEM101",
+      "HUM103",
+      "MATH131"
+    ],
+    "2": [
+      "MATH132",
+      "ISE101",
+      "PHYS102"
+    ],
+    "3": [
+      "MATH281",
+      "MATH241",
+      "ES112",
+      "ECON294",
+      "MATH221"
+    ],
+    "4": [
+      "ISE214",
+      "ISE256",
+      "ISE222"
+    ],
+    "5": [
+      "ISE323",
+      "ISE361",
+      "ISE311",
+      "ISE331",
+      "HTR301"
+    ],
+    "6": [
+      "ISE362",
+      "ISE344",
+      "HTR302",
+      "ISE316"
+    ],
+    "7": [
+      "ISE401",
+      "ISE491",
+      "ISE412",
+      "ISE400",
+      "ISE451"
+    ],
+    "8": [
+      "ISE432",
+      "ISE492",
+      "ISE402"
+    ]
+  },
+  "tur": "lisans"
+}

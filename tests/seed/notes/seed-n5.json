@@ -1,0 +1,21 @@
+{
+  "anon": false,
+  "at": 1789780000000,
+  "by": "demo09",
+  "cid": "EE211",
+  "desc": "Gerilim bölücü ve Thevenin adımları tek sayfada.",
+  "drive": "",
+  "h": "",
+  "likes": {
+    "demo01": true,
+    "demo05": true,
+    "demo10": true
+  },
+  "photos": [
+    "seed-p6"
+  ],
+  "reports": {},
+  "title": "Kirchhoff ve Thevenin, çözümlü örnek",
+  "tk": 20251,
+  "type": "not"
+}

@@ -1,0 +1,61 @@
+{
+  "ad": "Makine Mühendisliği",
+  "at": 1790300000000,
+  "bid": 453,
+  "dil": "İngilizce",
+  "fakulte": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "kaynak": "Yeditepe AKTS Bilgi Paketi",
+  "pid": 523,
+  "plan": {
+    "1": [
+      "CHEM101",
+      "MATH131",
+      "ME101",
+      "PHYS101"
+    ],
+    "2": [
+      "HUM103",
+      "ME182",
+      "PHYS102",
+      "MATH132"
+    ],
+    "3": [
+      "MATH241",
+      "MATH221",
+      "ME241",
+      "ME211"
+    ],
+    "4": [
+      "ME246",
+      "ME266",
+      "ME264",
+      "ME212",
+      "ME244"
+    ],
+    "5": [
+      "ME363",
+      "ME343",
+      "ME333",
+      "ME371",
+      "ME331"
+    ],
+    "6": [
+      "ME324",
+      "ME344",
+      "ME352"
+    ],
+    "7": [
+      "ME403",
+      "ME400",
+      "ME427",
+      "ME445",
+      "HTR301"
+    ],
+    "8": [
+      "ME492",
+      "HTR302",
+      "ME482"
+    ]
+  },
+  "tur": "lisans"
+}

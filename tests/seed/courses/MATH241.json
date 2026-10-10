@@ -1,0 +1,17 @@
+{
+  "at": 1790300000000,
+  "bolumler": [
+    "fizik",
+    "elektrik-elektronik-muhendisligi",
+    "bilgisayar-muhendisligi",
+    "makine-muhendisligi",
+    "endustri-muhendisligi"
+  ],
+  "by": "akts",
+  "code": "MATH 241",
+  "dept": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "dists": {},
+  "ects": 6,
+  "grades": {},
+  "name": "Diferansiyel Denklemler"
+}

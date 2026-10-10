@@ -1,0 +1,60 @@
+{
+  "ad": "Bilgisayar Mühendisliği",
+  "at": 1790300000000,
+  "bid": 459,
+  "dil": "İngilizce",
+  "fakulte": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "kaynak": "Yeditepe AKTS Bilgi Paketi",
+  "pid": 529,
+  "plan": {
+    "1": [
+      "CSE101",
+      "GBE113",
+      "MATH131",
+      "PHYS101"
+    ],
+    "2": [
+      "CSE114",
+      "MATH132",
+      "MATH154",
+      "PHYS102"
+    ],
+    "3": [
+      "HUM103",
+      "MATH221",
+      "CSE221",
+      "CSE211",
+      "EE211"
+    ],
+    "4": [
+      "CSE224",
+      "MATH281",
+      "CSE232",
+      "CSE212",
+      "MATH241"
+    ],
+    "5": [
+      "ES224",
+      "CSE341",
+      "HTR301",
+      "CSE351",
+      "CSE311",
+      "CSE323"
+    ],
+    "6": [
+      "CSE331",
+      "HTR302",
+      "CSE348",
+      "CSE354",
+      "CSE344"
+    ],
+    "7": [
+      "CSE471",
+      "CSE400"
+    ],
+    "8": [
+      "CSE492"
+    ]
+  },
+  "tur": "lisans"
+}

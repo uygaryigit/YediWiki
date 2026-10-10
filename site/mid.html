@@ -1,0 +1,64 @@
+</style>
+</head>
+<body>
+<a class="skip" href="#main">İçeriğe geç</a>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#/" aria-label="YediWiki ana sayfa">
+      <svg class="brand-hills" viewBox="0 0 84 9" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9a6 4.5 0 0 1 12 0a6 6 0 0 1 12 0a6 5 0 0 1 12 0a6 8 0 0 1 12 0a6 5 0 0 1 12 0a6 6 0 0 1 12 0a6 4.5 0 0 1 12 0z"/></svg>
+      <span class="brand-name">YediWiki</span>
+    </a>
+    <nav class="nav" aria-label="Ana menü">
+      <a href="#/dersler" data-nav="dersler">Dersler</a>
+      <a href="#/hocaolcer" data-nav="hocaolcer">HocaÖlçer</a>
+      <a href="#/kubbe" data-nav="kubbe">Kubbe</a>
+      <a href="#/hakkinda" data-nav="hakkinda">Hakkında</a>
+    </nav>
+    <span class="spacer"></span>
+    <a class="kubbe-chip" href="#/kubbe" data-r="kubbechip" hidden aria-label="Kubbe bakiyen"><span class="k-dot">◍</span><b>0</b></a>
+    <button type="button" class="bell-btn" data-g="bell" data-r="bell" hidden aria-label="Bildirimler"></button>
+    <button type="button" class="acc-btn" data-g="acc" data-r="acc"><span class="acc-name">Giriş yap</span></button>
+    <a class="btn btn-primary top-share" href="#/paylas">Not paylaş</a>
+  </div>
+</header>
+<div id="banner"></div>
+<main id="main" tabindex="-1"></main>
+<footer class="foot">
+  <div class="wrap">
+    <p>YediWiki, Yeditepe öğrencileri için bağımsız bir topluluk projesidir. Yeditepe Üniversitesi ile resmî bir bağı yoktur.</p>
+    <nav aria-label="Alt menü">
+      <a href="#/hakkinda">Kurallar</a>
+      <a href="#/profil">Profilim</a>
+      <a href="#/katkilarim">Katkılarım</a>
+      <a href="#/moderasyon" data-owner hidden>Moderasyon</a>
+      <button type="button" class="linkbtn wn-btn" data-g="whatsnew" data-r="wn">Yenilikler</button>
+      <button type="button" class="linkbtn theme-btn" data-g="theme" data-r="theme">Tema: Sistem</button>
+    </nav>
+  </div>
+</footer>
+<nav class="bnav" aria-label="Mobil menü">
+  <a href="#/" data-nav="">__HOME__<span>Ana sayfa</span></a>
+  <a href="#/dersler" data-nav="dersler">__BOOK__<span>Dersler</span></a>
+  <a href="#/hocaolcer" data-nav="hocaolcer">__STAR__<span>HocaÖlçer</span></a>
+  <a href="#/kubbe" data-nav="kubbe">__KUB__<span>Kubbe</span></a>
+  <a href="#/paylas" data-nav="paylas">__UP__<span>Paylaş</span></a>
+</nav>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<div id="lightbox" class="lb" hidden role="dialog" aria-modal="true" aria-label="Not sayfaları">
+  <div class="lb-top">
+    <span class="lb-count" data-lb="count"></span>
+    <span class="spacer"></span>
+    <button class="lb-btn" type="button" data-lb="dl" hidden>__DL__İndir</button>
+    <button class="lb-btn" type="button" data-lb="close" aria-label="Kapat">__X__</button>
+  </div>
+  <div class="lb-stage" data-lb="stage">
+    <button class="lb-nav prev" type="button" data-lb="prev" aria-label="Önceki sayfa">__CL__</button>
+    <img data-lb="img" alt="">
+    <p class="lb-msg" data-lb="msg"></p>
+    <button class="lb-nav next" type="button" data-lb="next" aria-label="Sonraki sayfa">__CR__</button>
+  </div>
+</div>
+
+<!--KATALOG-->
+<!--KADRO-->
+<script>

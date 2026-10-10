@@ -1,0 +1,59 @@
+{
+  "ad": "İşletme",
+  "at": 1790300000000,
+  "bid": 471,
+  "dil": "İngilizce",
+  "fakulte": "İşletme Fakültesi",
+  "kaynak": "Yeditepe AKTS Bilgi Paketi",
+  "pid": 543,
+  "plan": {
+    "1": [
+      "HUM103",
+      "LAW123",
+      "HTR301",
+      "ECON111",
+      "BBA101",
+      "MATH133"
+    ],
+    "2": [
+      "HTR302",
+      "ECON122",
+      "BBA102",
+      "LAW192",
+      "STAT410"
+    ],
+    "3": [
+      "BBA201",
+      "BBA261",
+      "BBA244",
+      "BBA204",
+      "BBA206"
+    ],
+    "4": [
+      "BBA245",
+      "BBA202",
+      "BBA210",
+      "BBA364"
+    ],
+    "5": [
+      "RSCH410",
+      "AFN214",
+      "BBA341"
+    ],
+    "6": [
+      "AFN311",
+      "BBA363",
+      "ACM312"
+    ],
+    "7": [
+      "AFN316",
+      "BBA491"
+    ],
+    "8": [
+      "BBA492",
+      "BBA404",
+      "BBA402"
+    ]
+  },
+  "tur": "lisans"
+}

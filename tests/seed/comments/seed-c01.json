@@ -1,0 +1,15 @@
+{
+  "anon": false,
+  "at": 1789950000000,
+  "by": "demo12",
+  "demo": true,
+  "h": "",
+  "likes": {
+    "demo01": true,
+    "demo08": true
+  },
+  "reports": {},
+  "text": "Vizeden önce linked list ve stack/queue sorularını bolca çözün, ağaçlar finale kalıyor.",
+  "tid": "CSE211",
+  "tt": "course"
+}

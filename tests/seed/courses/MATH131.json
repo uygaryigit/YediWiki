@@ -1,0 +1,18 @@
+{
+  "at": 1790121600000,
+  "bolumler": [
+    "fizik",
+    "elektrik-elektronik-muhendisligi",
+    "bilgisayar-muhendisligi",
+    "makine-muhendisligi",
+    "endustri-muhendisligi"
+  ],
+  "by": "seed",
+  "code": "MATH 131",
+  "dept": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "dists": {},
+  "ects": 6,
+  "grades": {},
+  "hocas": [],
+  "name": "Kalkülüs I"
+}

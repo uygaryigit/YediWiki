@@ -1,0 +1,19 @@
+{
+  "anon": false,
+  "at": 1789900000000,
+  "by": "demo03",
+  "c": null,
+  "demo": true,
+  "h": "",
+  "likes": {
+    "demo01": true,
+    "demo05": true,
+    "demo09": true
+  },
+  "r": null,
+  "reports": {},
+  "text": "İspat sorularında kısmi puan veriliyor, boş bırakmayın.",
+  "tid": "MATH154",
+  "tk": 20252,
+  "tt": "course"
+}

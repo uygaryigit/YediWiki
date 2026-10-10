@@ -1,0 +1,22 @@
+{
+  "anon": false,
+  "at": 1789720000000,
+  "by": "demo12",
+  "cid": "CSE211",
+  "desc": "Vize öncesi 3-4. hafta konuları. Reverse ve Floyd sorularına mutlaka bakın.",
+  "drive": "",
+  "h": "",
+  "likes": {
+    "demo01": true,
+    "demo03": true,
+    "demo08": true
+  },
+  "photos": [
+    "seed-p1",
+    "seed-p2"
+  ],
+  "reports": {},
+  "title": "Bağlı liste, stack ve queue özeti",
+  "tk": 20252,
+  "type": "ozet"
+}

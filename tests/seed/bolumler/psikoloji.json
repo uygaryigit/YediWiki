@@ -1,0 +1,57 @@
+{
+  "ad": "Psikoloji",
+  "at": 1790300000000,
+  "bid": 440,
+  "dil": "İngilizce",
+  "fakulte": "İnsan ve Toplum Bilimleri Fakültesi",
+  "kaynak": "Yeditepe AKTS Bilgi Paketi",
+  "pid": 509,
+  "plan": {
+    "1": [
+      "PSY159",
+      "PSY101",
+      "ANT101",
+      "PHIL101",
+      "MATH133"
+    ],
+    "2": [
+      "SOC101",
+      "PSY102",
+      "PSY160",
+      "HUM103"
+    ],
+    "3": [
+      "PSY221",
+      "STAT410",
+      "PSY241",
+      "PSY213"
+    ],
+    "4": [
+      "STAT411",
+      "PSY232",
+      "PSY214",
+      "PSY224"
+    ],
+    "5": [
+      "PSY351",
+      "PSY371",
+      "RSCH411"
+    ],
+    "6": [
+      "PSY314",
+      "PSY462",
+      "PSY362"
+    ],
+    "7": [
+      "PSY463",
+      "PHIL341",
+      "HTR301"
+    ],
+    "8": [
+      "HTR302",
+      "PSY402",
+      "PSY461"
+    ]
+  },
+  "tur": "lisans"
+}

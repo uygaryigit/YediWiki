@@ -1,0 +1,15 @@
+{
+  "anon": false,
+  "at": 1772000000000,
+  "by": "demo01",
+  "demo": true,
+  "h": "",
+  "likes": {
+    "demo03": true,
+    "demo05": true
+  },
+  "reports": {},
+  "text": "İlk dönem için yükü dengeli bir ders. Akış diyagramı sorularına alışın, sınavda mutlaka çıkıyor.",
+  "tid": "CSE101",
+  "tt": "course"
+}

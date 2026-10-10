@@ -1,0 +1,59 @@
+{
+  "ad": "Elektrik-Elektronik Mühendisliği",
+  "at": 1790300000000,
+  "bid": 452,
+  "dil": "İngilizce",
+  "fakulte": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "kaynak": "Yeditepe AKTS Bilgi Paketi",
+  "pid": 522,
+  "plan": {
+    "1": [
+      "MATH131",
+      "CHEM101",
+      "EE102",
+      "HUM103",
+      "PHYS101"
+    ],
+    "2": [
+      "MATH132",
+      "ES112",
+      "MATH221",
+      "PHYS102"
+    ],
+    "3": [
+      "EE211",
+      "MATH241",
+      "ES272",
+      "EE241"
+    ],
+    "4": [
+      "EE242",
+      "EE226",
+      "EE232",
+      "EE212",
+      "MATH281"
+    ],
+    "5": [
+      "EE333",
+      "EE361",
+      "EE371",
+      "EE323"
+    ],
+    "6": [
+      "EE372",
+      "EE334",
+      "EE354",
+      "EE384"
+    ],
+    "7": [
+      "EE491",
+      "EE400",
+      "HTR301"
+    ],
+    "8": [
+      "HTR302",
+      "EE492"
+    ]
+  },
+  "tur": "lisans"
+}

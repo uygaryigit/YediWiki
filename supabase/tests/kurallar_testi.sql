@@ -1,0 +1,164 @@
+
+create function pg_temp.mac(s text) returns text language sql as $f$
+  select replace(replace(replace(s, '$A', '0000000a-0000-4000-8000-00000000000a'), '$B', '0000000b-0000-4000-8000-00000000000b'), '$C', '0000000c-0000-4000-8000-00000000000c')
+$f$;
+create function pg_temp.k(u text, c text, i text) returns text language sql as $f$ select yw_private.key_for(pg_temp.mac(u)::uuid, c, i) $f$;
+create function pg_temp.f(c text, i text, p text) returns text language sql as $f$ select data #>> p::text[] from public.docs where col = c and id = pg_temp.mac(i) $f$;
+create function pg_temp.ct(u text) returns text language sql as $f$ select ctid::text from public.docs where col = 'users' and id = pg_temp.mac(u) $f$;
+create function pg_temp.step(n int, t text, who text, q text, want text, chk text, pre text) returns jsonb language plpgsql as $f$
+declare got text; pv text; ok boolean;
+begin
+  if pre is not null then execute 'select (' || pg_temp.mac(pre) || ')::text' into pv; end if;
+  perform set_config('request.jwt.claims', case when who is null then '' else json_build_object('sub', pg_temp.mac(who), 'role', 'authenticated')::text end, true);
+  begin
+    execute 'select (' || pg_temp.mac(q) || ')';
+    got := 'ok';
+  exception when others then got := 'fail: ' || sqlerrm;
+  end;
+  perform set_config('request.jwt.claims', '', true);
+  execute 'select coalesce((' || replace(pg_temp.mac(chk), '$pre', coalesce(quote_literal(pv), 'null')) || '), false)' into ok;
+  return jsonb_build_object('n', n, 't', t, 'ok', (case when want = 'ok' then got = 'ok' else got like 'fail%' end) and ok, 'got', got);
+end $f$;
+
+do $test$
+declare res jsonb := '[]'::jsonb; got text; n1 int; n2 int; n3 int; n4 int;
+begin
+  insert into yw_private.admins (uid) values ('0000000c-0000-4000-8000-00000000000c');
+  res := res || pg_temp.step(1, 'A hesap açar; korumalı alanları gönderse de sunucu yok sayar, gizli ad ve yıl özel kayda gider', '$A', 'select public.doc_set(''users'', ''$A'', ''{"username": "testa", "first": "Ali", "last": "Veli", "showName": false, "yil": 2023, "showYil": false, "bolum": "bilgisayar-muhendisligi", "emoji": "🦊", "spent": -999, "gift": 5000, "role": "admin", "items": {"kartal-kanatlari": 1}, "zor": {"CSE211": {"z": 5, "y": 5}}, "pic": "data:image/png;base64,AAAA", "junk": "x"}''::jsonb)', 'ok', 'pg_temp.f(''users'',''$A'',''{first}'') = '''' and pg_temp.f(''users'',''$A'',''{last}'') = '''' and pg_temp.f(''users'',''$A'',''{yil}'')::int = 0 and pg_temp.f(''users'',''$A'',''{spent}'')::int = 0 and pg_temp.f(''users'',''$A'',''{gift}'')::int = 0 and pg_temp.f(''users'',''$A'',''{role}'') = ''user'' and pg_temp.f(''users'',''$A'',''{items}'') = ''{}'' and pg_temp.f(''users'',''$A'',''{bonus}'')::int = 50 and pg_temp.f(''users'',''$A'',''{kb,all}'')::int = 50 and pg_temp.f(''users'',''$A'',''{zor}'') is null and pg_temp.f(''users'',''$A'',''{junk}'') is null and pg_temp.f(''users'',''$A'',''{pic}'') = '''' and pg_temp.f(''private'',''$A'',''{first}'') = ''Ali'' and pg_temp.f(''private'',''$A'',''{yil}'')::int = 2023 and pg_temp.f(''private'',''$A'',''{kb,all}'')::int = 50', null);
+  res := res || pg_temp.step(2, 'A kendine hediye kubbe yazamaz', '$A', 'select public.doc_update(''users'', ''$A'', ''{"gift":99999}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(3, 'A harcamasını sıfırlayamaz', '$A', 'select public.doc_update(''users'', ''$A'', ''{"spent":0}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(4, 'B hesap açar (adını gösterir)', '$B', 'select public.doc_set(''users'', ''$B'', ''{"username": "testb", "first": "Bora", "last": "Kaya", "showName": true, "bolum": "matematik", "emoji": "🐼"}''::jsonb)', 'ok', 'pg_temp.f(''users'',''$B'',''{first}'') = ''Bora''', null);
+  res := res || pg_temp.step(5, 'B başkasının kullanıcı adını alamaz', '$B', 'select public.doc_update(''users'', ''$B'', ''{"username":"testa"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(6, 'Geçersiz kullanıcı adı reddedilir', '$B', 'select public.doc_update(''users'', ''$B'', ''{"username":"B!"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(7, 'A adıyla not paylaşır; yazar, zaman ve beğeniler sunucudan', '$A', 'select public.doc_set(''notes'', ''tA1'', ''{"cid": "CSE211", "title": "Veri yapıları", "drive": "https://drive.google.com/file/d/abc/view", "by": "0000000b-0000-4000-8000-00000000000b", "at": 1, "likes": {"x": true}, "anon": false, "photos": ["p1"]}''::jsonb)', 'ok', 'pg_temp.f(''notes'',''tA1'',''{by}'') = ''$A'' and pg_temp.f(''notes'',''tA1'',''{at}'')::bigint > 1000000000000 and pg_temp.f(''notes'',''tA1'',''{likes}'') = ''{}'' and pg_temp.f(''notes'',''tA1'',''{photos}'') = ''[]'' and pg_temp.f(''users'',''$A'',''{kb,all}'')::int = 75 and pg_temp.f(''private'',''$A'',''{kb,all}'')::int = 75', null);
+  res := res || pg_temp.step(8, 'Drive bağlantısı olmayan not reddedilir', '$A', 'select public.doc_set(''notes'', ''tAx'', ''{"cid": "CSE211", "title": "Linksiz", "anon": false}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(9, 'Drive dışı bağlantı reddedilir', '$A', 'select public.doc_set(''notes'', ''tAy'', ''{"cid": "CSE211", "title": "Başka site", "drive": "https://example.com/a", "anon": false}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(10, 'A anonim not paylaşır: yazar boş, açık profil hiç değişmez', '$A', 'select public.doc_set(''notes'', ''tA2'', ''{"cid": "MATH131", "title": "Kalkülüs", "drive": "https://drive.google.com/file/d/abc/view", "anon": true, "by": "0000000a-0000-4000-8000-00000000000a"}''::jsonb)', 'ok', 'pg_temp.f(''notes'',''tA2'',''{by}'') = '''' and pg_temp.f(''notes'',''tA2'',''{byk}'') = pg_temp.k(''$A'',''notes'',''tA2'') and pg_temp.f(''users'',''$A'',''{kb,all}'')::int = 75 and pg_temp.f(''users'',''$A'',''{kb,notes}'')::int = 1 and pg_temp.f(''private'',''$A'',''{kb,all}'')::int = 100 and pg_temp.f(''private'',''$A'',''{kb,notes}'')::int = 2 and pg_temp.ct(''$A'') = $pre', 'pg_temp.ct(''$A'')');
+  res := res || pg_temp.step(11, 'B notu kendi anahtarıyla beğenir; A açık kubbede +2', '$B', 'select public.doc_update(''notes'', ''tA1'', jsonb_build_object(''likes'', jsonb_build_object(pg_temp.k(''$B'',''notes'',''tA1''), true)))', 'ok', 'pg_temp.f(''users'',''$A'',''{kb,all}'')::int = 77 and pg_temp.f(''users'',''$A'',''{kb,likes}'')::int = 1', null);
+  res := res || pg_temp.step(12, 'Anonim nota gelen beğeni açık profilde iz bırakmaz', '$B', 'select public.doc_update(''notes'', ''tA2'', jsonb_build_object(''likes'', jsonb_build_object(pg_temp.k(''$B'',''notes'',''tA2''), true)))', 'ok', 'pg_temp.f(''users'',''$A'',''{kb,all}'')::int = 77 and pg_temp.f(''private'',''$A'',''{kb,all}'')::int = 104 and pg_temp.ct(''$A'') = $pre', 'pg_temp.ct(''$A'')');
+  res := res || pg_temp.step(13, 'B gerçek kimliğiyle beğenemez', '$B', 'select public.doc_update(''notes'', ''tA1'', ''{"likes":{"$B":true}}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(14, 'B başka belgenin anahtarıyla beğenemez', '$B', 'select public.doc_update(''notes'', ''tA1'', jsonb_build_object(''likes'', jsonb_build_object(pg_temp.k(''$B'',''notes'',''tA2''), true)))', 'fail', 'true', null);
+  res := res || pg_temp.step(15, 'B başkasının notunu değiştiremez', '$B', 'select public.doc_update(''notes'', ''tA1'', ''{"title":"hack"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(16, 'A kendi notunu beğenemez', '$A', 'select public.doc_update(''notes'', ''tA1'', jsonb_build_object(''likes'', jsonb_build_object(pg_temp.k(''$A'',''notes'',''tA1''), true)))', 'fail', 'true', null);
+  res := res || pg_temp.step(17, 'B notu bildirir; zamanı sunucu koyar', '$B', 'select public.doc_update(''notes'', ''tA1'', jsonb_build_object(''reports'', jsonb_build_object(pg_temp.k(''$B'',''notes'',''tA1''), 1)))', 'ok', '(select (data->''reports''->>pg_temp.k(''$B'',''notes'',''tA1''))::bigint from public.docs where col = ''notes'' and id = ''tA1'') > 1000000000000', null);
+  res := res || pg_temp.step(18, 'A kendi notunun başlığını düzeltir (uzun başlık 80 harfe kısalır)', '$A', 'select public.doc_update(''notes'', ''tA1'', ''{"title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}''::jsonb)', 'ok', 'length(pg_temp.f(''notes'',''tA1'',''{title}'')) = 80', null);
+  res := res || pg_temp.step(19, 'B kadrodaki hocaya ilk puanı verir: puan gizli, açık profil değişmez, hocanın sahibi tutulmaz', '$B', 'select public.doc_set(''hocas'', ''esin-onbasioglu'', jsonb_build_object(''ratings'', jsonb_build_object(pg_temp.k(''$B'',''hocas'',''esin-onbasioglu''), ''{"a":4,"o":3.5,"n":5,"d":4,"c":"CSE211","tk":20261,"x":"fazla"}''::jsonb)))', 'ok', '(select data->''ratings'' ? pg_temp.k(''$B'',''hocas'',''esin-onbasioglu'') and not (data ? ''name'') and data->''ratings''->pg_temp.k(''$B'',''hocas'',''esin-onbasioglu'')->''x'' is null from public.docs where col = ''hocas'' and id = ''esin-onbasioglu'') and pg_temp.f(''users'',''$B'',''{kb,ratings}'')::int = 0 and pg_temp.f(''users'',''$B'',''{kb,all}'')::int = 50 and pg_temp.f(''private'',''$B'',''{kb,ratings}'')::int = 1 and pg_temp.f(''private'',''$B'',''{kb,all}'')::int = 60 and pg_temp.ct(''$B'') = $pre and not exists (select 1 from yw_private.doc_owner where col = ''hocas'' and id = ''esin-onbasioglu'')', 'pg_temp.ct(''$B'')');
+  res := res || pg_temp.step(20, 'Listede olmayan hocaya puan verilemez', '$B', 'select public.doc_set(''hocas'', ''yok-boyle-hoca'', jsonb_build_object(''ratings'', jsonb_build_object(pg_temp.k(''$B'',''hocas'',''yok-boyle-hoca''), ''{"a":4,"o":4,"n":4,"d":4}''::jsonb)))', 'fail', 'true', null);
+  res := res || pg_temp.step(21, 'B hocanın adını değiştiremez', '$B', 'select public.doc_update(''hocas'', ''esin-onbasioglu'', ''{"name":"X"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(22, 'A aynı hocaya puan verir (belge varken doc_set güncellemeye döner)', '$A', 'select public.doc_set(''hocas'', ''esin-onbasioglu'', jsonb_build_object(''ratings'', jsonb_build_object(pg_temp.k(''$A'',''hocas'',''esin-onbasioglu''), ''{"a":2,"o":2,"n":2,"d":2}''::jsonb)))', 'ok', 'pg_temp.f(''private'',''$A'',''{kb,ratings}'')::int = 1 and (select count(*) from jsonb_object_keys((select data->''ratings'' from public.docs where col = ''hocas'' and id = ''esin-onbasioglu''))) = 2', null);
+  res := res || pg_temp.step(23, 'Geçersiz puan reddedilir', '$A', 'select public.doc_update(''hocas'', ''esin-onbasioglu'', jsonb_build_object(''ratings'', jsonb_build_object(pg_temp.k(''$A'',''hocas'',''esin-onbasioglu''), ''{"a":7,"o":2,"n":2,"d":2}''::jsonb)))', 'fail', 'true', null);
+  res := res || pg_temp.step(24, 'Yazı içeren puan reddedilir', '$A', 'select public.doc_update(''hocas'', ''esin-onbasioglu'', jsonb_build_object(''ratings'', jsonb_build_object(pg_temp.k(''$A'',''hocas'',''esin-onbasioglu''), ''{"a":"5","o":2,"n":2,"d":2}''::jsonb)))', 'fail', 'true', null);
+  res := res || pg_temp.step(25, 'A, B adına puan veremez', '$A', 'select public.doc_update(''hocas'', ''esin-onbasioglu'', jsonb_build_object(''ratings'', jsonb_build_object(pg_temp.k(''$B'',''hocas'',''esin-onbasioglu''), ''{"a":1,"o":1,"n":1,"d":1}''::jsonb)))', 'fail', 'true', null);
+  res := res || pg_temp.step(26, 'A puanını kaldırır', '$A', 'select public.doc_update(''hocas'', ''esin-onbasioglu'', jsonb_build_object(''ratings'', jsonb_build_object(pg_temp.k(''$A'',''hocas'',''esin-onbasioglu''), null)))', 'ok', 'pg_temp.f(''private'',''$A'',''{kb,ratings}'')::int = 0', null);
+  res := res || pg_temp.step(27, 'B not isteği açar (kapanmış gibi gösteremez)', '$B', 'select public.doc_set(''requests'', ''tR1'', ''{"cid": "CSE211", "kind": "genel", "text": "not lazım", "done": true, "doneBy": "0000000a-0000-4000-8000-00000000000a"}''::jsonb)', 'ok', 'pg_temp.f(''requests'',''tR1'',''{by}'') = ''$B'' and pg_temp.f(''requests'',''tR1'',''{done}'') = ''false'' and pg_temp.f(''requests'',''tR1'',''{doneBy}'') = ''''', null);
+  res := res || pg_temp.step(28, 'B kendi isteğine katılamaz', '$B', 'select public.doc_update(''requests'', ''tR1'', jsonb_build_object(''plus'', jsonb_build_object(pg_temp.k(''$B'',''requests'',''tR1''), true)))', 'fail', 'true', null);
+  res := res || pg_temp.step(29, 'A isteğe kendi anahtarıyla katılır', '$A', 'select public.doc_update(''requests'', ''tR1'', jsonb_build_object(''plus'', jsonb_build_object(pg_temp.k(''$A'',''requests'',''tR1''), true)))', 'ok', 'true', null);
+  res := res || pg_temp.step(30, 'Başka dersin notuyla istek kapatılamaz', '$A', 'select public.doc_update(''requests'', ''tR1'', ''{"done": true, "nid": "tA2", "doneBy": "0000000a-0000-4000-8000-00000000000a", "doneAt": 0}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(31, 'A isteği adıyla paylaştığı notla karşılar', '$A', 'select public.doc_update(''requests'', ''tR1'', ''{"done": true, "nid": "tA1", "doneBy": "0000000a-0000-4000-8000-00000000000a", "doneAt": 0}''::jsonb)', 'ok', 'pg_temp.f(''requests'',''tR1'',''{doneBy}'') = ''$A'' and pg_temp.f(''users'',''$A'',''{kb,fills}'')::int = 1 and pg_temp.f(''users'',''$A'',''{kb,all}'')::int = 87', null);
+  res := res || pg_temp.step(32, 'Anonim notla karşılanan istekte karşılayan görünmez', '$B', 'select public.doc_set(''requests'', ''tR2'', ''{"cid": "MATH131", "kind": "vize", "text": ""}''::jsonb)', 'ok', 'true', null);
+  res := res || pg_temp.step(33, 'A ikinci isteği anonim notuyla karşılar: açık profil değişmez', '$A', 'select public.doc_update(''requests'', ''tR2'', ''{"done": true, "nid": "tA2", "doneBy": "0000000a-0000-4000-8000-00000000000a", "doneAt": 0}''::jsonb)', 'ok', 'pg_temp.f(''requests'',''tR2'',''{doneBy}'') = '''' and pg_temp.f(''users'',''$A'',''{kb,fills}'')::int = 1 and pg_temp.f(''private'',''$A'',''{kb,fills}'')::int = 2 and pg_temp.ct(''$A'') = $pre', 'pg_temp.ct(''$A'')');
+  res := res || pg_temp.step(34, 'İstek metni 140 harfe kısalır, tür listede değilse genel olur', '$B', 'select public.doc_set(''requests'', ''tR3'', ''{"cid": "CSE211", "kind": "uydurma", "text": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"}''::jsonb)', 'ok', 'length(pg_temp.f(''requests'',''tR3'',''{text}'')) = 140 and pg_temp.f(''requests'',''tR3'',''{kind}'') = ''genel''', null);
+  res := res || pg_temp.step(35, 'Kubbe yetmeyince ürün alınamaz', '$A', 'select public.buy_item(''kartal-kanatlari'')', 'fail', 'true', null);
+  res := res || pg_temp.step(36, 'Yönetici hediye kubbe verir', '$C', 'select public.doc_update(''users'', ''$A'', ''{"gift":2000}''::jsonb)', 'ok', 'pg_temp.f(''users'',''$A'',''{gift}'')::int = 2000', null);
+  res := res || pg_temp.step(37, 'A ürünü alır (bakiye tam hesaptan)', '$A', 'select public.buy_item(''kartal-kanatlari'')', 'ok', 'pg_temp.f(''users'',''$A'',''{spent}'')::int = 1500 and (select data->''items'' ? ''kartal-kanatlari'' from public.docs where col = ''users'' and id = ''$A'')', null);
+  res := res || pg_temp.step(38, 'Aynı ürün iki kez alınamaz', '$A', 'select public.buy_item(''kartal-kanatlari'')', 'fail', 'true', null);
+  res := res || pg_temp.step(39, 'Sahip olunmayan ürün profil resmi olamaz', '$A', 'select public.doc_update(''users'', ''$A'', ''{"avk":"urun","urun":"gece-eskortu"}''::jsonb)', 'ok', 'pg_temp.f(''users'',''$A'',''{avk}'') = ''emoji''', null);
+  res := res || pg_temp.step(40, 'Sahip olunan ürün profil resmi olur', '$A', 'select public.doc_update(''users'', ''$A'', ''{"avk":"urun","urun":"kartal-kanatlari"}''::jsonb)', 'ok', 'pg_temp.f(''users'',''$A'',''{avk}'') = ''urun''', null);
+  res := res || pg_temp.step(41, 'B nota adıyla yorum yazar', '$B', 'select public.doc_set(''comments'', ''tC1'', ''{"tt": "note", "tid": "tA1", "text": "teşekkürler", "anon": false}''::jsonb)', 'ok', 'pg_temp.f(''comments'',''tC1'',''{by}'') = ''$B'' and pg_temp.f(''users'',''$B'',''{kb,comments}'')::int = 1', null);
+  res := res || pg_temp.step(42, 'B anonim yorum yazar: yazar boş, açık profil değişmez', '$B', 'select public.doc_set(''comments'', ''tC3'', ''{"tt": "note", "tid": "tA1", "text": "gizli", "anon": true}''::jsonb)', 'ok', 'pg_temp.f(''comments'',''tC3'',''{by}'') = '''' and pg_temp.f(''comments'',''tC3'',''{byk}'') = pg_temp.k(''$B'',''comments'',''tC3'') and pg_temp.f(''users'',''$B'',''{kb,comments}'')::int = 1 and pg_temp.f(''private'',''$B'',''{kb,comments}'')::int = 2 and pg_temp.ct(''$B'') = $pre', 'pg_temp.ct(''$B'')');
+  res := res || pg_temp.step(43, 'Boş yorum reddedilir', '$B', 'select public.doc_set(''comments'', ''tC4'', ''{"tt": "note", "tid": "tA1", "text": "   "}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(44, 'Yeri belli olmayan yorum reddedilir', '$B', 'select public.doc_set(''comments'', ''tC5'', ''{"tt": "xx", "tid": "tA1", "text": "a"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(45, 'B başkasının notunu silemez', '$B', 'select public.doc_delete(''notes'', ''tA1'')', 'fail', 'true', null);
+  res := res || pg_temp.step(46, 'Not sahibi altındaki yorumu silebilir', '$A', 'select public.doc_delete(''comments'', ''tC1'')', 'ok', 'not exists (select 1 from public.docs where col = ''comments'' and id = ''tC1'')', null);
+  res := res || pg_temp.step(47, 'B yeni yorum yazar', '$B', 'select public.doc_set(''comments'', ''tC2'', ''{"tt": "note", "tid": "tA1", "text": "ikinci", "anon": false}''::jsonb)', 'ok', 'true', null);
+  res := res || pg_temp.step(48, 'A notunu silince yorumları ve karşılama kubbesi de gider', '$A', 'select public.doc_delete(''notes'', ''tA1'')', 'ok', 'not exists (select 1 from public.docs where (col = ''notes'' and id = ''tA1'') or (col = ''comments'' and id in (''tC2'', ''tC3''))) and pg_temp.f(''users'',''$B'',''{kb,comments}'')::int = 0 and pg_temp.f(''private'',''$B'',''{kb,comments}'')::int = 0 and pg_temp.f(''users'',''$A'',''{kb,fills}'')::int = 0', null);
+  res := res || pg_temp.step(49, 'A DersÖlçer oyu verir (takma adla, ders belgesinde)', '$A', 'select public.doc_set(''zor'', ''CSE211'', jsonb_build_object(''v'', jsonb_build_object(pg_temp.k(''$A'',''zor'',''CSE211''), ''{"z":4,"y":3,"x":1}''::jsonb)))', 'ok', '(select data->''v''->pg_temp.k(''$A'',''zor'',''CSE211'')->>''z'' = ''4'' and data->''v''->pg_temp.k(''$A'',''zor'',''CSE211'')->''x'' is null and (data->''v''->pg_temp.k(''$A'',''zor'',''CSE211'')->>''at'')::bigint > 0 from public.docs where col = ''zor'' and id = ''CSE211'')', null);
+  res := res || pg_temp.step(50, 'B aynı derse oy verir', '$B', 'select public.doc_set(''zor'', ''CSE211'', jsonb_build_object(''v'', jsonb_build_object(pg_temp.k(''$B'',''zor'',''CSE211''), ''{"z":2,"y":2}''::jsonb)))', 'ok', '(select count(*) from jsonb_object_keys((select data->''v'' from public.docs where col = ''zor'' and id = ''CSE211''))) = 2', null);
+  res := res || pg_temp.step(51, 'Geçersiz oy reddedilir', '$A', 'select public.doc_update(''zor'', ''CSE211'', jsonb_build_object(''v'', jsonb_build_object(pg_temp.k(''$A'',''zor'',''CSE211''), ''{"z":7,"y":3}''::jsonb)))', 'fail', 'true', null);
+  res := res || pg_temp.step(52, 'Ders kodu olmayan belgeye oy verilemez', '$A', 'select public.doc_set(''zor'', ''xx'', jsonb_build_object(''v'', jsonb_build_object(pg_temp.k(''$A'',''zor'',''xx''), ''{"z":3,"y":3}''::jsonb)))', 'fail', 'true', null);
+  res := res || pg_temp.step(53, 'A, B adına oy veremez', '$A', 'select public.doc_update(''zor'', ''CSE211'', jsonb_build_object(''v'', jsonb_build_object(pg_temp.k(''$B'',''zor'',''CSE211''), null)))', 'fail', 'true', null);
+  res := res || pg_temp.step(54, 'A oyunu kaldırır', '$A', 'select public.doc_update(''zor'', ''CSE211'', jsonb_build_object(''v'', jsonb_build_object(pg_temp.k(''$A'',''zor'',''CSE211''), null)))', 'ok', '(select data->''v''->pg_temp.k(''$A'',''zor'',''CSE211'') = ''null''::jsonb from public.docs where col = ''zor'' and id = ''CSE211'')', null);
+  res := res || pg_temp.step(55, 'Kullanıcı kaydına DersÖlçer oyu yazılamaz', '$A', 'select public.doc_update(''users'', ''$A'', ''{"zor":{"CSE211":{"z":1,"y":1}}}''::jsonb)', 'ok', 'pg_temp.f(''users'',''$A'',''{zor}'') is null', null);
+  res := res || pg_temp.step(56, 'B başkasının özel kaydına yazamaz', '$B', 'select public.doc_set(''private'', ''$A'', ''{"x":1}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(57, 'A özel kaydına yazar; sunucunun kubbesi ve gizli adı korunur', '$A', 'select public.doc_set(''private'', ''$A'', ''{"myc":["CSE211"],"kb":{"all":99999}}''::jsonb)', 'ok', 'pg_temp.f(''private'',''$A'',''{myc,0}'') = ''CSE211'' and pg_temp.f(''private'',''$A'',''{first}'') = ''Ali'' and pg_temp.f(''private'',''$A'',''{kb,all}'')::int < 99999', null);
+  res := res || pg_temp.step(58, 'A özel kubbesini güncelleyemez', '$A', 'select public.doc_update(''private'', ''$A'', ''{"kb":{"all":99999}}''::jsonb)', 'ok', 'pg_temp.f(''private'',''$A'',''{kb,all}'')::int < 99999', null);
+  res := res || pg_temp.step(59, 'Giriş yapmadan yazılamaz', null, 'select public.doc_set(''notes'', ''tX'', ''{"cid": "CSE211", "title": "xx", "drive": "https://drive.google.com/file/d/abc/view"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(60, 'Yönetici ders kaydı açar', '$C', 'select public.doc_set(''courses'', ''CSE211'', ''{"code": "CSE 211", "name": "Veri Yapıları", "edAt": 1}''::jsonb)', 'ok', 'pg_temp.f(''courses'',''CSE211'',''{name}'') = ''Veri Yapıları''', null);
+  res := res || pg_temp.step(61, 'Öğrenci ders kaydı açamaz', '$A', 'select public.doc_set(''courses'', ''CSE212'', ''{"name": "x"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(62, 'Öğrenci derste kendi anahtarıyla not bilgisi yazar', '$A', 'select public.doc_update(''courses'', ''CSE211'', jsonb_build_object(''grades'', jsonb_build_object(pg_temp.k(''$A'',''courses'',''CSE211''), ''{"g":"BA"}''::jsonb)))', 'ok', 'true', null);
+  res := res || pg_temp.step(63, 'Yönetici bölüm kaydı açar', '$C', 'select public.doc_set(''bolumler'', ''deneme-bolum'', ''{"name": "Deneme", "plan": {}}''::jsonb)', 'ok', 'true', null);
+  res := res || pg_temp.step(64, 'Öğrenci bölüm kaydı açamaz', '$A', 'select public.doc_set(''bolumler'', ''x-bolum'', ''{"name": "x"}''::jsonb)', 'fail', 'true', null);
+  res := res || pg_temp.step(65, 'Yönetici hocanın adını düzeltir', '$C', 'select public.doc_set(''hocas'', ''esin-onbasioglu'', jsonb_build_object(''name'', ''Esin Onbaşıoğlu'', ''edAt'', 1, ''ratings'', (select data->''ratings'' from public.docs where col = ''hocas'' and id = ''esin-onbasioglu'')))', 'ok', 'pg_temp.f(''hocas'',''esin-onbasioglu'',''{name}'') = ''Esin Onbaşıoğlu'' and pg_temp.f(''private'',''$B'',''{kb,ratings}'')::int = 1', null);
+  res := res || pg_temp.step(66, 'Yönetici bildirimleri temizler (anonim notta yazar gizli kalır)', '$C', 'select public.doc_update(''notes'', ''tA2'', ''{"ok": 9999999999999}''::jsonb)', 'ok', 'pg_temp.f(''notes'',''tA2'',''{by}'') = '''' and pg_temp.f(''notes'',''tA2'',''{byk}'') = pg_temp.k(''$A'',''notes'',''tA2'')', null);
+  res := res || pg_temp.step(67, 'Yönetici isteği düzenler', '$C', 'select public.doc_update(''requests'', ''tR2'', ''{"text": "düzenlendi"}''::jsonb)', 'ok', 'pg_temp.f(''private'',''$A'',''{kb,fills}'')::int = 1', null);
+  res := res || pg_temp.step(68, 'Yönetici DersÖlçer belgesini düzenler', '$C', 'select public.doc_set(''zor'', ''MATH131'', ''{"v": {}}''::jsonb)', 'ok', 'true', null);
+  res := res || pg_temp.step(69, 'Yönetici başkası adına profil açar', '$C', 'select public.doc_set(''users'', ''00000011-0000-4000-8000-000000000011'', ''{"username": "testx", "first": "X", "last": "Y", "showName": true}''::jsonb)', 'ok', 'pg_temp.f(''users'',''00000011-0000-4000-8000-000000000011'',''{role}'') = ''user''', null);
+  res := res || pg_temp.step(70, 'Yönetici hocanın puan belgesini siler; puan verenlerin kubbesi düşer', '$C', 'select public.doc_delete(''hocas'', ''esin-onbasioglu'')', 'ok', 'pg_temp.f(''private'',''$B'',''{kb,ratings}'')::int = 0 and pg_temp.f(''private'',''$B'',''{kb,all}'')::int = 50', null);
+  res := res || pg_temp.step(71, 'Yönetici isteği siler', '$C', 'select public.doc_delete(''requests'', ''tR2'')', 'ok', 'pg_temp.f(''private'',''$A'',''{kb,fills}'')::int = 0', null);
+  res := res || pg_temp.step(72, 'Öğrenci kendi isteğini siler', '$B', 'select public.doc_delete(''requests'', ''tR3'')', 'ok', 'true', null);
+  res := res || pg_temp.step(73, 'Öğrenci başkasının isteğini silemez', '$A', 'select public.doc_delete(''requests'', ''tR1'')', 'fail', 'true', null);
+  res := res || pg_temp.step(74, 'Olmayan kaydı silmek sessizce geçer', '$A', 'select public.doc_delete(''hocas'', ''yok'')', 'ok', 'true', null);
+  res := res || pg_temp.step(75, 'Yönetici anonim notu siler', '$C', 'select public.doc_delete(''notes'', ''tA2'')', 'ok', 'pg_temp.f(''private'',''$A'',''{kb,notes}'')::int = 0', null);
+
+  -- okuma kuralları: anon özel kayıtları görmez, sahibi kendi özel kaydını görür
+  perform set_config('request.jwt.claims', '', true);
+  perform set_config('role', 'anon', true);
+  select count(*) into n1 from public.docs where col = 'private';
+  select count(*) into n2 from public.docs where col = 'users';
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '0000000a-0000-4000-8000-00000000000a', 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  select count(*) into n3 from public.docs where col = 'private';
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '0000000b-0000-4000-8000-00000000000b', 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  select count(*) into n4 from public.docs where col = 'private' and id = '0000000a-0000-4000-8000-00000000000a';
+  perform set_config('role', 'postgres', true);
+  res := res || jsonb_build_array(jsonb_build_object('t', 'okuma: anon özel kayıt görmez, profilleri görür', 'ok', n1 = 0 and n2 = 3, 'got', n1 || '/' || n2));
+  res := res || jsonb_build_array(jsonb_build_object('t', 'okuma: sahibi kendi özel kaydını görür, başkası göremez', 'ok', n3 = 1 and n4 = 0, 'got', n3 || '/' || n4));
+  perform set_config('request.jwt.claims', json_build_object('sub', '0000000c-0000-4000-8000-00000000000c', 'role', 'authenticated')::text, true);
+  res := res || jsonb_build_array(jsonb_build_object('t', 'my_info yöneticiyi tanır', 'ok', (public.my_info()->>'admin')::boolean));
+  perform set_config('request.jwt.claims', json_build_object('sub', '0000000a-0000-4000-8000-00000000000a', 'role', 'authenticated')::text, true);
+  res := res || jsonb_build_array(jsonb_build_object('t', 'my_info öğrenciye kendi gizlisini verir, yönetici saymaz', 'ok',
+    not (public.my_info()->>'admin')::boolean and public.my_info()->>'sec' = (select secret from yw_private.secrets where uid = '0000000a-0000-4000-8000-00000000000a')));
+  perform set_config('request.jwt.claims', '', true);
+
+  -- istemcideki HMAC ile aynı anahtar (bilinen gizliyle)
+  insert into yw_private.secrets (uid, secret) values ('0000000d-0000-4000-8000-00000000000d', '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff');
+  res := res || jsonb_build_array(jsonb_build_object('t', 'anahtar istemciyle aynı', 'ok', yw_private.key_for('0000000d-0000-4000-8000-00000000000d', 'notes', 'x1') = 'k19ae4234017c6ae7d465b8ef', 'got', yw_private.key_for('0000000d-0000-4000-8000-00000000000d', 'notes', 'x1')));
+
+  -- özel hesaplar: panelden onaylı açılan yönetici
+  insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
+  values ('0000000e-0000-4000-8000-00000000000e', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'Yonetici@yediwiki.com', 'x', now(), now(), now(), '{}', '{}');
+  res := res || jsonb_build_array(jsonb_build_object('t', 'yönetici hesabı açılınca yetki ve profil kurulur', 'ok',
+    exists (select 1 from yw_private.admins where uid = '0000000e-0000-4000-8000-00000000000e')
+    and (select data->>'role' = 'admin' and data->>'username' = 'yonetici' and (data->>'gift')::int = 100000 from public.docs where col = 'users' and id = '0000000e-0000-4000-8000-00000000000e')));
+  -- deneme hesabı önce onaysız açılır (kodla kayıt gibi), onaylanınca kurulur
+  insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
+  values ('0000000f-0000-4000-8000-00000000000f', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'deneme123@std.yeditepe.edu.tr', 'x', now(), now(), '{}', '{}');
+  n1 := (select count(*) from public.docs where col = 'users' and id = '0000000f-0000-4000-8000-00000000000f');
+  update auth.users set email_confirmed_at = now() where id = '0000000f-0000-4000-8000-00000000000f';
+  res := res || jsonb_build_array(jsonb_build_object('t', 'deneme hesabı onaylanınca kurulur (ad özel kayıtta, hediye 10000)', 'ok',
+    n1 = 0 and not exists (select 1 from yw_private.admins where uid = '0000000f-0000-4000-8000-00000000000f')
+    and (select data->>'username' = 'deneme123' and data->>'first' = '' and (data->>'gift')::int = 10000 and data->'shared' = 'true'::jsonb and (data->'kb'->>'all')::int = 50
+         from public.docs where col = 'users' and id = '0000000f-0000-4000-8000-00000000000f')
+    and (select data->>'first' = 'Deneme' from public.docs where col = 'private' and id = '0000000f-0000-4000-8000-00000000000f')));
+  -- okul dışı adresle kayıt olunamaz
+  begin
+    insert into auth.users (id, instance_id, aud, role, email, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
+    values ('00000010-0000-4000-8000-000000000010', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'biri@gmail.com', now(), now(), '{}', '{}');
+    got := 'ok';
+  exception when others then got := 'fail';
+  end;
+  res := res || jsonb_build_array(jsonb_build_object('t', 'okul dışı adresle kayıt olunamaz', 'ok', got = 'fail'));
+  -- SQL düzenleyicisi (postgres) özel hesabın şifresini değiştirebilir
+  begin
+    update auth.users set encrypted_password = 'y' where id = '0000000f-0000-4000-8000-00000000000f';
+    got := 'ok';
+  exception when others then got := 'fail: ' || sqlerrm;
+  end;
+  res := res || jsonb_build_array(jsonb_build_object('t', 'yönetim SQL ile özel hesabın şifresini değiştirebilir', 'ok', got = 'ok', 'got', got));
+
+  raise exception 'SONUC:%', res::text;
+end
+$test$;

@@ -1,0 +1,16 @@
+{
+  "at": 1790300000000,
+  "bolumler": [
+    "fizik",
+    "elektrik-elektronik-muhendisligi",
+    "makine-muhendisligi",
+    "endustri-muhendisligi"
+  ],
+  "by": "akts",
+  "code": "CHEM 101",
+  "dept": "Mühendislik ve Doğa Bilimleri Fakültesi",
+  "dists": {},
+  "ects": 6,
+  "grades": {},
+  "name": "Genel Kimya"
+}

@@ -1,0 +1,20 @@
+{
+  "anon": false,
+  "at": 1789860000000,
+  "by": "demo03",
+  "cid": "PSY101",
+  "desc": "Yapısalcılıktan bilişsel yaklaşıma kadar kısa özet.",
+  "drive": "",
+  "h": "",
+  "likes": {
+    "demo07": true,
+    "demo11": true
+  },
+  "photos": [
+    "seed-p5"
+  ],
+  "reports": {},
+  "title": "Vize 1: yaklaşımlar ve öncüler",
+  "tk": 20252,
+  "type": "ozet"
+}

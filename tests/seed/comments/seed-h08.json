@@ -1,0 +1,18 @@
+{
+  "anon": false,
+  "at": 1789700000000,
+  "by": "demo05",
+  "c": null,
+  "demo": true,
+  "h": "",
+  "likes": {
+    "demo01": true,
+    "demo09": true
+  },
+  "r": null,
+  "reports": {},
+  "text": "Algoritma mantığını oturtan bir ders. Sınavlar tamamen derste işlenenden çıkıyor.",
+  "tid": "CSE101",
+  "tk": 20251,
+  "tt": "course"
+}

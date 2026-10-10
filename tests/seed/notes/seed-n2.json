@@ -1,0 +1,20 @@
+{
+  "anon": false,
+  "at": 1789610000000,
+  "by": "demo08",
+  "cid": "MATH131",
+  "desc": "Tek sayfada bütün temel türev kuralları. Sınav öncesi son tekrar için.",
+  "drive": "",
+  "h": "",
+  "likes": {
+    "demo02": true,
+    "demo06": true
+  },
+  "photos": [
+    "seed-p3"
+  ],
+  "reports": {},
+  "title": "Limit ve türev formül kâğıdı",
+  "tk": 20251,
+  "type": "ozet"
+}
