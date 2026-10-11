@@ -25,6 +25,8 @@ const FACULTIES = ['Mühendislik Fakültesi', 'Fen-Edebiyat Fakültesi', 'İktis
 const TERM_NAMES = { 1: 'Güz', 2: 'Bahar', 3: 'Yaz' };
 const MAIL_DOMAIN = '@std.yeditepe.edu.tr';
 const MAIL_RE = /^[a-z0-9][a-z0-9._%+-]{1,40}@std\.yeditepe\.edu\.tr$/i;
+/* Sitede kodla değil şifreyle giren hesaplar (yönetici ve ortak deneme hesabı); sunucudaki yw_private.special_accounts ile aynı */
+const PW_ACCOUNTS = ['yonetici@yediwiki.com', 'deneme123@std.yeditepe.edu.tr'];
 const USER_RE = /^[a-z0-9][a-z0-9._]{2,19}$/;
 /* Okul e-postası: kutuya @ işaretinden önceki kısım yazılır, uzantı kutuda hazır durur. Tam adres yapıştırılırsa da çalışır; başka uzantı null döner */
 function mailOf(raw) {
@@ -1974,6 +1976,10 @@ function openAuth(opts = {}) {
     const err = $('.err', host);
     $('form', host).addEventListener('submit', async e => {
       e.preventDefault();
+      if (S.supa) {
+        const raw = $('#au-mail', host).value.trim().toLowerCase().replace(/\s+/g, ''), full = raw.includes('@') ? raw : raw + MAIL_DOMAIN;
+        if (PW_ACCOUNTS.includes(full)) { st.loginMail = full; stepLogin(); return; }
+      }
       const v = mailOf($('#au-mail', host).value);
       if (v === null) { err.textContent = `Yalnızca ${MAIL_DOMAIN} uzantılı okul e-postasıyla hesap açılır.`; return; }
       if (!MAIL_RE.test(v)) { err.textContent = 'E-postanın @ işaretinden önceki kısmını yaz, örneğin ad.soyad.'; return; }
@@ -2104,7 +2110,8 @@ function openAuth(opts = {}) {
   function stepLogin() {
     host.innerHTML = `<form novalidate>
       <p class="help">${S.supa ? 'Yönetici ve ortak deneme hesabı şifreyle girer; okul adresi değilse adresin tamamını yaz. Öğrenciler okul e-postasına gelen kodla girer.' : S.readOnly ? 'Bu sayfayı görüntüleme izniyle açtın. Sana verilen hesapla girip siteyi gezebilirsin.' : S.out ? 'Hesabından çıktın. Deneme hesabıyla ya da kendi e-posta ve şifrenle giriş yap.' : 'Sana verilen e-posta ve şifreyle giriş yap.'}</p>
-      ${mailFieldHtml('au-lmail', 'E-posta')}
+      ${st.loginMail ? '<p class="help ok">Bu hesap kodla değil şifreyle girer.</p>' : ''}
+      ${mailFieldHtml('au-lmail', 'E-posta', st.loginMail || '')}
       <div class="field"><label for="au-lpw">Şifre</label><input id="au-lpw" class="input" type="password" autocomplete="current-password"></div>
       <p class="err" role="alert"></p>
       ${S.readOnly || S.out ? '' : '<p class="auth-alt">Hesabın yok mu? <button type="button" class="linkbtn" data-r="to-signup">Yeditepe mailinle hesap aç</button></p>'}
@@ -2140,7 +2147,7 @@ function openAuth(opts = {}) {
       const nx = S.pendingHash; S.pendingHash = null;
       if (nx && nx !== location.hash) location.hash = nx; else route();
     });
-    setTimeout(() => { const i = $('#au-lmail', host); if (i) i.focus(); }, 40);
+    setTimeout(() => { const i = $(st.loginMail ? '#au-lpw' : '#au-lmail', host); if (i) i.focus(); }, 40);
   }
   if (S.supa && S.session) step3();
   else if (S.readOnly || opts.login || S.out) stepLogin(); else step1();

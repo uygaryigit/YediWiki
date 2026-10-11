@@ -12,7 +12,7 @@ Yeditepe Üniversitesi ile resmî bir bağı yoktur.
 | `supabase/migrations/` | Veritabanı: belge deposu, kurallar (RPC), kadro kimlikleri, gizlilik ve özel hesaplar |
 | `supabase/tests/` | Kural testleri (`gen_kurallar.py` üretir), yerel PostgreSQL'de çalıştırıcı (`yerel.sh`) |
 | `tests/` | Sayfa testleri: `t_katalog.js` (claude.ai sürümü), `t_supa.js` (site sürümü, yerel PostgreSQL'e bağlı sahte supabase-js) |
-| `tools/` | Derleme (`build.py`), katalog ve kadro araçları |
+| `tools/` | Derleme (`build.js`), katalog ve kadro araçları |
 
 Aynı `app.js` iki yerde çalışır: claude.ai artifact'i içinde (`window.claude` veritabanı) ve gerçek sitede (Supabase).
 
@@ -23,7 +23,7 @@ npm ci
 npm run build        # dist/index.html (site) ve dist/artifact.html (claude.ai)
 ```
 
-Cloudflare Pages: derleme komutu `npm ci && npm run build`, çıktı klasörü `dist`.
+Cloudflare Pages: derleme komutu `npm ci --omit=dev && npm run build`, çıktı klasörü `dist`.
 
 ## Testler
 

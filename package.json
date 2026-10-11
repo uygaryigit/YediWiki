@@ -3,7 +3,7 @@
   "private": true,
   "description": "Yeditepe öğrencileri için ders notları, bölüm ders planları, HocaÖlçer ve Kubbe.",
   "scripts": {
-    "build": "python3 tools/build.py",
+    "build": "node tools/build.js",
     "test": "npm run build && node tests/t_katalog.js dist/artifact.html",
     "test:site": "npm run build && bash supabase/tests/pg_yerel.sh && node tests/t_supa.js dist/index.html",
     "test:db": "bash supabase/tests/yerel.sh"

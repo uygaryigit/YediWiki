@@ -270,8 +270,14 @@ async function signup(t, be, local, prof) {
     console.log('8) ortak deneme hesabı ve market');
     await dashboardUser(be, 'deneme123@std.yeditepe.edu.tr', 'deneme123');
     const Dn = await tab(be, { name: 'deneme' });
-    Dn.ev('openAuth({ login: true })'); await sleep(60);
-    Dn.$('#au-lmail').value = 'deneme123'; Dn.$('#au-lpw').value = 'deneme123';
+    Dn.ev('openAuth()'); await sleep(60);
+    const m0 = be.mails.length;
+    Dn.$('#au-mail').value = 'deneme123';
+    await Dn.submit('.modal form', 150);
+    ok(!!Dn.$('#au-lpw') && Dn.$('#au-lmail').value === 'deneme123', 'ilk ekranda deneme123 yazınca şifre ekranına geçer');
+    eq(be.mails.length, m0, 'deneme hesabına kod gönderilmedi');
+    ok(/şifreyle girer/.test(Dn.text('.modal')), 'şifre ekranında açıklama');
+    Dn.$('#au-lpw').value = 'deneme123';
     await Dn.submit('.modal form', 300);
     await Dn.until(() => Dn.ev('!!myAcc()') && !Dn.$('.modal'), 'deneme hesabına girildi');
     await Dn.until(() => Dn.text('[data-r=kubbechip] b') === '10050', 'hediye kubbe (10050)');
