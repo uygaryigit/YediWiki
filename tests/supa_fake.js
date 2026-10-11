@@ -17,10 +17,7 @@ async function setupDb(name, { shim, migrations }) {
   await admin.end();
   const c = new Client(Object.assign({ database: name }, PG));
   await c.connect();
-  let shimSql = fs.readFileSync(shim, 'utf8');
-  // roller başka bir test veritabanından kalmış olabilir
-  shimSql = shimSql.replace(/create role (\w+) nologin( bypassrls)?;/g, (m, r, b) => `do $$ begin if not exists (select 1 from pg_roles where rolname = '${r}') then create role ${r} nologin${b || ''}; end if; end $$;`);
-  await c.query(shimSql);
+  await c.query(fs.readFileSync(shim, 'utf8'));   // taklit dosyası rolleri yalnızca yoksa oluşturur
   for (const f of migrations) await c.query(fs.readFileSync(f, 'utf8'));
   await c.query(`
     create or replace function public.test_notify() returns trigger language plpgsql as $$
