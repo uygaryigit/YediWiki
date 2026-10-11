@@ -245,7 +245,11 @@ async function signup(t, be, local, prof) {
     const C = await tab(be, { name: 'yönetici' });
     C.ev('openAuth()'); await sleep(60);
     C.$('.modal [data-r=to-login]').click(); await sleep(40);
-    C.$('#au-lmail').value = 'yonetici@yediwiki.com'; C.$('#au-lpw').value = 'yanlis';
+    ok(!C.$('.modal .mail-dom').hidden, 'okul uzantısı başta görünür');
+    C.typeIn(C.$('#au-lmail'), 'yonetici@yediwiki.com');
+    eq(C.$('#au-lmail').value, 'yonetici@yediwiki.com', 'başka uzantılı tam adres kutuda kalır');
+    ok(C.$('.modal .mail-dom').hidden, 'tam adres yazılınca okul uzantısı gizlenir');
+    C.$('#au-lpw').value = 'yanlis';
     await C.submit('.modal form', 200);
     ok(/şifre hatalı/i.test(C.text('.modal .err')), 'yanlış şifre');
     C.$('#au-lpw').value = 'Test-Yonetici-1';

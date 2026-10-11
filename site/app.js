@@ -1940,12 +1940,18 @@ function mailFieldHtml(id, label, val = '', ac = 'username') {
 /* @ yazılınca ya da tam adres yapıştırılınca uzantıyı kutudan düşür (uzantı zaten yanında yazılı) */
 function wireMailField(inp) {
   if (!inp) return;
+  // tam adres yazılınca (başka uzantı) kutunun yanındaki okul uzantısı gizlenir
+  const dom = inp.parentElement ? inp.parentElement.querySelector('.mail-dom') : null;
+  const sync = () => { if (dom) dom.hidden = inp.value.includes('@'); };
   inp.addEventListener('input', () => {
     const v = inp.value, i = v.indexOf('@');
-    if (i < 0) return;
-    const tail = v.slice(i).toLowerCase().replace(/\s+/g, '');
-    if (MAIL_DOMAIN.startsWith(tail) || tail === MAIL_DOMAIN) inp.value = v.slice(0, i);
+    if (i >= 0) {
+      const tail = v.slice(i).toLowerCase().replace(/\s+/g, '');
+      if (MAIL_DOMAIN.startsWith(tail) || tail === MAIL_DOMAIN) inp.value = v.slice(0, i);
+    }
+    sync();
   });
+  sync();
 }
 function openAuth(opts = {}) {
   if (!S.db) { guardWrite(); return; }
@@ -2097,7 +2103,7 @@ function openAuth(opts = {}) {
   }
   function stepLogin() {
     host.innerHTML = `<form novalidate>
-      <p class="help">${S.supa ? 'Yönetici ve ortak deneme hesabı şifreyle girer. Öğrenciler okul e-postasına gelen kodla girer.' : S.readOnly ? 'Bu sayfayı görüntüleme izniyle açtın. Sana verilen hesapla girip siteyi gezebilirsin.' : S.out ? 'Hesabından çıktın. Deneme hesabıyla ya da kendi e-posta ve şifrenle giriş yap.' : 'Sana verilen e-posta ve şifreyle giriş yap.'}</p>
+      <p class="help">${S.supa ? 'Yönetici ve ortak deneme hesabı şifreyle girer; okul adresi değilse adresin tamamını yaz. Öğrenciler okul e-postasına gelen kodla girer.' : S.readOnly ? 'Bu sayfayı görüntüleme izniyle açtın. Sana verilen hesapla girip siteyi gezebilirsin.' : S.out ? 'Hesabından çıktın. Deneme hesabıyla ya da kendi e-posta ve şifrenle giriş yap.' : 'Sana verilen e-posta ve şifreyle giriş yap.'}</p>
       ${mailFieldHtml('au-lmail', 'E-posta')}
       <div class="field"><label for="au-lpw">Şifre</label><input id="au-lpw" class="input" type="password" autocomplete="current-password"></div>
       <p class="err" role="alert"></p>

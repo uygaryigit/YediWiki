@@ -2,6 +2,7 @@
 # Kuralları yerel PostgreSQL'de dener: boş veritabanı + Supabase taklidi + bütün göçler + kural testleri.
 # Kullanım: supabase/tests/yerel.sh   (PG: /var/tmp/ywpg soketi, 54329 portu)
 set -euo pipefail
+bash "$(dirname "$0")/pg_yerel.sh"
 here="$(cd "$(dirname "$0")" && pwd)"
 PSQL=(psql -h "${PGHOST:-/var/tmp/ywpg}" -p "${PGPORT:-54329}" -U postgres -v ON_ERROR_STOP=1 -q -X)
 "${PSQL[@]}" -d postgres -c "drop database if exists yw_test with (force)" -c "create database yw_test"

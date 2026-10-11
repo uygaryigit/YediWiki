@@ -5,7 +5,7 @@
   "scripts": {
     "build": "python3 tools/build.py",
     "test": "npm run build && node tests/t_katalog.js dist/artifact.html",
-    "test:site": "npm run build && node tests/t_supa.js dist/index.html",
+    "test:site": "npm run build && bash supabase/tests/pg_yerel.sh && node tests/t_supa.js dist/index.html",
     "test:db": "bash supabase/tests/yerel.sh"
   },
   "dependencies": {
