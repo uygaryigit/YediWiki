@@ -1,0 +1,9 @@
+// Cloudflare: yalnızca statik dosya sunan Worker (dist/ klasörü). Derleme: npm ci --omit=dev && npm run build
+{
+  "name": "yediwiki",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "none"
+  }
+}

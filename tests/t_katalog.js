@@ -1,7 +1,7 @@
 // Katalog turu testleri: node t_katalog.js [html yolu]
 const fs = require('fs'), path = require('path');
 const { boot, loadBackup, clone } = require('./fake.js');
-const HTML = fs.readFileSync(process.argv[2] || path.join(__dirname, '../dist/artifact.html'), 'utf8');
+const HTML = fs.readFileSync(process.argv[2] || path.join(__dirname, '../build/artifact.html'), 'utf8');
 const SEED = loadBackup(process.env.YW_SEED || path.join(__dirname, 'seed'));
 const CATJ = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/catalog.json'), 'utf8'));
 // Her yayında elle güncellenen beklenen sayılar: katalog yeniden kurulunca kazara değişimi yakalar

@@ -20,10 +20,10 @@ Aynı `app.js` iki yerde çalışır: claude.ai artifact'i içinde (`window.clau
 
 ```sh
 npm ci
-npm run build        # dist/index.html (site) ve dist/artifact.html (claude.ai)
+npm run build        # dist/index.html (yayımlanan site) ve build/artifact.html (claude.ai)
 ```
 
-Cloudflare Pages: derleme komutu `npm ci --omit=dev && npm run build`, çıktı klasörü `dist`.
+Cloudflare (Workers, Git bağlantılı): derleme komutu `npm ci --omit=dev && npm run build`, yayın komutu `npx wrangler deploy` (ayar: `wrangler.jsonc`, `dist/` klasörü).
 
 ## Testler
 

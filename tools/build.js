@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // YediWiki derlemesi: tek dosyalık iki sayfa üretir.
 //   dist/index.html     gerçek site (Supabase): supabase-js, bağdaştırıcı (site/supa.js) ve ayar (site/config.json) sayfaya gömülü
-//   dist/artifact.html  claude.ai sürümü (window.claude veritabanı)
+//   build/artifact.html claude.ai sürümü (window.claude veritabanı); yayımlanmaz
 // Ders kataloğu (data/catalog.min.json) ve akademik kadro (data/kadro.min.json) ikisine de gömülür.
 // Kullanım: node tools/build.js [--artifact-out YOL]
 'use strict';
@@ -50,9 +50,19 @@ const cut = mid.trimEnd().lastIndexOf('<script>');
 const siteMid = mid.slice(0, cut) + '<script id="yw-sb">' + jsSafe(umd) + '</script>\n<script>' + jsSafe(supa) + '</script>\n<script>' + conf + '</script>\n<script>';
 const site = pre + parts['style.css'] + siteMid + parts['app.js'] + parts['post.html'];
 
+// dist/ yayımlanır (yalnızca site); claude.ai sürümü build/ altına
+fs.rmSync(P('dist'), { recursive: true, force: true });
 fs.mkdirSync(P('dist'), { recursive: true });
+fs.mkdirSync(P('build'), { recursive: true });
 fs.writeFileSync(P('dist', 'index.html'), site);
-fs.writeFileSync(P('dist', 'artifact.html'), artifact);
-console.log('dist/index.html', Buffer.byteLength(site), 'bayt; dist/artifact.html', Buffer.byteLength(artifact), 'bayt');
+fs.writeFileSync(P('dist', '_headers'), [
+  '/*',
+  '  X-Content-Type-Options: nosniff',
+  '  Referrer-Policy: strict-origin-when-cross-origin',
+  '  X-Frame-Options: DENY',
+  '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
+  ''].join('\n'));
+fs.writeFileSync(P('build', 'artifact.html'), artifact);
+console.log('dist/index.html', Buffer.byteLength(site), 'bayt; build/artifact.html', Buffer.byteLength(artifact), 'bayt');
 const i = process.argv.indexOf('--artifact-out');
 if (i > 0 && process.argv[i + 1]) { fs.writeFileSync(process.argv[i + 1], artifact); console.log('->', process.argv[i + 1]); }
