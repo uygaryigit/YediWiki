@@ -1173,29 +1173,43 @@ button.rank-row:hover{background:var(--surface-2)}
 @keyframes aySay{0%{opacity:0;transform:translate(var(--sx),6px) scale(.85)}12%{opacity:1;transform:translate(var(--sx),0) scale(1)}85%{opacity:1}100%{opacity:0;transform:translate(var(--sx),-6px)}}
 .ay-roam[data-say=l] .ay-say{left:6px;--sx:0%;border-radius:14px 14px 14px 4px}
 .ay-roam[data-say=r] .ay-say{left:auto;right:6px;--sx:0%;border-radius:14px 14px 4px 14px}
-/* hoş geldin turu */
-.modal.modal-tour{width:min(520px,100%)}
-.ay-tour{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:center}
-.ay-tour-dog{width:150px}
-.ay-tour-dog .ay-svg{width:150px}
-.ay-bubble{position:relative;padding:12px 14px;border-radius:16px;background:var(--surface-2);border:2px solid var(--ink);min-height:112px}
-.ay-bubble::before{content:"";position:absolute;left:-10px;top:42px;width:16px;height:16px;background:var(--surface-2);border-left:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
-.ay-bubble b{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.ay-bubble .wel-n{width:24px;height:24px;font-size:.8rem}
-.ay-bubble p{margin:0 0 10px;font-size:.9rem;color:var(--ink-2)}
-.ay-bubble p:last-child{margin-bottom:0}
-.ay-foot{align-items:center}
-.ay-dots{display:flex;gap:6px;margin-right:auto}
-.ay-dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
-.ay-dots i.on{background:var(--pen);width:20px;border-radius:999px}
 @media (max-width:560px){
   .ay-stage{height:90px}
   .ay-roam{width:142px}
-  .ay-tour{grid-template-columns:1fr;justify-items:center;gap:10px}
-  .ay-tour-dog,.ay-tour-dog .ay-svg{width:130px}
-  .ay-bubble{min-height:0;width:100%}
-  .ay-bubble::before{left:calc(50% - 8px);top:-10px;transform:rotate(135deg)}
 }
+/* hoş geldin turu: ışıktaki öğe, çevresinde tıklamayı tutan perde ve Ayhan Abi'nin kartı (pencerelerin altında, sayfanın üstünde) */
+.tour-veil{position:fixed;z-index:50;left:0;top:0;width:0;height:0}
+.tour:not(.has-hole) .tour-veil[data-t=v0]{background:rgba(8,12,36,.74)}
+.tour-hole{position:fixed;z-index:51;border-radius:14px;box-shadow:0 0 0 4px var(--marker),0 0 0 200vmax rgba(8,12,36,.74);pointer-events:none;transition:left .38s ease,top .38s ease,width .38s ease,height .38s ease}
+.tour-hole::after{content:"";position:absolute;inset:-4px;border-radius:inherit;border:3px solid var(--marker);animation:tourPulse 1.6s ease-out infinite}
+@keyframes tourPulse{0%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:scale(1.06)}}
+.tour-card{position:fixed;z-index:52;left:0;top:0;width:min(460px,calc(100vw - 32px));display:grid;grid-template-columns:118px minmax(0,1fr);gap:4px 16px;align-items:start;padding:18px 18px 16px;background:var(--surface);color:var(--ink);border:3px solid var(--ink);border-radius:22px;box-shadow:7px 7px 0 var(--marker),0 30px 70px -20px rgba(0,0,0,.55);transition:transform .4s cubic-bezier(.2,.8,.25,1)}
+.tour.init .tour-card,.tour.init .tour-hole{transition:none}
+.tour-dog{position:relative;width:118px;margin-top:2px;display:grid;justify-items:center;gap:4px}
+.tour-dog .ay-svg{width:118px}
+.tour-name{padding:2px 9px;border-radius:999px;background:var(--ink);color:var(--surface);font-size:.72rem;font-weight:800;white-space:nowrap}
+.tour-txt{min-width:0}
+.tour-step{font-size:.76rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--pen);margin-bottom:3px}
+.tour-t{font-family:var(--f-display);font-size:1.5rem;font-weight:800;line-height:1.12;margin-bottom:7px}
+.tour-say{font-size:1.06rem;line-height:1.5;font-weight:520;color:var(--ink)}
+.tour-bar{grid-column:1/-1;height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:12px}
+.tour-bar i{display:block;height:100%;width:0;background:var(--marker);border-radius:inherit;transition:width .4s ease}
+.tour-foot{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:12px}
+.tour-skip{margin-right:auto;padding:8px 2px;border:0;background:none;color:var(--ink-2);font-weight:650;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.tour-next{padding:11px 20px;font-size:1rem}
+.tour-card::before{content:"";position:absolute;width:18px;height:18px;background:var(--surface);border:3px solid var(--ink);display:none}
+.tour-card[data-tail=up]::before{display:block;top:-12px;left:calc(var(--tx,50%) - 9px);border-right:0;border-bottom:0;transform:rotate(45deg)}
+.tour-card[data-tail=down]::before{display:block;bottom:-12px;left:calc(var(--tx,50%) - 9px);border-left:0;border-top:0;transform:rotate(45deg)}
+.tour-card[data-tail=left]::before{display:block;left:-12px;top:calc(var(--ty,50%) - 9px);border-right:0;border-top:0;transform:rotate(45deg)}
+.tour-card[data-tail=right]::before{display:block;right:-12px;top:calc(var(--ty,50%) - 9px);border-left:0;border-bottom:0;transform:rotate(45deg)}
+.tour-card.nudge{animation:tourNudge .35s ease}
+@keyframes tourNudge{0%,100%{translate:0}25%{translate:-7px 0}75%{translate:7px 0}}
+.tour-card.dock{left:10px;right:10px;top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:auto;transform:none;grid-template-columns:84px minmax(0,1fr);gap:4px 12px;padding:14px 14px 12px}
+.tour-card.dock .tour-dog,.tour-card.dock .tour-dog .ay-svg{width:84px}
+.tour-card.dock .tour-name{font-size:.66rem;padding:1px 7px}
+.tour-card.dock .tour-t{font-size:1.3rem}
+.tour-card.dock .tour-say{font-size:1rem}
+@media (prefers-reduced-motion:reduce){.tour-card,.tour-hole,.tour-bar i{transition:none!important}.tour-hole::after,.tour-card.nudge{animation:none!important}}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ay-bed{fill:#2E3A7A;stroke:#5B6CC0}}
 :root[data-theme="dark"] .ay-bed{fill:#2E3A7A;stroke:#5B6CC0}
 @media (prefers-reduced-motion:reduce){.ay *,.ay-roam{animation:none!important;transition:none!important}.ay-say.on{opacity:1}}

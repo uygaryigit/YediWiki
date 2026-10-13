@@ -2460,7 +2460,7 @@ function renderChrome() {
     }
   }
   const wnb = $('[data-r=wn]'); if (wnb) wnb.classList.toggle('has-new', (+ls.get('wn', 0) || 0) < CHANGES_VER);
-  { const uu = myAcc(); if (uu && S.loaded.users && !S.owner && !ls.get('welcomed:' + S.me, false) && !document.querySelector('.modal')) { ls.set('welcomed:' + S.me, true); setTimeout(() => { if (!document.querySelector('.modal')) openWelcome(); }, 900); } }
+  { const uu = myAcc(); if (TOUR.on && !uu) tourEnd(); if (uu && S.loaded.users && !S.owner && !TOUR.on && !ls.get('welcomed:' + S.me, false) && !document.querySelector('.modal')) { ls.set('welcomed:' + S.me, true); setTimeout(() => { if (!document.querySelector('.modal') && !TOUR.on) openWelcome(); }, 900); } }
   checkBadges();
 }
 function waitState() {
@@ -2848,31 +2848,203 @@ function recentHtml() {
   const list = (ls.get('recent', []) || []).filter(x => x && x.q && typeof x.h === 'string' && x.h.startsWith('#/'));
   return list.length ? `<span class="rc-lbl">Son aramaların:</span>${list.map(x => `<a class="rc" href="${esc(x.h)}">${esc(x.q)}</a>`).join('')}<button type="button" class="rc-clear" data-g="recent-clear" aria-label="Son aramaları temizle">${icon('x')}</button>` : '';
 }
-/* Hoş geldin turu ve köpek */
+/* Hoş geldin turu: Ayhan Abi sayfadan sayfaya gezdirir, her durakta anlattığı yeri ışıkla gösterir.
+   Tur bir pencere değildir; sayfa değişince kapanmaz. Işığın dışındaki alan tıklamaya kapalıdır, ışıktaki öğe kullanılabilir. */
+const TOUR = { on: false, i: 0, steps: [], el: null, tgt: null, seq: 0, poll: 0, tick: 0, want: '', t0: 0, prevFocus: null };
+const TOUR_NUM = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz'];
+function tourCourse() {
+  const ok = id => !!id && S.courses.has(id);
+  const mine = myCourses().find(ok); if (mine) return mine;
+  try { const top = [...courseActivity().entries()].sort((a, b) => b[1].total - a[1].total)[0]; if (top && ok(top[0])) return top[0]; } catch (e) { /* yok */ }
+  try { const P = planOf((userOf(S.me) || {}).bolum || ''); const p = P && P.plan ? Object.values(P.plan).flat().find(ok) : ''; if (p) return p; } catch (e) { /* yok */ }
+  return ['CSE211', 'MATH131'].find(ok) || S.courses.keys().next().value || '';
+}
+function tourSteps(u) {
+  const cid = tourCourse();
+  const list = [
+    { t: 'Hoş geldin!', next: 'Gezdir beni' },   // tanışma bulunduğun sayfada; gezinti ilk durakta başlar
+    { go: '#/', sel: '#main .hero .search', t: 'Her şey buradan başlar', say: 'Ders kodunu (CSE 211 gibi) ya da hocanın adını buraya yaz, listeden seç. Aradığın ders ya da hoca hemen önüne gelir.' },
+    { go: '#/dersler', sel: '#main .toolbar', t: 'Bölümünün ders planı', say: 'Buradan bölümünü seç: dönem dönem bütün derslerin çıkar. Bitirdiğin dersleri ✓ ile işaretlersen ne kadar kaldığını da görürsün.' },
+    cid ? { go: '#/ders/' + cid, sel: ['#main [data-r=myc]', '#main .head-actions'], t: 'Derslerini ekle', say: 'Her dersin kendi sayfası var: notlar, yorumlar ve hocalar. “Derslerime ekle”ye basarsan o derse yeni not düşünce ilk sen görürsün.' } : null,
+    { go: '#/paylas', sel: ['#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `Notunu Google Drive’a koy, linkini buraya yapıştır. Her not ${KUBBE.note} kubbe kazandırır; bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
+    { go: '#/hocaolcer', sel: '#main .toolbar', t: 'HocaÖlçer', say: 'Hocayı adıyla ya da ders koduyla bul. Anlatım, ödev yükü, not verme ve devamsızlıkta puanla; yorumunu anonim bırakabilirsin.' },
+    { go: '#/kubbe', sel: ['#main [data-r=head]', '#main .shop-sec'], t: 'Kubbe ve market', say: 'Paylaştıkça kubbe toplarsın. Dönemin yıldızı sıralamasında yüksel, marketten profilini süsleyecek parçalar al.' },
+    { go: '#/', sel: '#main [data-r=ayhan]', t: 'Hepsi bu kadar!', say: 'Ben burada, ana sayfada dolaşıyorum. Canın sıkılırsa gel beni sev. İlk notunu bekliyorum, hav!', next: 'Başlayalım' }
+  ].filter(Boolean);
+  const n = list.length - 1;
+  list[0].say = `Hav! Ben Ayhan Abi, kampüsün köpeği. ${u.username ? '@' + u.username + ', seni' : 'Seni'} YediWiki’de kısa bir tura çıkarayım: ${(TOUR_NUM[n] || String(n)).toLocaleLowerCase('tr')} durak, bir dakika bile sürmez.`;
+  return list;
+}
+const tourPath = h => String(h || '').split('?')[0].replace(/^#?\/?$/, '#/') || '#/';
 function openWelcome() {
   const u = myAcc(); if (!u) return;
-  const steps = [
-    { say: `Hav! Ben Ayhan Abi, kampüsün köpeği. Hoş geldin${u.username ? ', @' + u.username : ''}! YediWiki’yi sana üç adımda ben gezdireyim.` },
-    { t: 'Derslerini ekle', say: 'Ders sayfasındaki “Derslerime ekle” ile aldığın dersleri seç. Yeni not düşünce ilk sen görürsün.', go: ['#/dersler', 'book', 'Derslere git'] },
-    { t: 'Notunu paylaş, kubbe kazan', say: `Notunu Google Drive’a koy, linkini paylaş: her not ${KUBBE.note} kubbe. Bir not isteğini karşılarsan +${KUBBE.fill}.`, go: ['#/paylas', 'up', 'Not paylaş'] },
-    { t: 'HocaÖlçer’de değerlendir', say: 'Aldığın dersin hocasını 4 kriterde puanla, yorumunu anonim bırakabilirsin. Ben ana sayfada dolaşıyorum; canın sıkılırsa gel beni sev.', go: ['#/hocaolcer', 'star', 'HocaÖlçer'] }
-  ];
-  let i = 0;
-  const m = openModal({ title: 'Ayhan Abi seni gezdiriyor', body: `<div class="ay-tour"><div class="ay ay-tour-dog idle" aria-hidden="true">${AYHAN_SVG}</div><div class="ay-bubble" data-r="say" aria-live="polite"></div></div>
-    <div class="modal-foot ay-foot"><span class="ay-dots" data-r="dots" aria-hidden="true"></span><button type="button" class="btn btn-ghost" data-r="back">Geri</button><button type="button" class="btn btn-primary" data-r="next">İleri</button></div>` });
-  m.el.classList.add('modal-tour');
-  const dog = $('.ay-tour-dog', m.el);
-  const render = () => {
-    const st = steps[i];
-    $('[data-r=say]', m.el).innerHTML = (st.t ? `<b><span class="wel-n">${i}</span>${esc(st.t)}</b>` : '') + `<p>${esc(st.say)}</p>` + (st.go ? `<a class="btn btn-sm" href="${st.go[0]}" data-close>${icon(st.go[1])}${esc(st.go[2])}</a>` : '');
-    $('[data-r=dots]', m.el).innerHTML = steps.map((x, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
-    $('[data-r=back]', m.el).hidden = i === 0;
-    $('[data-r=next]', m.el).textContent = i === steps.length - 1 ? 'Başlayalım' : i === 0 ? 'Gezdir beni' : 'İleri';
-    dog.classList.remove('barking'); void dog.offsetWidth; dog.classList.add('barking');
+  tourEnd();
+  TOUR.steps = tourSteps(u); TOUR.on = true; TOUR.prevFocus = document.activeElement;
+  const el = document.createElement('div');
+  el.className = 'tour init';
+  el.innerHTML = '<div class="tour-veil" data-t="v0"></div><div class="tour-veil" data-t="v1"></div><div class="tour-veil" data-t="v2"></div><div class="tour-veil" data-t="v3"></div><div class="tour-hole" data-t="hole" hidden></div>'
+    + `<section class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-t" aria-describedby="tour-say" data-t="card">
+      <div class="tour-dog ay idle" aria-hidden="true">${AYHAN_SVG}<span class="tour-name">Ayhan Abi</span></div>
+      <div class="tour-txt"><p class="tour-step" data-t="step"></p><h2 class="tour-t" id="tour-t" data-t="t"></h2><p class="tour-say" id="tour-say" data-t="say" aria-live="polite"></p></div>
+      <div class="tour-bar" aria-hidden="true"><i data-t="bar"></i></div>
+      <div class="tour-foot"><button type="button" class="tour-skip" data-t="skip">Turu geç</button><button type="button" class="btn btn-ghost" data-t="back">Geri</button><button type="button" class="btn btn-primary tour-next" data-t="next">İleri</button></div>
+    </section>`;
+  document.body.appendChild(el);
+  TOUR.el = el;
+  const T = k => el.querySelector(`[data-t=${k}]`);
+  T('next').addEventListener('click', () => tourGo(TOUR.i + 1));
+  T('back').addEventListener('click', () => tourGo(TOUR.i - 1));
+  T('skip').addEventListener('click', () => tourEnd());
+  el.addEventListener('click', e => { if (e.target.classList && e.target.classList.contains('tour-veil')) tourNudge(); });
+  window.addEventListener('resize', tourPlace);
+  window.addEventListener('scroll', tourPlace, { passive: true });
+  window.addEventListener('hashchange', tourRoute);
+  document.addEventListener('keydown', tourKey, true);
+  TOUR.tick = setInterval(tourPlace, 300);   // sayfa yeniden çizilince ya da kaydırınca ışık öğeyi izler
+  tourGo(0);
+  const raf = window.requestAnimationFrame || (f => setTimeout(f, 16));
+  raf(() => raf(() => { if (TOUR.el === el) el.classList.remove('init'); }));   // ilk yerleşim kaymadan, sonrakiler akarak
+}
+function tourGo(i) {
+  if (!TOUR.on || !TOUR.el) return;
+  if (i >= TOUR.steps.length) { tourEnd(); return; }
+  i = Math.max(0, i);
+  TOUR.i = i; TOUR.seq++; TOUR.tgt = null;
+  const st = TOUR.steps[i], el = TOUR.el, T = k => el.querySelector(`[data-t=${k}]`), n = TOUR.steps.length - 1;
+  T('step').textContent = i ? `Durak ${i} / ${n}` : 'Tanışalım';
+  T('t').textContent = st.t;
+  T('say').textContent = st.say;
+  T('bar').style.width = Math.round(i / n * 100) + '%';
+  T('back').hidden = i === 0;
+  T('next').textContent = st.next || 'İleri';
+  tourDog(i ? 'walk' : 'bark');
+  TOUR.want = tourPath(st.go || location.hash); TOUR.t0 = Date.now();
+  if (st.go && tourPath(location.hash) !== TOUR.want) location.hash = st.go;
+  tourPlace();
+  tourSeek(TOUR.seq);
+  tourFocus();
+}
+function tourFind(sel) {
+  for (const s of [].concat(sel || [])) {
+    const x = document.querySelector(s);
+    if (x && !x.closest('[hidden]') && x.getClientRects().length) return x;
+  }
+  return null;
+}
+function tourSeek(seq) {
+  clearTimeout(TOUR.poll);
+  const st = TOUR.steps[TOUR.i];
+  if (!st || !st.sel) { TOUR.tgt = null; tourPlace(); return; }
+  const look = () => {
+    if (!TOUR.on || seq !== TOUR.seq) return;
+    const here = tourPath(location.hash) === TOUR.want && curKey === TOUR.want.slice(2).split('/')[0];
+    const x = here ? tourFind(st.sel) : null;
+    if (x) { TOUR.tgt = x; tourScroll(x); tourPlace(); tourFocus(); if (TOUR.el.querySelector('.tour-dog.walk')) tourDog('bark', 380); return; }
+    if (!here && Date.now() - TOUR.t0 > 1500) { TOUR.tgt = null; tourPlace(); tourDog('idle'); return; }   // kullanıcı başka sayfaya geçti: ışıksız bekle
+    if (Date.now() - TOUR.t0 < 6000) TOUR.poll = setTimeout(look, 120);
+    else { TOUR.tgt = null; tourPlace(); tourDog('idle'); }
   };
-  $('[data-r=next]', m.el).addEventListener('click', () => { if (i < steps.length - 1) { i++; render(); } else m.close(); });
-  $('[data-r=back]', m.el).addEventListener('click', () => { if (i > 0) { i--; render(); } });
-  render();
+  look();
+}
+function tourRoute() {
+  if (!TOUR.on) return;
+  TOUR.tgt = null; TOUR.t0 = Date.now();
+  tourSeek(TOUR.seq);
+}
+const tourMobile = () => (window.innerWidth || 1024) < 700;
+function tourTopbar() { const tb = $('.topbar'); return tb ? Math.max(0, tb.getBoundingClientRect().bottom) : 0; }
+function tourScroll(x) {
+  const r = x.getBoundingClientRect(), vh = window.innerHeight || 768, top = tourTopbar() + 18;
+  const card = TOUR.el && TOUR.el.querySelector('[data-t=card]');
+  const room = tourMobile() && card ? vh - card.offsetHeight - 28 : vh - 24;
+  if (r.top >= top && r.bottom <= room) return;
+  const want = Math.max(0, (window.scrollY || 0) + r.top - top);
+  try { window.scrollTo({ top: want, behavior: reduceMotion() ? 'auto' : 'smooth' }); } catch (e) { /* yok */ }
+}
+function tourPlace() {
+  if (!TOUR.on || !TOUR.el) return;
+  const el = TOUR.el, hole = el.querySelector('[data-t=hole]'), card = el.querySelector('[data-t=card]');
+  const vs = [0, 1, 2, 3].map(k => el.querySelector(`[data-t=v${k}]`));
+  const vw = Math.min(window.innerWidth || 1024, document.documentElement.clientWidth || window.innerWidth || 1024), vh = window.innerHeight || 768;
+  let x = TOUR.tgt;
+  if (x && (!document.contains(x) || !x.getClientRects().length || x.closest('[hidden]'))) { x = TOUR.tgt = null; tourSeek(TOUR.seq); }   // sayfa öğeyi yeniden çizdi: yenisini bul
+  const box = (v, l, t, w, h) => { v.style.left = l + 'px'; v.style.top = t + 'px'; v.style.width = Math.max(0, w) + 'px'; v.style.height = Math.max(0, h) + 'px'; };
+  let R = null;
+  if (x) {
+    const r = x.getBoundingClientRect(), pad = 8;
+    R = { l: Math.max(4, r.left - pad), t: Math.max(4, r.top - pad), r: Math.min(vw - 4, r.right + pad), b: Math.min(vh - 4, r.bottom + pad) };
+    if (R.r - R.l < 8 || R.b - R.t < 8) R = null;
+  }
+  el.classList.toggle('has-hole', !!R);
+  hole.hidden = !R;
+  if (R) {
+    box(hole, R.l, R.t, R.r - R.l, R.b - R.t);
+    box(vs[0], 0, 0, vw, R.t); box(vs[1], 0, R.b, vw, vh - R.b); box(vs[2], 0, R.t, R.l, R.b - R.t); box(vs[3], R.r, R.t, vw - R.r, R.b - R.t);
+  } else { box(vs[0], 0, 0, vw, vh); vs.slice(1).forEach(v => box(v, 0, 0, 0, 0)); }
+  const mob = tourMobile();
+  card.classList.toggle('dock', mob);
+  if (mob) { card.style.transform = ''; card.dataset.tail = 'none'; return; }
+  const cw = card.offsetWidth || 440, ch = card.offsetHeight || 260, m = 16, minT = tourTopbar() + 8;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  let left, top, tail = 'none';
+  if (!R) { left = (vw - cw) / 2; top = Math.max(minT, (vh - ch) / 2); }
+  else if (vh - R.b - m >= ch + m) { top = R.b + m; tail = 'up'; }
+  else if (R.t - m - ch >= minT) { top = R.t - m - ch; tail = 'down'; }
+  else if (vw - R.r - m >= cw + m) { left = R.r + m; top = clamp(R.t, minT, vh - ch - m); tail = 'left'; }
+  else if (R.l - m >= cw + m) { left = R.l - m - cw; top = clamp(R.t, minT, vh - ch - m); tail = 'right'; }
+  else top = vh - ch - m;
+  if (left == null) left = clamp((R ? (R.l + R.r) / 2 : vw / 2) - cw / 2, m, vw - cw - m);
+  card.dataset.tail = tail;
+  if (R && (tail === 'up' || tail === 'down')) card.style.setProperty('--tx', Math.round(clamp((R.l + R.r) / 2 - left, 28, cw - 28)) + 'px');
+  if (R && (tail === 'left' || tail === 'right')) card.style.setProperty('--ty', Math.round(clamp((R.t + R.b) / 2 - top, 28, ch - 28)) + 'px');
+  card.style.transform = `translate3d(${Math.round(left)}px,${Math.round(top)}px,0)`;
+}
+function tourFocus() {
+  const el = TOUR.el; if (!el) return;
+  setTimeout(() => { const b = el.querySelector('[data-t=next]'); if (TOUR.el === el && b && !el.contains(document.activeElement)) { try { b.focus({ preventScroll: true }); } catch (e) { /* yok */ } } }, 40);
+}
+/* Kart yer değiştirirken Ayhan Abi yürür, yerine varınca havlar */
+function tourDog(mode, delay = 0) {
+  const dog = TOUR.el && TOUR.el.querySelector('.tour-dog'); if (!dog) return;
+  clearTimeout(dog._t);
+  const go = () => {
+    dog.classList.remove('walk', 'idle', 'barking');
+    if (mode === 'walk') { dog.classList.add('walk'); return; }
+    dog.classList.add('idle');
+    if (mode === 'bark') { void dog.offsetWidth; dog.classList.add('barking'); }
+  };
+  if (delay && !reduceMotion()) dog._t = setTimeout(go, delay); else go();
+}
+function tourNudge() {
+  const card = TOUR.el && TOUR.el.querySelector('[data-t=card]'); if (!card) return;
+  card.classList.remove('nudge'); void card.offsetWidth; card.classList.add('nudge');
+}
+function tourKey(e) {
+  if (!TOUR.on || !TOUR.el || modalStack.length) return;   // turun üstünde açılan pencere kendi tuşlarını kullanır
+  const card = TOUR.el.querySelector('[data-t=card]'), inCard = card.contains(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); tourEnd(); return; }
+  if (e.key === 'Tab') {
+    const f = [...card.querySelectorAll('button')].filter(b => !b.hidden);
+    if (!f.length) return;
+    const k = f.indexOf(document.activeElement);
+    if (!inCard || (e.shiftKey && k <= 0) || (!e.shiftKey && k === f.length - 1)) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+    return;
+  }
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
+  if (typing) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); tourGo(TOUR.i + 1); }
+  else if (e.key === 'ArrowLeft' && TOUR.i > 0) { e.preventDefault(); tourGo(TOUR.i - 1); }
+}
+function tourEnd() {
+  clearTimeout(TOUR.poll); clearInterval(TOUR.tick);
+  const was = TOUR.on; TOUR.on = false; TOUR.seq++;
+  window.removeEventListener('resize', tourPlace);
+  window.removeEventListener('scroll', tourPlace);
+  window.removeEventListener('hashchange', tourRoute);
+  document.removeEventListener('keydown', tourKey, true);
+  if (TOUR.el) TOUR.el.remove();
+  TOUR.el = null; TOUR.tgt = null;
+  if (was) { const p = TOUR.prevFocus; TOUR.prevFocus = null; if (p && p.focus && document.contains(p) && p !== document.body) { try { p.focus({ preventScroll: true }); } catch (e) { /* yok */ } } }
 }
 function petDog(el, say) {
   if (!el) return;
@@ -2886,9 +3058,11 @@ function petDog(el, say) {
   if (n === 10) toast('Ayhan Abi seni çok sevdi 🐾');
 }
 /* Yenilikler ve test listesi */
-const CHANGES_VER = 10;
+const CHANGES_VER = 11;
 const CHANGES = [
   { tur: 'Bu tur', items: [
+    { id: 'tur2', t: 'Ayhan Abi seni sayfa sayfa gezdiriyor', d: 'Hoş geldin turu artık sayfadan sayfaya gidiyor ve her durakta anlattığı yeri ışıkla gösteriyor; yazılar daha büyük ve net. “Dene” ile turu şimdi izle.', go: '#/', g: 'welcome' }] },
+  { tur: '9. tur', items: [
     { id: 'kadro', get t() { return `Akademik kadro: ${CAT.hocas.size} hoca`; }, d: 'Hocalar Yeditepe’nin sitesinden geldi: unvanı, fakültesi, bölümü ve verdiği dersler. Ders sayfasının Hocalar sekmesinde o dersi verenler, HocaÖlçer’de ders koduyla arama, not paylaşırken hoca listesi o dersi verenlerle başlıyor.', go: '#/hocaolcer' }] },
   { tur: '8. tur', items: [
     { id: 'mailkisa', t: 'E-postanın yalnızca ilk kısmı', d: 'Hesap açarken ve girişte yalnızca @ işaretinden önceki kısmı yazıyorsun; @std.yeditepe.edu.tr kutuda hazır. Tam adresi yapıştırırsan uzantı kendiliğinden düşer.', go: '#/' },
