@@ -19,21 +19,19 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - `www.yediwiki.com`: A 192.0.2.1 (proxied) ve Redirect Rule ile `https://yediwiki.com`'a 301.
   - `yediwiki.xyz`: Redirect Rule ile tüm istekler `https://yediwiki.com` + yol, 301.
   - Natro'dan gelen park kayıtları (A ve www CNAME) silindi; kök SPF TXT kaydı (Natro) duruyor.
-- **E-posta:** Hâlâ Supabase'in yerleşik göndericisi kullanılıyor.
-  - Resend hesabı açıldı (GitHub ile). Alan adı `yediwiki.com`, bölge eu-west-1.
-  - Resend DNS kayıtları Cloudflare'e girildi: `resend._domainkey` TXT (DKIM), `rsend` ve `send` CNAME (DNS only), `_dmarc` TXT. Doğrulama, Cloudflare etkinleşince olacak.
-  - Supabase Site URL `https://yediwiki.com` yapıldı.
+- **E-posta (14 Ekim):** Supabase Auth, Resend üzerinden gönderiyor (Resend → Supabase bağlantısı kullanıcı onayıyla kuruldu).
+  - Gönderen `YediWiki <iletisim@yediwiki.com>`, smtp.resend.com:465, kullanıcı `resend`; aynı kişiye en sık 60 saniyede bir e-posta.
+  - Resend'de yediwiki.com doğrulandı (eu-west-1). DNS kayıtları Cloudflare'de: `resend._domainkey` TXT, `rsend` ve `send` CNAME (DNS only), `_dmarc` TXT.
+  - "Magic link or OTP" ve "Confirm sign up" şablonları Türkçe; gövdede ve konuda `{{ .Token }}` (kod) var, bağlantı yok.
+  - Supabase Site URL `https://yediwiki.com`.
+  - Gerçek bir okul adresiyle kodun gelişi henüz denenmedi. Resend ücretsiz planı günde 100 e-posta.
+- **Ayhan Abi turu:** Pencere değil, sayfa değişince kapanmayan 7 duraklı tur (`openWelcome`, `TOUR`); her durakta ilgili öğe ışıkla gösterilir.
 
 ## Sıradaki işler
 
-1. **Etkinleşmeyi bekle:** Cloudflare'de yediwiki.com ve yediwiki.xyz "Active" olunca https://yediwiki.com açılıyor mu, www ve .xyz yönleniyor mu, kontrol et.
-2. **Resend doğrulaması:** Resend → Domains → yediwiki.com "Verified" olmalı.
-3. **Supabase SMTP:**
-   - Resend → Settings → Integrations → Connect to Supabase. Bu bir izin verme adımı; kullanıcı onaylamalı.
-   - Alternatif: Resend'de yalnızca gönderme yetkili API anahtarı oluştur, anahtarı Supabase SMTP şifre alanına kullanıcı kendisi yapıştırsın (smtp.resend.com, 465, kullanıcı `resend`).
-   - Gönderen: `YediWiki <giris@yediwiki.com>`.
-4. **Şablonlar:** "Magic Link" ve "Confirm signup" şablonlarına Türkçe metin ve `{{ .Token }}` ekle (şablonlar ancak özel SMTP kurulunca düzenlenebiliyor). Ardından e-posta hız sınırını ayarla.
-5. **Deneme:** Yönetici, deneme ve öğrenci (kodla) girişlerini dene; Supabase advisors'a bak.
+1. **Kod e-postasını dene:** Gerçek bir `@std.yeditepe.edu.tr` adresiyle yediwiki.com'da kod iste; e-posta geliyor mu, kod çalışıyor mu bak. Resend → Logs'ta gönderim görünür.
+2. **Hız sınırı:** Supabase Auth → Rate Limits'te e-posta sınırını kullanıma göre ayarla (Resend ücretsiz planı günde 100).
+3. **Deneme:** Yönetici ve deneme hesabıyla şifreli giriş; yeni öğrenci hesabında Ayhan Abi turu; Supabase advisors.
 
 Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market ürünleri; Drive önizleme.
 
