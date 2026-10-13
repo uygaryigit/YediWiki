@@ -14,10 +14,8 @@ const CRIT = [
   { k: 'n', name: 'Not verme', lo: 'çok sıkı', hi: 'çok cömert' },
   { k: 'd', name: 'Devamsızlık', lo: 'çok katı', hi: 'esnek' }
 ];
-const NOTE_TYPES = [
-  { k: 'not', name: 'Ders notu' }, { k: 'sinav', name: 'Çıkmış sınav' }, { k: 'odev', name: 'Ödev / proje' },
-  { k: 'ozet', name: 'Özet' }, { k: 'lab', name: 'Lab' }, { k: 'diger', name: 'Diğer' }
-];
+const NOTE_TYPES = [{ k: 'not', name: 'Ders notu' }, { k: 'sinav', name: 'Çıkmış sınav' }];
+const noteType = n => (n && n.type === 'sinav' ? NOTE_TYPES[1] : NOTE_TYPES[0]);   // eski türler (özet, ödev, lab, diğer) ders notu sayılır
 const TITLES = ['Prof. Dr.', 'Doç. Dr.', 'Dr. Öğr. Üyesi', 'Öğr. Gör. Dr.', 'Öğr. Gör.', 'Arş. Gör. Dr.', 'Arş. Gör.'];
 const FACULTIES = ['Mühendislik Fakültesi', 'Fen-Edebiyat Fakültesi', 'İktisadi ve İdari Bilimler Fakültesi', 'Hukuk Fakültesi',
   'Tıp Fakültesi', 'Diş Hekimliği Fakültesi', 'Eczacılık Fakültesi', 'Sağlık Bilimleri Fakültesi', 'Güzel Sanatlar Fakültesi',
@@ -68,6 +66,9 @@ const ICONS = {
   camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   comment: '<path d="M4 5h16v11H9l-5 4z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  shrink: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   cl: '<path d="m15 5-7 7 7 7"/>',
   cr: '<path d="m9 5 7 7-7 7"/>',
@@ -1150,6 +1151,7 @@ const G = {
   'cap-unhide': (id, el) => capUnhide(id, +el.dataset.sem),
   'recent-clear': () => { ls.set('recent', []); changed(); },
   'bark': (id, el) => petDog(el),
+  'dview-max': (id, el) => dviewMax(el.closest('.dview')),
   'welcome': () => { if (hasAcc()) openWelcome(); else openAuth(); },
   'whatsnew': () => openWhatsNew(),
   'tests-reset': () => { CHANGES.flatMap(g => g.items).forEach(i => ls.set('test:' + i.id, false)); changed(); },
@@ -1512,12 +1514,71 @@ function driveCardHtml(url) {
   const info = driveInfo(url) || { k: 'drive', name: 'Drive' };
   return `<div class="dcard mt k-${info.k}"><span class="dtile">${driveGlyph(info.k)}</span><span class="dinfo"><b>${esc(info.name === 'Drive' ? 'Google Drive' : info.name)}</b><span class="dsub">Google Drive’da paylaşıldı</span><span class="url" title="${esc(url)}">${esc(url)}</span></span><span class="dacts"><a class="btn btn-primary" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('external')}Aç</a><button type="button" class="btn" data-g="copy" data-text="${esc(url)}">${icon('copy')}Kopyala</button></span></div>`;
 }
+/* Drive önizlemesi (yalnızca gerçek sitede; claude.ai sayfası dış çerçeve ve resim açmaz).
+   Bağlantıdan dosya kimliği çıkarılır: Drive/Docs'un önizleme adresi çerçeveye, küçük resmi not kartına konur. */
+function driveEmbed(url) {
+  const u = String(url || '').trim(), info = driveInfo(u);
+  if (!info || info.k === 'form') return null;
+  const m = /\/folders\/([A-Za-z0-9_-]{10,})/.exec(u) || /\/d\/([A-Za-z0-9_-]{10,})/.exec(u) || /[?&]id=([A-Za-z0-9_-]{10,})/.exec(u);
+  if (!m) return null;
+  const id = m[1], rk = (/[?&]resourcekey=([A-Za-z0-9_-]+)/.exec(u) || [])[1] || '', q = rk ? '?resourcekey=' + rk : '';
+  const src = info.k === 'folder' ? `https://drive.google.com/embeddedfolderview?id=${id}${rk ? '&resourcekey=' + rk : ''}#grid`
+    : info.k === 'doc' ? `https://docs.google.com/document/d/${id}/preview${q}`
+    : info.k === 'slide' ? `https://docs.google.com/presentation/d/${id}/preview${q}`
+    : info.k === 'sheet' ? `https://docs.google.com/spreadsheets/d/${id}/preview${q}`
+    : `https://drive.google.com/file/d/${id}/preview${q}`;
+  const thumb = info.k === 'folder' ? '' : `https://drive.google.com/thumbnail?id=${id}&sz=w640${rk ? '&resourcekey=' + rk : ''}`;
+  return { id, k: info.k, name: info.name, src, thumb };
+}
+/* Not kartındaki küçük resim; açılamazsa (paylaşım kapalı, klasör) kendini kaldırır, altındaki Drive simgesi görünür */
+const driveThumbHtml = url => { const e = S.supa ? driveEmbed(url) : null; return e && e.thumb ? `<img class="dthumb" src="${esc(e.thumb)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ''; };
+document.addEventListener('error', e => { const t = e.target; if (t && t.classList && t.classList.contains('dthumb')) t.remove(); }, true);
+function drivePreviewHtml(url, { mini = false } = {}) {
+  const e = S.supa ? driveEmbed(url) : null;
+  if (!e) return driveCardHtml(url);
+  const name = e.k === 'drive' || e.k === 'file' ? 'Drive dosyası' : e.name;
+  return `<div class="dview k-${e.k}${mini ? ' mini' : ''}">
+    <div class="dview-bar"><span class="dtile sm">${driveGlyph(e.k)}</span><b>${esc(name)}</b><span class="spacer"></span>
+      ${mini ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-g="dview-max" aria-pressed="false">${icon('expand')}<span class="dv-lbl">Tam ekran</span></button><button type="button" class="btn btn-sm btn-ghost" data-g="copy" data-text="${esc(url)}">${icon('copy')}<span class="dv-lbl">Kopyala</span></button>`}<a class="btn btn-sm btn-primary" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('external')}Drive’da aç</a></div>
+    <div class="dview-frame"><div class="dview-load" aria-hidden="true">${loadingHtml()}</div><iframe src="${esc(e.src)}" title="Not önizlemesi" loading="lazy" allow="fullscreen; autoplay" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"></iframe></div>
+    <p class="dview-help">${mini ? 'Önizleme senin Google hesabınla açılıyor olabilir; herkesin görmesi için paylaşım “Bağlantıya sahip olan herkes” olmalı.' : `Önizleme açılmazsa dosyanın paylaşımı “Bağlantıya sahip olan herkes” olmayabilir; <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Drive’da açmayı dene</a>.`}</p>
+  </div>`;
+}
+function wireDview(root) {
+  $$('.dview iframe', root).forEach(f => {
+    if (f.dataset.w) return;
+    f.dataset.w = '1';
+    const box = f.closest('.dview');
+    f.addEventListener('load', () => box.classList.add('ready'));
+    setTimeout(() => { if (!box.classList.contains('ready')) box.classList.add('ready', 'slow'); }, 12000);
+  });
+}
+/* Tam ekran: sayfanın üstüne serilir (telefonda da çalışır); Esc ya da Küçült ile döner */
+function dviewMax(box, on) {
+  if (!box) return;
+  on = on == null ? !box.classList.contains('max') : !!on;
+  box.classList.toggle('max', on);
+  document.body.classList.toggle('no-scroll', on || modalStack.length > 0);
+  const b = box.querySelector('[data-g=dview-max]');
+  if (b) { b.setAttribute('aria-pressed', String(on)); b.innerHTML = icon(on ? 'shrink' : 'expand') + `<span class="dv-lbl">${on ? 'Küçült' : 'Tam ekran'}</span>`; }
+}
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const mx = document.querySelector('.dview.max'); if (mx && !modalStack.length) { e.stopImmediatePropagation(); dviewMax(mx, false); } }, true);   // önce tam ekran kapanır, tur ve pencereler sonra
 function popFx(el) { if (!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 let drivePasteOn = false;
 function wireDriveBox(root) {
-  const inp = $('#sh-drive', root), prev = $('[data-r=dprev]', root), box = $('[data-r=dbox]', root);
+  const inp = $('#sh-drive', root), prev = $('[data-r=dprev]', root), box = $('[data-r=dbox]', root), mini = $('[data-r=dmini]', root);
   if (!inp || !prev || !box) return;
+  let miniT = 0;
+  const renderMini = () => {
+    if (!mini) return;
+    clearTimeout(miniT);
+    const v = inp.value.trim(), e = S.supa && v ? driveEmbed(v) : null;
+    if (!e) { mini.innerHTML = ''; mini.dataset.u = ''; return; }
+    if (mini.dataset.u === v) return;
+    miniT = setTimeout(() => { mini.dataset.u = v; mini.innerHTML = drivePreviewHtml(v, { mini: true }); wireDview(mini); }, 400);
+  };
   const render = () => {
+    renderMini();
     const v = inp.value.trim(), info = v ? driveInfo(v) : null;
     box.classList.toggle('ok', !!info); box.classList.toggle('bad', !!v && !info);
     if (!v) { prev.hidden = true; prev.innerHTML = ''; return; }
@@ -1779,26 +1840,26 @@ function startAyhan(stage) {
 }
 function noteCard(n) {
   if (isHidden(n) && !S.revealed.has(n.id)) return noteRow(n, { showCourse: true });
-  const type = (NOTE_TYPES.find(t => t.k === n.type) || { name: 'Not' }).name;
+  const type = noteType(n).name;
   const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
   const lk = likeCount(n);
   return `<li class="ncard"><a class="ncard-link" href="#/not/${esc(n.id)}">
-    <span class="ncard-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `${(() => { const di = driveInfo(n.drive) || { k: 'drive', name: 'Drive' }; return `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`; })()}`}${photos.length > 1 ? `<span class="ncard-pages">${photos.length} sayfa</span>` : ''}</span>
-    <span class="ncard-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span><span class="kind kind-${esc(n.type)}">${esc(type)}</span></span>
+    <span class="ncard-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `${(() => { const di = driveInfo(n.drive) || { k: 'drive', name: 'Drive' }; return `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`; })()}${driveThumbHtml(n.drive)}`}${photos.length > 1 ? `<span class="ncard-pages">${photos.length} sayfa</span>` : ''}</span>
+    <span class="ncard-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span><span class="kind kind-${noteType(n).k}">${esc(type)}</span></span>
       <span class="ncard-title">${esc(n.title)}</span>
       <span class="meta"><span>${esc(displayName(n.by, n.anon, n.nick))}</span><span>${esc(ago(n.at))}</span>${lk ? `<span>${lk} beğeni</span>` : ''}</span></span></a></li>`;
 }
 function noteRow(n, { showCourse = false } = {}) {
   if (isHidden(n) && !S.revealed.has(n.id)) return `<li><div class="is-hidden"><span>Bu not bildirimler nedeniyle gizlendi.</span><button type="button" class="btn btn-sm btn-ghost" data-g="reveal" data-id="${esc(n.id)}">Yine de göster</button></div></li>`;
-  const type = (NOTE_TYPES.find(t => t.k === n.type) || { name: 'Not' }).name;
+  const type = noteType(n).name;
   const h = n.h && S.hocas.get(n.h);
   const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
   const lk = likeCount(n), cc = commentCount('note', n.id);
-  const ico = photos.length ? `<span class="note-ico"><img data-photo="${esc(photos[0])}" alt=""></span>` : `<span class="note-ico">${icon('external')}</span>`;
+  const ico = photos.length ? `<span class="note-ico"><img data-photo="${esc(photos[0])}" alt=""></span>` : `<span class="note-ico">${icon('external')}${driveThumbHtml(n.drive)}</span>`;
   return `<li class="note-row">
     ${ico}
     <div class="note-body">
-      <div class="note-line">${showCourse ? `<a class="code" href="#/ders/${esc(n.cid)}">${esc(codeOf(n.cid))}</a>` : ''}<span class="kind kind-${esc(n.type)}">${esc(type)}</span></div>
+      <div class="note-line">${showCourse ? `<a class="code" href="#/ders/${esc(n.cid)}">${esc(codeOf(n.cid))}</a>` : ''}<span class="kind kind-${noteType(n).k}">${esc(type)}</span></div>
       <a class="note-title" href="#/not/${esc(n.id)}">${esc(n.title)}</a>
       <div class="meta">${n.tk ? `<span>${esc(termLabel(n.tk))}</span>` : ''}${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}<span>${esc(displayName(n.by, n.anon, n.nick))}</span><span>${esc(ago(n.at))}</span></div>
     </div>
@@ -2415,6 +2476,7 @@ function route() {
   closeAllModals();
   if (!$('#lightbox').hidden) closeLightbox();
   if (view && view.cleanup) { try { view.cleanup(); } catch (e) { /* yok */ } }
+  $$('.dview.max').forEach(x => dviewMax(x, false));
   const main = $('#main');
   main.innerHTML = '';
   try { view = fn(main, r) || {}; } catch (e) { console.error(e); view = {}; main.innerHTML = `<div class="wrap panel">${emptyHtml('Bir şeyler ters gitti', 'Sayfayı yenileyip tekrar dene.')}</div>`; }
@@ -3058,9 +3120,11 @@ function petDog(el, say) {
   if (n === 10) toast('Ayhan Abi seni çok sevdi 🐾');
 }
 /* Yenilikler ve test listesi */
-const CHANGES_VER = 11;
+const CHANGES_VER = 12;
 const CHANGES = [
   { tur: 'Bu tur', items: [
+    { id: 'onizleme', t: 'Notlar sitenin içinde açılıyor', d: 'yediwiki.com’da not sayfası Drive dosyasını sayfadan çıkmadan gösteriyor: PDF, Docs, Slaytlar, Tablolar ve klasörler. “Tam ekran” ile büyüt; not listelerinde dosyanın küçük resmi görünüyor. Not paylaşırken linki yapıştırınca önizleme hemen altında çıkıyor.', go: '#/dersler' },
+    { id: 'turiki', t: 'Not türü iki: Ders notu ve Çıkmış sınav', d: 'Not paylaşırken yalnızca bu ikisinden birini seçiyorsun. Daha önce özet, ödev, lab ya da diğer diye paylaşılanlar ders notu olarak görünüyor.', go: '#/paylas' },
     { id: 'tur2', t: 'Ayhan Abi seni sayfa sayfa gezdiriyor', d: 'Hoş geldin turu artık sayfadan sayfaya gidiyor ve her durakta anlattığı yeri ışıkla gösteriyor; yazılar daha büyük ve net. “Dene” ile turu şimdi izle.', go: '#/', g: 'welcome' }] },
   { tur: '9. tur', items: [
     { id: 'kadro', get t() { return `Akademik kadro: ${CAT.hocas.size} hoca`; }, d: 'Hocalar Yeditepe’nin sitesinden geldi: unvanı, fakültesi, bölümü ve verdiği dersler. Ders sayfasının Hocalar sekmesinde o dersi verenler, HocaÖlçer’de ders koduyla arama, not paylaşırken hoca listesi o dersi verenlerle başlıyor.', go: '#/hocaolcer' }] },
@@ -3520,7 +3584,7 @@ function courseNotesTab(panel, cid) {
       tSel.innerHTML = '<option value="all">Tüm dönemler</option>' + terms.map(tk => `<option value="${tk}">${esc(termLabel(tk))}</option>`).join('');
       tSel.value = terms.some(tk => String(tk) === term) ? term : 'all';
       term = tSel.value;
-      const list = all.filter(n => (type === 'all' || n.type === type) && (term === 'all' || String(n.tk) === term));
+      const list = all.filter(n => (type === 'all' || noteType(n).k === type) && (term === 'all' || String(n.tk) === term));
       list.sort(sort === 'top' ? (a, b) => likeCount(b) - likeCount(a) || b.at - a.at : (a, b) => b.at - a.at);
       if (!all.length) { el.innerHTML = emptyHtml('Bu derse henüz not paylaşılmadı', 'Notunu Google Drive’a yükleyip linkini paylaşabilirsin.', `<a class="btn btn-primary" href="#/paylas?ders=${esc(cid)}">${icon('up')}İlk notu paylaş</a>`); return; }
       if (!list.length) { el.innerHTML = emptyHtml('Bu seçimde not yok', 'Türü ya da dönemi değiştir.'); return; }
@@ -3720,7 +3784,7 @@ ROUTES['not'] = function viewNote(root, r) {
     root.innerHTML = `
       <section class="page-head"><div class="wrap">
         <a class="crumb" href="#/ders/${esc(n.cid)}">${icon('cl')}<span data-r="crumb"></span></a>
-        <div class="note-line"><span class="kind kind-${esc(n.type)}">${esc((NOTE_TYPES.find(t => t.k === n.type) || { name: 'Not' }).name)}</span>${n.tk ? `<span class="pill">${esc(termLabel(n.tk))}</span>` : ''}</div>
+        <div class="note-line"><span class="kind kind-${noteType(n).k}">${esc(noteType(n).name)}</span>${n.tk ? `<span class="pill">${esc(termLabel(n.tk))}</span>` : ''}</div>
         <h1 class="mt-s">${esc(n.title)}</h1>
         <div class="meta" data-r="meta"></div>
         <div class="note-actions" data-r="acts"></div>
@@ -3741,10 +3805,10 @@ ROUTES['not'] = function viewNote(root, r) {
     const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
     el.innerHTML = `
       ${n.desc ? `<p class="note-desc">${esc(n.desc)}</p>` : ''}
-      ${drive ? driveCardHtml(drive) : ''}
+      ${drive ? drivePreviewHtml(drive) : ''}
       ${photos.length ? `<h2 class="sub-h mt">Not fotoğrafları, ${photos.length} sayfa</h2><div class="gallery">${photos.map((p, i) => `<button type="button" data-g="photos" data-id="${esc(nid)}" data-i="${i}" aria-label="Sayfa ${i + 1}, büyüt"><img data-photo="${esc(p)}" alt=""><span class="pg">${i + 1}</span></button>`).join('')}</div>` : ''}
       ${!drive && !photos.length ? '<p class="muted">Bu notta içerik bulunmuyor.</p>' : ''}`;
-    lazyPhotos(el);
+    lazyPhotos(el); wireDview(el);
   }
   return {
     refresh() {
@@ -3792,7 +3856,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
         </div>
         <div class="form-sec"><h2>İçerik</h2>
           <div class="field"><label for="sh-drive">Google Drive linki</label>
-            <div class="drive-box" data-r="dbox"><div class="drive-in">${icon('external')}<input id="sh-drive" class="input" type="url" inputmode="url" autocomplete="off" placeholder="Linki buraya yapıştır"><button type="button" class="btn btn-sm" data-r="paste">${icon('copy')}Yapıştır</button></div><div class="drive-prev" data-r="dprev" hidden></div></div>
+            <div class="drive-box" data-r="dbox"><div class="drive-in">${icon('external')}<input id="sh-drive" class="input" type="url" inputmode="url" autocomplete="off" placeholder="Linki buraya yapıştır"><button type="button" class="btn btn-sm" data-r="paste">${icon('copy')}Yapıştır</button></div><div class="drive-prev" data-r="dprev" hidden></div></div><div data-r="dmini"></div>
             <p class="help">Drive’da linki kopyaladıktan sonra bu sayfada <b>Ctrl+V</b> yapman yeter, kutu kendiliğinden dolar.</p>
             <details class="drive-help"><summary>Linki nasıl alırım?</summary><ol class="dsteps"><li><span>1</span><div>Drive’da dosyaya ya da klasöre sağ tıkla, <b>Paylaş</b>’ı seç.</div></li><li><span>2</span><div>Genel erişimi <b>Bağlantıya sahip olan herkes</b> yap.</div></li><li><span>3</span><div><b>Bağlantıyı kopyala</b>, buraya dön ve yapıştır.</div></li></ol><a class="btn btn-sm" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer">${icon('external')}Drive’ı aç</a></details></div>
         </div>

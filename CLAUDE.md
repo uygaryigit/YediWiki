@@ -26,6 +26,8 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - Supabase Site URL `https://yediwiki.com`.
   - Gerçek bir okul adresiyle kodun gelişi henüz denenmedi. Resend ücretsiz planı günde 100 e-posta.
 - **Ayhan Abi turu:** Pencere değil, sayfa değişince kapanmayan 7 duraklı tur (`openWelcome`, `TOUR`); her durakta ilgili öğe ışıkla gösterilir.
+- **Drive önizlemesi (14 Ekim):** Yalnızca sitede (`S.supa`): not sayfasında gömülü önizleme ve tam ekran (`drivePreviewHtml`, `dviewMax`), not listelerinde küçük resim (`driveThumbHtml`), paylaşırken anlık önizleme. Artifact eski kartı gösterir.
+- **Not türleri:** Yalnızca "Ders notu" (`not`) ve "Çıkmış sınav" (`sinav`); eski türler ders notu sayılır (`noteType`).
 
 ## Sıradaki işler
 
@@ -33,7 +35,7 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
 2. **Hız sınırı:** Supabase Auth → Rate Limits'te e-posta sınırını kullanıma göre ayarla (Resend ücretsiz planı günde 100).
 3. **Deneme:** Yönetici ve deneme hesabıyla şifreli giriş; yeni öğrenci hesabında Ayhan Abi turu; Supabase advisors.
 
-Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market ürünleri; Drive önizleme.
+Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market ürünleri.
 
 ## Çalışma kuralları
 
@@ -50,4 +52,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1358/1358, `npm run test:site` 66/66, `npm run test:db` 84/84.
+- **Beklenen sonuçlar:** `npm test` 1378/1378, `npm run test:site` 76/76, `npm run test:db` 84/84.

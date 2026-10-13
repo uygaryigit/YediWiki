@@ -242,6 +242,8 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(/yalnızca Drive linki saklanır/.test(t.text('.page-intro')), 'tanıtım: yalnızca Drive linki');
     ok(/hocanın sayfasında da görünür/.test(t.text('[data-r=form]')), 'hoca seçimi açıklaması');
     ok(/El yazısı notlar için/.test(t.text('.aside')), 'yan kutu: el yazısı notları taramak');
+    eq(t.$$('#main .typepick input[name=type]').map(x => x.value).join(), 'not,sinav', 'not türü iki: ders notu ve çıkmış sınav');
+    ok(t.ev("noteType({ type: 'ozet' }).name === 'Ders notu' && noteType({ type: 'lab' }).k === 'not' && noteType({ type: 'sinav' }).name === 'Çıkmış sınav'"), 'eski türler ders notu sayılır');
     t.$('#sh-title').value = 'Vize özeti'; t.$('[data-r=rules]').checked = true;
     const nLinksiz = t.store.count('notes');
     t.$('[data-r=form]').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(80);
@@ -256,6 +258,10 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     await t.go('#/ders/DENT115');
     ok(/Vize özeti/.test(t.text('[data-r=panel]')), 'not ders sayfasında');
     ok(/1 not/.test(t.text('[data-r=facts]')), 'sayaç: ' + t.text('[data-r=facts]'));
+    eq(t.$$('[data-r=panel] [data-type]').map(x => x.dataset.type).join(), 'all,not,sinav', 'tür süzgeci: Tümü, Ders notu, Çıkmış sınav');
+    { const nid = [...t.store.docs.keys()].find(p => p.startsWith('notes/') && t.store.get(p).title === 'Vize özeti').slice(6);
+      await t.go('#/not/' + nid);
+      ok(!!t.$('#main .dcard') && !t.$('#main iframe') && !t.$('#main img.dthumb'), 'claude.ai sürümünde önizleme yok, Drive kartı var'); }
     noErr(t, 'not paylaşma');
 
     console.log('7b) yorum, not isteği ve hoca puanı (katalog dersinde)');

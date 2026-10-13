@@ -167,6 +167,27 @@ async function signup(t, be, local, prof) {
     await B.go('#/not/' + n2); await sleep(150);
     ok(/Anonim/.test(B.text('[data-r=meta]')) && !/\(sen\)/.test(B.text('[data-r=meta]')), 'B için not anonim');
     ok(!B.$('[data-g=del-note]'), 'B anonim notu silemez');
+    // Drive önizlemesi: dosya sayfanın içinde açılır, tam ekran olur, Esc ile küçülür
+    { const fr = B.$('#main .dview iframe');
+      ok(fr && fr.getAttribute('src') === 'https://drive.google.com/file/d/Kalkulusanonim/preview', 'not sayfasında Drive önizlemesi: ' + (fr && fr.getAttribute('src')));
+      ok(fr && /allow-scripts/.test(fr.getAttribute('sandbox') || '') && fr.getAttribute('loading') === 'lazy', 'önizleme çerçevesi kısıtlı ve gecikmeli yüklenir');
+      ok(!!B.$('#main .dview a[href$="/Kalkulusanonim/view"][target=_blank]'), 'Drive’da aç bağlantısı');
+      B.$('#main [data-g=dview-max]').click(); await sleep(30);
+      ok(B.$('#main .dview').classList.contains('max') && B.w.document.body.classList.contains('no-scroll'), 'tam ekran açıldı');
+      B.w.document.dispatchEvent(new B.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await sleep(30);
+      ok(!B.$('#main .dview').classList.contains('max') && !B.w.document.body.classList.contains('no-scroll'), 'Esc ile küçüldü'); }
+    await B.go('#/ders/MATH131'); await sleep(150);
+    ok(!!B.$('[data-r=panel] img.dthumb[src="https://drive.google.com/thumbnail?id=Kalkulusanonim&sz=w640"]'), 'not listesinde Drive küçük resmi');
+    ok(B.$$('[data-r=panel] [data-type]').map(x => x.dataset.type).join() === 'all,not,sinav', 'tür süzgeci: Tümü, Ders notu, Çıkmış sınav');
+    await B.go('#/paylas?ders=CSE211'); await sleep(80);
+    ok(B.$$('#main .typepick input[name=type]').map(x => x.value).join() === 'not,sinav', 'paylaşırken iki tür: ders notu ve çıkmış sınav');
+    B.typeIn(B.$('#sh-drive'), 'https://docs.google.com/document/d/1AbCdEfGhIjK/edit?usp=sharing'); await sleep(550);
+    { const fr = B.$('[data-r=dmini] .dview.mini iframe');
+      ok(fr && fr.getAttribute('src') === 'https://docs.google.com/document/d/1AbCdEfGhIjK/preview', 'paylaşırken link yapıştırılınca önizleme: ' + (fr && fr.getAttribute('src'))); }
+    B.typeIn(B.$('#sh-drive'), 'https://example.com/not'); await sleep(80);
+    ok(!B.$('[data-r=dmini] iframe'), 'Drive linki değilse önizleme kalkar');
+    B.typeIn(B.$('#sh-drive'), ''); await sleep(30);
+    await B.go('#/not/' + n2); await sleep(150);
     B.$('[data-g=like-note]').click(); await sleep(300);
     { const d = await doc(be, 'notes', n2), k = B.ev(`pk('notes', ${JSON.stringify(n2)})`);
       ok(d.likes && d.likes[k] === true && !d.likes[bid], 'beğeni B\'nin bu nottaki takma adıyla'); }
