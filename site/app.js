@@ -1844,17 +1844,10 @@ async function toggleMyCourse(cid) {
   const pp = privPath();
   if (!S.readOnly && pp) { try { const ref = S.db.doc(pp); if (S.priv) await ref.update({ myc: next }); else await ref.set({ myc: next }); } catch (e) { /* bu cihazda kalır */ } }
 }
-function myCoursesHtml() {
-  if (!myAcc()) return '';
-  const list = myCourses().filter(id => S.courses.has(id));
-  const head = `<div class="sec-head"><h2>${icon('bookmark')}Derslerim</h2><a class="sec-link" href="#/dersler?b=__mine">${list.length ? 'Tümü' : 'Ders seç'}</a></div>`;
-  if (!list.length) return head + '<p class="myc-empty">Bu dönem aldığın dersleri ekle, yeni not düşünce ilk sen gör. Ders sayfasındaki <b>Derslerime ekle</b> düğmesini kullan.</p>';
-  return head + `<ul class="myc-list">${list.slice(0, 8).map(id => {
-    const ns = notesWhere(n => n.cid === id && !isHidden(n));
-    const seen = ls.get('cseen:' + S.me + ':' + id, null);
-    const fresh = seen == null ? 0 : ns.filter(n => (n.at || 0) > seen && !isMine(n)).length;
-    return `<li><a class="myc" href="#/ders/${esc(id)}"><span class="code">${esc(codeOf(id))}</span><span class="myc-name">${esc((S.courses.get(id) || {}).name || '')}</span><span class="myc-n">${ns.length} not${fresh ? `<i>${fresh} yeni</i>` : ''}</span></a></li>`;
-  }).join('')}</ul>`;
+// Derslerim'deki bir derse, o ders sayfasına son bakıştan sonra başkalarının eklediği not sayısı (Dersler > Derslerim listesinde rozet)
+function freshNotes(id) {
+  const seen = ls.get('cseen:' + S.me + ':' + id, null);
+  return seen == null ? 0 : notesWhere(n => n.cid === id && !isHidden(n) && (n.at || 0) > seen && !isMine(n)).length;
 }
 function notifItems() {
   if (!myAcc()) return [];
@@ -1881,7 +1874,7 @@ function openNotifs() {
   if (!needAcc()) return;
   const st = notifState();
   const rows = st.items.map(x => {
-    if (x.r) return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.r.nid)}" data-close>${avatarHtml(x.r.doneBy, { anon: !x.r.doneBy, cls: 'sm' })}<span><span><b>${esc(x.r.doneBy ? displayName(x.r.doneBy, false, '') : 'Anonim biri')}</b>, ${esc(codeOf(x.r.cid))} ${esc(reqKind(x.r.kind).toLocaleLowerCase('tr'))} isteğini karşıladı 🎉</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
+    if (x.r) return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.r.nid)}" data-close>${avatarHtml(x.r.doneBy, { anon: !x.r.doneBy, cls: 'sm' })}<span><span><b>${esc(x.r.doneBy ? displayName(x.r.doneBy, false, '') : 'Anonim biri')}</b>, ${esc(codeOf(x.r.cid))} not isteğini karşıladı 🎉</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
     const n = S.notes.get(x.c.tid) || {};
     const who = x.c.anon ? 'Anonim' : displayName(x.c.by, false, x.c.nick);
     return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.c.tid)}" data-close>${avatarHtml(x.c.anon ? '' : x.c.by, { cls: 'sm' })}<span><span><b>${esc(who)}</b>, “${esc(n.title || 'notun')}” notuna yorum yazdı</span><span class="nf-text">${esc(String(x.c.text || '').slice(0, 90))}</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
@@ -2998,9 +2991,10 @@ function wireLoot(root) {
 }
 
 /* ================= Ana sayfa ================= */
-/* ================= Tur 3: not istekleri, DersÖlçer, mezuniyet yolu, son aramalar, yenilikler ================= */
-const REQ_KINDS = [{ k: 'vize', name: 'Vize notu' }, { k: 'final', name: 'Final notu' }, { k: 'ozet', name: 'Konu özeti' }, { k: 'cikmis', name: 'Çıkmış sorular' }, { k: 'genel', name: 'Ders notu' }];
-const reqKind = k => (REQ_KINDS.find(x => x.k === k) || REQ_KINDS[REQ_KINDS.length - 1]).name;
+/* ================= Tur 3: not istekleri, DersÖlçer, mezuniyet yolu, son aramalar ================= */
+// İsteğin türü yok: kişi ne lazım olduğunu kısaca yazar (boş da bırakabilir). Eski kayıtlardaki kind alanı okunmaz.
+const reqTitle = r => (r && typeof r.text === 'string' && r.text.trim()) || 'Not isteği';
+const reqNorm = s => fold(String(s || '')).replace(/\s+/g, ' ').trim();
 function requestsWhere(fn) { const out = []; for (const [id, r] of S.requests) if (r && typeof r === 'object' && fn(r)) out.push(Object.assign({ id }, r)); return out; }
 const plusCount = r => Object.values((r && r.plus) || {}).filter(Boolean).length;
 const plusedByMe = r => { const k = okey(r); return !!(k && r && r.plus && r.plus[k]); };
@@ -3011,7 +3005,7 @@ function reqItemHtml(r, { showCourse = false } = {}) {
   const acts = r.done
     ? (r.nid ? `<a class="btn btn-sm" href="#/not/${esc(r.nid)}">${icon('book')}Nota git</a>` : '')
     : `<button type="button" class="req-plus${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor"><span>Ben de</span><b>${n}</b></button><a class="btn btn-sm btn-primary" href="#/paylas?ders=${esc(r.cid)}&istek=${esc(r.id)}">${icon('up')}Ben paylaşırım</a>`;
-  return `<li class="req${r.done ? ' done' : ''}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqKind(r.kind))}</b>${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span>${r.text ? `<span class="req-text">${esc(r.text)}</span>` : ''}<span class="meta"><span>${esc(displayName(r.by, false, ''))}</span><span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${esc(r.doneBy ? displayName(r.doneBy, false, '') : 'Anonim')}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
+  return `<li class="req${r.done ? ' done' : ''}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span><span class="meta"><span>${esc(displayName(r.by, false, ''))}</span><span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${esc(r.doneBy ? displayName(r.doneBy, false, '') : 'Anonim')}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
 }
 function requestBoxHtml(cid) {
   const list = openRequests(cid), people = list.reduce((s, r) => s + demandOf(r), 0);
@@ -3021,19 +3015,19 @@ function openRequestModal(cid) {
   if (!needAcc()) return;
   if (openRequests(cid).filter(r => r.by === S.me).length >= 3) { toast('Bu ders için en fazla 3 açık isteğin olabilir.', 'err'); return; }
   const m = openModal({ title: codeOf(cid) + ' için not iste', body: `<form novalidate>
-      <fieldset class="field"><legend class="label">Ne lazım?</legend><div class="req-kinds">${REQ_KINDS.map((k, i) => `<label class="rk"><input type="radio" name="rk" value="${k.k}"${i === 0 ? ' checked' : ''}><span>${esc(k.name)}</span></label>`).join('')}</div></fieldset>
-      <div class="field"><label for="rq-text">Kısa açıklama <span class="opt">isteğe bağlı</span></label><input id="rq-text" class="input" maxlength="140" autocomplete="off" placeholder="Örn. 3. hafta, bağlı listeler"></div>
+      <div class="field"><label for="rq-text">Ne lazım? <span class="opt">isteğe bağlı</span></label><input id="rq-text" class="input" maxlength="140" autocomplete="off" placeholder="Örn. 3. hafta, bağlı listeler"><p class="help">Boş bırakırsan bu dersten herhangi bir not istemiş olursun.</p></div>
       <p class="help">İsteğin ders sayfasında ve ana sayfada görünür. Notu paylaşıp isteği karşılayan kişi ${KUBBE.fill} kubbe kazanır.</p>
       <p class="err" role="alert"></p>
       <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">İste</button></div></form>` });
   $('form', m.el).addEventListener('submit', async e => {
     e.preventDefault();
-    const kind = ($('input[name=rk]:checked', m.el) || {}).value || 'genel', text = $('#rq-text', m.el).value.trim().slice(0, 140);
-    const dup = openRequests(cid).find(r => r.kind === kind);
+    const text = $('#rq-text', m.el).value.trim().replace(/\s+/g, ' ').slice(0, 140);
+    // aynı ders için aynı istek (boş istek de) zaten açıksa yenisi açılmaz: başkasınınsa ona katılınır
+    const dup = openRequests(cid).find(r => reqNorm(r.text) === reqNorm(text));
     if (dup && dup.by !== S.me) { m.close(); await togglePlus(dup.id, true); return; }
-    if (dup) { $('.err', m.el).textContent = 'Bu türde açık bir isteğin zaten var.'; return; }
+    if (dup) { $('.err', m.el).textContent = 'Bu ders için aynı isteğin zaten açık.'; return; }
     const ref = S.db.collection('requests').doc();
-    if (await write(() => ref.set({ cid, kind, text, by: S.me, at: Date.now(), plus: {}, done: false, nid: '', doneBy: '', doneAt: 0 }), 'İsteğin yayınlandı')) m.close();
+    if (await write(() => ref.set({ cid, text, by: S.me, at: Date.now(), plus: {}, done: false, nid: '', doneBy: '', doneAt: 0 }), 'İsteğin yayınlandı')) m.close();
   });
 }
 async function togglePlus(id, join) {
@@ -3059,7 +3053,7 @@ function renderReqBanner(root) {
   const r = S.shareReq ? S.requests.get(S.shareReq) : null;
   let b = $('.req-banner', root);
   if (!r || r.done) { if (b) b.remove(); return; }
-  const h = `<span aria-hidden="true">📣</span><span><b>${esc(displayName(r.by, false, ''))}</b> bu dersten <b>${esc(reqKind(r.kind).toLocaleLowerCase('tr'))}</b> istiyor (${esc(codeOf(r.cid))}). Paylaştığın not bu isteği karşılayacak${r.by === S.me ? '' : `, +${KUBBE.fill} kubbe`}.</span>`;
+  const h = `<span aria-hidden="true">📣</span><span><b>${esc(displayName(r.by, false, ''))}</b> ${esc(codeOf(r.cid))} dersinden not istiyor${r.text ? `: “${esc(r.text)}”` : ''}. Paylaştığın not bu isteği karşılayacak${r.by === S.me ? '' : `, +${KUBBE.fill} kubbe`}.</span>`;
   if (!b) { b = document.createElement('div'); b.className = 'req-banner'; intro.appendChild(b); }
   if (b.dataset.h !== h) { b.dataset.h = h; b.innerHTML = h; }
 }
@@ -3080,9 +3074,14 @@ ROUTES['istekler'] = function viewRequests(root) {
   } };
   return api;
 };
-/* DersÖlçer: zorluk ve iş yükü */
-const ZOR_L = ['Çok kolay', 'Kolay', 'Orta', 'Zor', 'Çok zor'], YUK_L = ['Çok az', 'Az', 'Orta', 'Fazla', 'Çok fazla'];
+/* DersÖlçer: zorluk ve iş yükü
+   Oy kaydındaki z ve y DERECEDİR: 1 çok kolay / çok az ... 5 çok zor / çok fazla (eski kayıtlar da böyle, göç gerekmez).
+   Ekranda PUAN gösterilir: puan = 6 − derece. 1 en zor / en ağır, 5 en kolay / en hafif; HocaÖlçer gibi yüksek puan öğrencinin lehine. */
+const ZOR_W = ['Çok zor', 'Zor', 'Orta', 'Kolay', 'Çok kolay'], YUK_W = ['Çok ağır', 'Ağır', 'Orta', 'Hafif', 'Çok hafif'];   // puan 1..5
+const HEAT = ['#E0262F', '#F2551F', '#F29A0B', '#7DBB2E', '#22A86A'];   // puan 1..5: kırmızıdan yeşile
 const dec1 = x => (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
+const puanOf = deg => 6 - deg, degOf = puan => 6 - puan;
+const lvOf = p => Math.min(5, Math.max(1, Math.round(p)));
 function zorIndex() {
   return memoized('zor', () => {
     const m = new Map();
@@ -3108,28 +3107,62 @@ function zorWrite(cid, val) {
 }
 function zorStats(cid) {
   const o = zorIndex().get(cid), v = o ? [...o.values()] : [];
-  if (!v.length) return { n: 0, z: 0, y: 0 };
-  return { n: v.length, z: v.reduce((s, x) => s + x.z, 0) / v.length, y: v.reduce((s, x) => s + x.y, 0) / v.length };
+  if (!v.length) return { n: 0, zor: 0, yuk: 0 };
+  const avg = k => v.reduce((s, x) => s + x[k], 0) / v.length;
+  return { n: v.length, zor: puanOf(avg('z')), yuk: puanOf(avg('y')) };   // puan: 1 en zor / en ağır
 }
-const lvl = (v, L) => L[Math.min(4, Math.max(0, Math.round(v) - 1))];
-function meterHtml(v, kind) { const full = Math.round(v); return `<span class="mtr mtr-${kind}" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= full ? 'on' : ''}"></i>`).join('')}</span>`; }
-function zchipHtml(cid) { const z = zorStats(cid); return z.n ? `<span class="zchip" title="Zorluk ${dec1(z.z)}/5, ${z.n} oy">🌶️ ${dec1(z.z)}</span>` : ''; }
+// Acı biber: rengi zorluğa göre kırmızıdan yeşile döner; zor derste üstünden dalga dalga ısı çıkar
+function chiliSvg(lv, { gray = false, mini = false } = {}) {
+  const c = gray ? '#C3C9D8' : HEAT[lv - 1], cap = gray ? '#A3ABBE' : '#2A9A55', capD = gray ? '#8E97AD' : '#1E7A41';
+  const heat = gray || mini ? 0 : Math.max(0, 4 - lv);   // puan 1: üç dalga, 2: iki, 3: bir
+  const waves = [[13, 30], [21, 25], [29, 28]].slice(0, heat).map(([x, y], i) => `<path class="ch-heat ch-h${i}" d="M${x} ${y}c-2.6-2.4 2.6-4.6 0-7.2s2.6-4.6 0-7.2" stroke="${c}"/>`).join('');
+  return `<svg class="chili" viewBox="0 0 64 64" aria-hidden="true" focusable="false">${waves ? `<g fill="none" stroke-linecap="round" stroke-width="2.6" opacity=".85">${waves}</g>` : ''}<path d="M35.5 19C43 14.5 50.5 16 51.6 22.4c1.7 9.6-3.6 20.4-13.4 27.8C30.2 56.2 20 59.4 10.8 58.6c-2.4-.2-2.9-2.9-.7-3.7 8.8-3 16.4-8.4 20.6-16.6 3.3-6.5 3-13.4 4.8-19.3z" fill="${c}"/><path d="M11.6 57.7c9.4.4 18.7-2.6 26.6-8.7" fill="none" stroke="#000" stroke-opacity=".16" stroke-width="2.4" stroke-linecap="round"/><path d="M45.2 24.2c1.3 6.4-1.4 13-6.8 18" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3" stroke-linecap="round"/><path d="M47 21.6c.4 1.4.5 2.6.4 3.6" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2.4" stroke-linecap="round"/><path d="M32.6 20.3c1.8-5.6 7.4-8.3 12.6-7.3 4.4.9 7.6 4 8.2 8.4-2.6-1.6-5.5-1.5-7.8.3-2.2-2.4-6-3.2-9.2-1.4-1.3-.4-2.6-.5-3.8 0z" fill="${cap}"/><path d="M36.6 20c2.8-1.6 6.2-1.2 8.6 1.1" fill="none" stroke="${capD}" stroke-width="1.4" stroke-linecap="round"/><path d="M45.4 13.6c-.4-4.6 2.4-8.2 7.4-8.6" fill="none" stroke="${cap}" stroke-width="3.6" stroke-linecap="round"/></svg>`;
+}
+// Kitap yığını: iş yükü ağırlaştıkça yığın yükselir (puan 1: beş kitap ... puan 5: tek kitap)
+const BOOKS = [['#3D5BD9', 48, 0, 0], ['#FFB020', 42, 3, -2.5], ['#FF4D6D', 45, -2, 2], ['#22A86A', 38, 4, -3], ['#7C5CFF', 41, -1, 2.5]];
+function booksSvg(lv, { gray = false } = {}) {
+  const n = gray ? 3 : 6 - lv;
+  const g = BOOKS.slice(0, n).map(([col, w, dx, rot], i) => {
+    const r2 = v => Math.round(v * 100) / 100, h = 8.6, y = r2(56.4 - (i + 1) * h - i * .5), x = r2(32 - w / 2 + dx), cx = r2(x + w / 2), cy = r2(y + h / 2), f = gray ? ['#B9C0D1', '#C9CEDB', '#AEB6C9'][i] : col;
+    return `<g class="bk" style="animation-delay:${i * 70}ms"><g transform="rotate(${rot} ${cx} ${cy})"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.2" fill="${f}"/><rect x="${r2(x + w - 7.4)}" y="${r2(y + 1.6)}" width="5.6" height="${r2(h - 3.2)}" rx="1.2" fill="#FFF7E6"/><path d="M${r2(x + w - 7.4)} ${r2(y + 3.5)}h5.6M${r2(x + w - 7.4)} ${r2(y + 5.2)}h5.6" stroke="#E6D9BC" stroke-width=".8"/><rect x="${r2(x + 4.4)}" y="${y}" width="2.6" height="${h}" fill="#fff" fill-opacity=".3"/><rect x="${r2(x + 8.4)}" y="${y}" width="1.2" height="${h}" fill="#fff" fill-opacity=".22"/></g></g>`;
+  }).join('');
+  return `<svg class="books" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><ellipse cx="32" cy="58.6" rx="23" ry="2.4" fill="#000" fill-opacity=".08"/>${g}</svg>`;
+}
+function zchipHtml(cid) {
+  const st = zorStats(cid); if (!st.n) return '';
+  const lv = lvOf(st.zor);
+  return `<span class="zchip" style="--hc:${HEAT[lv - 1]}" title="Zorluk ${dec1(st.zor)}/5, ${ZOR_W[lv - 1].toLocaleLowerCase('tr')} (1 en zor, 5 en kolay), ${st.n} oy">${chiliSvg(lv, { mini: true })}<b>${dec1(st.zor)}</b></span>`;
+}
+function dolTileHtml(kind, p, n) {
+  const z = kind === 'z', lv = n ? lvOf(p) : 3, W = z ? ZOR_W : YUK_W;
+  return `<div class="dol-tile dol-${kind}${n ? '' : ' empty'}" style="--hc:${n ? HEAT[lv - 1] : '#9AA3BA'}">
+    <span class="dol-art">${z ? chiliSvg(lv, { gray: !n }) : booksSvg(lv, { gray: !n })}</span>
+    <span class="dol-lbl">${z ? 'Zorluk' : 'İş yükü'}</span>
+    ${n ? `<span class="dol-num"><b>${dec1(p)}</b><small>/5</small></span><span class="dol-word">${W[lv - 1]}</span>` : '<span class="dol-none">Henüz oy yok</span>'}
+    <span class="dol-scale"><span class="dol-track" aria-hidden="true">${n ? `<i style="left:${((p - 1) / 4 * 100).toFixed(1)}%"></i>` : ''}</span><span class="dol-ends"><span>1 ${z ? 'en zor' : 'en ağır'}</span><span>5 ${z ? 'en kolay' : 'en hafif'}</span></span></span>
+  </div>`;
+}
 function zorCardHtml(cid) {
   const st = zorStats(cid), mine = !!myZor(cid);
-  const item = (lbl, v, kind, L) => `<div class="zor-item"><span class="zor-lbl">${lbl}</span>${st.n ? `${meterHtml(v, kind)}<b>${dec1(v)}</b><span class="zor-word">${esc(lvl(v, L))}</span>` : '<span class="zor-none">Henüz oy yok</span>'}</div>`;
-  return `<div class="zor-card">${item('🌶️ Zorluk', st.z, 'z', ZOR_L)}${item('📚 İş yükü', st.y, 'y', YUK_L)}<div class="zor-foot"><span>${st.n ? st.n + ' öğrenci oyladı' : 'İlk oyu sen ver'}</span><button type="button" class="btn btn-sm" data-g="zor" data-id="${esc(cid)}">${mine ? 'Oyunu değiştir' : 'Oy ver'}</button></div></div>`;
+  return `<section class="zor-card dol" aria-label="DersÖlçer: zorluk ve iş yükü">
+    <div class="dol-head"><span class="dol-t">DersÖlçer</span><span class="dol-n">${st.n ? st.n + ' öğrenci oyladı' : 'İlk oyu sen ver'}</span><button type="button" class="btn btn-sm${mine ? '' : ' btn-primary'}" data-g="zor" data-id="${esc(cid)}">${mine ? 'Oyunu değiştir' : 'Oy ver'}</button></div>
+    <div class="dol-grid">${dolTileHtml('z', st.zor, st.n)}${dolTileHtml('y', st.yuk, st.n)}</div>
+  </section>`;
 }
 function openZorModal(cid) {
   if (!needAcc()) return;
   const c = S.courses.get(cid); if (!c) return;
-  const cur = myZor(cid) || {};
-  const scale = (name, label, L, val) => `<fieldset class="field"><legend class="label">${label}</legend><div class="zor-scale">${L.map((l, i) => `<label class="zs"><input type="radio" name="${name}" value="${i + 1}"${val === i + 1 ? ' checked' : ''}><span><b>${i + 1}</b>${esc(l)}</span></label>`).join('')}</div></fieldset>`;
-  const m = openModal({ title: codeOf(cid) + ' nasıl bir ders?', body: `<form novalidate>${scale('z', '🌶️ Zorluk', ZOR_L, cur.z)}${scale('y', '📚 İş yükü (ödev, proje, okuma)', YUK_L, cur.y)}<p class="err" role="alert"></p><div class="modal-foot">${cur.z ? '<button type="button" class="btn btn-ghost" data-r="zdel">Oyumu kaldır</button>' : ''}<button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">Kaydet</button></div></form>` });
+  const cur = myZor(cid), curZ = cur ? puanOf(cur.z) : 0, curY = cur ? puanOf(cur.y) : 0;   // seçenekler puandır
+  const scale = (name, label, hint, W, val, art) => `<fieldset class="field zfs"><legend class="label zl">${art(1)}<span>${label}</span><span class="opt">${hint}</span></legend><div class="zor-scale">${W.map((l, i) => `<label class="zs" style="--hc:${HEAT[i]}"><input type="radio" name="${name}" value="${i + 1}"${val === i + 1 ? ' checked' : ''}><span>${art(i + 1)}<b>${i + 1}</b>${esc(l)}</span></label>`).join('')}</div></fieldset>`;
+  const m = openModal({ title: codeOf(cid) + ' nasıl bir ders?', body: `<form novalidate>
+      ${scale('z', 'Zorluk', '1 en zor, 5 en kolay', ZOR_W, curZ, lv => chiliSvg(lv, { mini: true }))}
+      ${scale('y', 'İş yükü', 'ödev, proje, okuma; 1 en ağır, 5 en hafif', YUK_W, curY, lv => booksSvg(lv))}
+      <p class="err" role="alert"></p><div class="modal-foot">${cur ? '<button type="button" class="btn btn-ghost" data-r="zdel">Oyumu kaldır</button>' : ''}<button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">Kaydet</button></div></form>` });
   $('form', m.el).addEventListener('submit', async e => {
     e.preventDefault();
-    const z = +(($('input[name=z]:checked', m.el) || {}).value || 0), y = +(($('input[name=y]:checked', m.el) || {}).value || 0);
-    if (!z || !y) { $('.err', m.el).textContent = 'İki soruyu da işaretle.'; return; }
-    if (await write(() => zorWrite(cid, { z, y, at: Date.now() }), 'Oyun kaydedildi')) m.close();
+    const zp = +(($('input[name=z]:checked', m.el) || {}).value || 0), yp = +(($('input[name=y]:checked', m.el) || {}).value || 0);
+    if (!zp || !yp) { $('.err', m.el).textContent = 'İki soruyu da işaretle.'; return; }
+    if (await write(() => zorWrite(cid, { z: degOf(zp), y: degOf(yp), at: Date.now() }), 'Oyun kaydedildi')) m.close();
   });
   const del = $('[data-r=zdel]', m.el);
   if (del) del.addEventListener('click', async () => { if (await write(() => zorWrite(cid, null), 'Oyun kaldırıldı')) m.close(); });
@@ -3410,7 +3443,6 @@ ROUTES[''] = function viewHome(root) {
   </section>
   <div class="wrap home-main" data-r="main">
     <div class="home-left">
-      <section class="home-sec mycs" data-r="mycs" hidden></section>
       <section class="home-sec">
         <div class="sec-head"><h2>Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn" data-ns="hot" aria-pressed="true">🔥 Revaçta</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
         <div data-r="notes"></div>
@@ -3498,7 +3530,6 @@ ROUTES[''] = function viewHome(root) {
       const tryList = (top.length ? top : [...S.courses.keys()]).slice(0, 4);
       R('try').hidden = !tryList.length;
       R('try').innerHTML = tryList.length ? 'Hızlı erişim: ' + tryList.map(id => `<a class="code" href="#/ders/${esc(id)}">${esc(codeOf(id))}</a>`).join('') : '';
-      { const mc = R('mycs'), h = myCoursesHtml(); mc.hidden = !h; if (mc.dataset.h !== h) { mc.dataset.h = h; mc.innerHTML = h; } }
       { const rc = R('recent'), h = recentHtml(); rc.hidden = !h; if (rc.dataset.h !== h) { rc.dataset.h = h; rc.innerHTML = h; } }
       { const list = openRequests().slice(0, 3), h = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>` : '', el2 = R('reqs'); R('reqsec').hidden = !h; if (el2.dataset.h !== h) { el2.dataset.h = h; el2.innerHTML = h; } }
       // Revaçta: oy ve tazelik (▼ alan aşağı iner, eksiye düşen burada görünmez); Yeni: son paylaşılanlar. Haftanın notu üstte, listede tekrar etmez.
@@ -3592,7 +3623,7 @@ ROUTES['dersler'] = function viewCourses(root, r) {
       const match = id => { const c = S.courses.get(id) || {}; return !q || id.toLowerCase().includes(qc) || foldName(c.name).includes(q); };
       if (bol === '__mine') {
         const mine = myCourses().filter(id => S.courses.has(id) && match(id));
-        el.innerHTML = '<div class="bol-head"><h2>Derslerim</h2><p class="muted">Ders sayfalarındaki “Derslerime ekle” düğmesiyle eklediğin dersler.</p></div>' + (mine.length ? `<ul class="list">${mine.map(id => courseRow(id)).join('')}</ul>` : emptyHtml('Henüz ders eklemedin', 'Bir ders sayfası açıp “Derslerime ekle”ye bas.'));
+        el.innerHTML = '<div class="bol-head"><h2>Derslerim</h2><p class="muted">Ders sayfalarındaki “Derslerime ekle” düğmesiyle eklediğin dersler. Son bakışından sonra yeni not düşen derste rozet görürsün.</p></div>' + (mine.length ? `<ul class="list">${mine.map(id => { const f = freshNotes(id); return courseRow(id, f ? `<span class="row-sub"><span class="fresh-n">${f} yeni not</span></span>` : ''); }).join('')}</ul>` : emptyHtml('Henüz ders eklemedin', 'Bir ders sayfası açıp “Derslerime ekle”ye bas.'));
         return;
       }
       if (bol) {
@@ -3708,14 +3739,19 @@ ROUTES['ders'] = function viewCourse(root, r) {
     root.innerHTML = `
       <section class="page-head"><div class="wrap">
         <a class="crumb" href="#/dersler">${icon('cl')}Dersler</a>
-        <div class="course-head"><span class="code code-xl">${esc(codeOf(cid))}</span><div><h1 data-r="name"></h1><p class="muted" data-r="dept"></p></div></div>
-        <div class="head-actions">
-          <a class="btn btn-primary" href="#/paylas?ders=${esc(cid)}">${icon('up')}Not paylaş</a>
-          <button type="button" class="btn btn-ghost myc-btn" data-g="myc" data-id="${esc(cid)}" data-r="myc" aria-pressed="false" hidden>${icon('bookmark')}<span>Derslerime ekle</span></button>
-          <button type="button" class="btn btn-ghost" data-g="share" data-title="${esc(codeOf(cid))} ders notları" data-hash="#/ders/${esc(cid)}">${icon('share')}Paylaş</button>
-          <button type="button" class="btn btn-ghost" data-g="edit-course" data-id="${esc(cid)}" data-r="edit" hidden>${icon('edit')}Düzenle</button>
+        <div class="course-top">
+          <div class="course-info">
+            <div class="course-head"><span class="code code-xl">${esc(codeOf(cid))}</span><div><h1 data-r="name"></h1><p class="muted" data-r="dept"></p></div></div>
+            <div class="head-actions">
+              <a class="btn btn-primary" href="#/paylas?ders=${esc(cid)}">${icon('up')}Not paylaş</a>
+              <button type="button" class="btn btn-ghost myc-btn" data-g="myc" data-id="${esc(cid)}" data-r="myc" aria-pressed="false" hidden>${icon('bookmark')}<span>Derslerime ekle</span></button>
+              <button type="button" class="btn btn-ghost" data-g="share" data-title="${esc(codeOf(cid))} ders notları" data-hash="#/ders/${esc(cid)}">${icon('share')}Paylaş</button>
+              <button type="button" class="btn btn-ghost" data-g="edit-course" data-id="${esc(cid)}" data-r="edit" hidden>${icon('edit')}Düzenle</button>
+            </div>
+            <p class="head-facts" data-r="facts"></p>
+          </div>
+          <div class="course-dol" data-r="zor"></div>
         </div>
-        <p class="head-facts" data-r="facts"></p><div data-r="zor"></div>
         ${tabsHtml(TABS, tab)}
       </div></section>
       <div class="wrap"><div class="panel" role="tabpanel" data-r="panel"></div></div>`;
@@ -4046,19 +4082,16 @@ ROUTES['paylas'] = function viewShare(root, r) {
     <div class="page-intro"><h1>Not paylaş</h1><p>${gdCfg() ? 'Notunu Google Drive’dan seç, gerisini YediWiki halleder.' : 'Notunu Google Drive’a yükle, linkini burada paylaş.'} Dosya YediWiki’ye yüklenmez, yalnızca Drive linki saklanır. Her not <b>${KUBBE.note} kubbe</b> kazandırır.</p></div>
     <div class="empty mb2" data-r="locked" hidden><h3>Önce Yeditepe hesabın gerekiyor</h3><p>Not paylaşmak, yorum yazmak ve puan vermek için okul e-postanla bir hesap aç.</p><button type="button" class="btn btn-primary" data-g="auth">${icon('star')}Hesabımla gir</button></div>
     <div class="share-grid" data-r="grid">
-      <form class="form-card" novalidate data-r="form">
-        <div class="form-sec"><h2>Ders</h2>
-          <div class="two">
-            <div class="field cb-wrap"><label for="sh-code">Ders kodu</label><input id="sh-code" class="input" maxlength="12" placeholder="Örn. CSE 211" autocapitalize="characters" value="${esc(pre ? pre.code : '')}"><p class="help" data-r="code-help">Listeden seç: harf ve üç rakam, örneğin MATH 131.</p></div>
-            <div class="field"><label for="sh-hoca">Hoca <span class="opt">isteğe bağlı</span></label><select id="sh-hoca" class="select"><option value="">Hoca seçilmedi</option></select><div class="cb-wrap mt-xs"><input id="sh-hoca-q" class="input sm" autocomplete="off" placeholder="Listede yoksa adıyla ara" aria-label="Hocayı adıyla ara"></div><p class="help">Seçersen not hocanın sayfasında da görünür.</p></div>
+      <form class="form-card share-form" novalidate data-r="form">
+        <div class="form-sec">
+          <div class="quad" data-r="quad">
+            <div class="field cb-wrap q-code"><label for="sh-code">Ders kodu</label><input id="sh-code" class="input" maxlength="12" placeholder="Örn. CSE 211" autocapitalize="characters" value="${esc(pre ? pre.code : '')}"><p class="help" data-r="code-help">Listeden seç, örneğin MATH 131.</p></div>
+            <div class="field q-hoca"><label for="sh-hoca">Hoca <span class="opt">isteğe bağlı</span></label><select id="sh-hoca" class="select"><option value="">Hoca seçilmedi</option></select><p class="help">Not hocanın sayfasında da görünür.</p></div>
+            <div class="field q-term"><label for="sh-term">Dönem</label><select id="sh-term" class="select">${terms.map((tk, i) => `<option value="${tk}"${i === 0 ? ' selected' : ''}>${esc(termLabel(tk))}</option>`).join('')}</select></div>
+            <div class="field q-hq"><label for="sh-hoca-q">Hoca listede yoksa</label><div class="cb-wrap"><input id="sh-hoca-q" class="input" autocomplete="off" placeholder="Adıyla ara"></div></div>
           </div>
-          <div class="field"><label for="sh-term">Dönem</label><select id="sh-term" class="select">${terms.map((tk, i) => `<option value="${tk}"${i === 0 ? ' selected' : ''}>${esc(termLabel(tk))}</option>`).join('')}</select></div>
-        </div>
-        <div class="form-sec"><h2>Not</h2>
-          <fieldset class="field"><legend class="label">Tür</legend><div class="typepick">${NOTE_TYPES.map((t, i) => `<label><input type="radio" name="type" value="${t.k}"${i === 0 ? ' checked' : ''}><span>${esc(t.name)}</span></label>`).join('')}</div></fieldset>
           <div class="field"><label for="sh-title">Başlık</label><input id="sh-title" class="input" maxlength="80" placeholder="Örn. Vize 1 konu özeti ve çözümlü örnekler"></div>
-        </div>
-        <div class="form-sec"><h2>Dosya</h2>
+          ${gdCfg() ? '<span class="label sh-flabel">Dosya</span>' : ''}
           <div class="gpick" data-r="gpick"${gdCfg() ? '' : ' hidden'}>
             <button type="button" class="btn btn-primary gpick-btn" data-r="gbtn">${DRIVE_LOGO}<span>Drive’dan seç</span></button>
             <p class="help">Google hesabınla gir, notunu Drive’ından seç ya da “Yükle” sekmesinden telefonundan ekle. Paylaşım ayarını YediWiki yapar: dosyayı bağlantıya sahip olan herkes görüntüleyebilir.</p>
@@ -4068,11 +4101,10 @@ ROUTES['paylas'] = function viewShare(root, r) {
             <div class="drive-box" data-r="dbox"><div class="drive-in">${icon('external')}<input id="sh-drive" class="input" type="url" inputmode="url" autocomplete="off" placeholder="Linki buraya yapıştır"><button type="button" class="btn btn-sm" data-r="paste">${icon('copy')}Yapıştır</button></div><div class="drive-prev" data-r="dprev" hidden></div></div><div data-r="dmini"></div>
             <p class="help">Drive’da linki kopyaladıktan sonra bu sayfada <b>Ctrl+V</b> yapman yeter, kutu kendiliğinden dolar.</p>
             <details class="drive-help"><summary>Linki nasıl alırım?</summary><ol class="dsteps"><li><span>1</span><div>Drive’da dosyaya ya da klasöre sağ tıkla, <b>Paylaş</b>’ı seç.</div></li><li><span>2</span><div>Genel erişimi <b>Bağlantıya sahip olan herkes</b> yap.</div></li><li><span>3</span><div><b>Bağlantıyı kopyala</b>, buraya dön ve yapıştır.</div></li></ol><a class="btn btn-sm" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer">${icon('external')}Drive’ı aç</a></details></div>
-        </div>
-        <div class="form-sec"><h2>Açıklama <span class="opt">isteğe bağlı</span></h2>
-          <div class="field"><label for="sh-desc" class="sr">Açıklama</label><textarea id="sh-desc" class="textarea" rows="3" maxlength="500" placeholder="Hangi haftaları kapsıyor, neye dikkat etmeli?"></textarea></div>
+          <div class="field mb0"><label for="sh-desc">Açıklama <span class="opt">isteğe bağlı</span></label><textarea id="sh-desc" class="textarea" rows="3" maxlength="500" placeholder="Hangi haftaları kapsıyor, neye dikkat etmeli?"></textarea></div>
         </div>
         <div class="form-sec">
+          <fieldset class="field"><legend class="label">Tür</legend><div class="typepick">${NOTE_TYPES.map((t, i) => `<label><input type="radio" name="type" value="${t.k}"${i === 0 ? ' checked' : ''}><span>${esc(t.name)}</span></label>`).join('')}</div></fieldset>
           <div class="field"><span class="label">Paylaşan adı</span><div class="chips"><button type="button" class="chip" data-anon="0" aria-pressed="true" data-r="asme"></button><button type="button" class="chip" data-anon="1" aria-pressed="false">Anonim</button></div><p class="help" data-r="who"></p></div>
           <label class="check"><input type="checkbox" data-r="rules"><span>Bu içerik kişisel bilgi, telifli kitap ya da devam eden bir sınavın sorularını içermiyor. <a href="#/hakkinda">Kurallar</a></span></label>
           <p class="err mt" role="alert" data-r="err"></p>
@@ -4099,7 +4131,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
   function checkCode() {
     const v = codeIn.value.trim(), pc = parseCode(v), help = R('code-help');
     help.classList.remove('ok');
-    if (!v) { help.textContent = 'Listeden seç: harf ve üç rakam, örneğin MATH 131.'; return; }
+    if (!v) { help.textContent = 'Listeden seç, örneğin MATH 131.'; return; }
     if (!pc) { help.textContent = 'Biçim CSE 211 gibi olmalı.'; return; }
     if (S.courses.has(pc.id)) { help.textContent = S.courses.get(pc.id).name || pc.code; help.classList.add('ok'); }
     else help.textContent = 'Bu ders listede yok. Eksikse site yönetimine bildir.';
@@ -4219,6 +4251,7 @@ ROUTES['hakkinda'] = function viewAbout(root) {
     <p>YediWiki, Yeditepe öğrencilerinin ders notlarını paylaştığı, bölüm ders planlarına baktığı ve hocaları HocaÖlçer’de değerlendirdiği bağımsız bir topluluk sitesidir. Yeditepe Üniversitesi ile resmî bir bağı yoktur.</p>
     <h2>Nasıl kullanılır?</h2>
     <p><b>Ders kodunu ara.</b> Ders sayfasında paylaşılan notlar, yorumlar ve dersi veren hocalar yer alır. Dersler sayfasında bölümünü seçip dönem dönem ders planını görebilirsin.</p>
+    <p><b>DersÖlçer’e bak.</b> Ders sayfasındaki DersÖlçer, öğrencilerin oylarıyla dersin zorluğunu ve iş yükünü gösterir. Puan 1 ile 5 arasındadır: 1 en zor ve en ağır, 5 en kolay ve en hafif demektir.</p>
     <p><b>Hoca adını ara.</b> HocaÖlçer’de hocalar dört kriterde, 5 yıldız üzerinden buçuklu puanlanır. 5 yıldız her kriterde öğrenci açısından en iyi durumdur: ödev yükünde “çok hafif”, not vermede “çok cömert”, devamsızlıkta “esnek” anlamına gelir.</p>
     <p><b>Not paylaş.</b> Notlar Google Drive’dan paylaşılır; dosyalar siteye yüklenmez, YediWiki yalnızca linki saklar. ${S.supa ? '“Drive’dan seç” ile dosyanı site içinden seçersin, paylaşım ayarını YediWiki yapar. ' : ''}El yazısı notları tarayıp PDF olarak Drive’a koyabilirsin.</p>
     <p><b>Oy ver.</b> İşine yarayan nota yeşil ▲, yaramayana kırmızı ▼ ver. ▲ alan not öne çıkar ve paylaşana kubbe kazandırır; ▼ alan not sıralamada aşağı iner.</p>

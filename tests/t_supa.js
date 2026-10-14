@@ -208,6 +208,8 @@ async function signup(t, be, local, prof) {
     ok(B.$$('[data-r=panel] [data-type]').map(x => x.dataset.type).join() === 'all,not,sinav', 'tür süzgeci: Tümü, Ders notu, Çıkmış sınav');
     await B.go('#/paylas?ders=CSE211'); await sleep(80);
     ok(B.$$('#main .typepick input[name=type]').map(x => x.value).join() === 'not,sinav', 'paylaşırken iki tür: ders notu ve çıkmış sınav');
+    { const f = B.$('[data-r=form]'), all = [...f.querySelectorAll('*')], pos = sel => all.indexOf(f.querySelector(sel));
+      ok(B.$$('[data-r=form] h2').length === 0 && pos('#sh-title') < pos('.sh-flabel') && pos('.sh-flabel') < pos('[data-r=gbtn]') && B.text('.sh-flabel') === 'Dosya', 'sitede başlığın hemen altında Dosya etiketi ve Drive’dan seç, bölüm başlığı yok'); }
     B.typeIn(B.$('#sh-drive'), 'https://docs.google.com/document/d/1AbCdEfGhIjK/edit?usp=sharing'); await sleep(550);
     { const fr = B.$('[data-r=dmini] .dview.mini iframe');
       ok(fr && fr.getAttribute('src') === 'https://docs.google.com/document/d/1AbCdEfGhIjK/preview', 'paylaşırken link yapıştırılınca önizleme: ' + (fr && fr.getAttribute('src'))); }
@@ -329,9 +331,10 @@ async function signup(t, be, local, prof) {
     B.$('.modal input[name=z][value="4"]').checked = true; B.$('.modal input[name=y][value="2"]').checked = true;
     await B.submit('.modal form', 400);
     { const z = await doc(be, 'zor', 'CSE211'), k = B.ev("pk('zor', 'CSE211')");
-      ok(z && z.v && z.v[k] && z.v[k].z === 4, 'DersÖlçer oyu ders belgesinde takma adla');
+      ok(z && z.v && z.v[k] && z.v[k].z === 2 && z.v[k].y === 4, 'DersÖlçer oyu ders belgesinde takma adla, derece olarak (puan 4 → derece 2): ' + JSON.stringify(z && z.v && z.v[k]));
       const u = await doc(be, 'users', bid); ok(!u.zor, 'kullanıcı kaydında oy yok'); }
     await B.until(() => /1 öğrenci oyladı/.test(B.text('.zor-card')) && /Oyunu değiştir/.test(B.text('[data-g=zor]')), 'kart güncellendi');
+    eq(B.text('.zor-card .dol-z .dol-num') + ' ' + B.text('.zor-card .dol-z .dol-word'), '4,0/5 Kolay', 'zorluk puanı: 1 en zor, 4 kolay');
     await A.go('#/ders/CSE211');
     await A.until(() => /1 öğrenci oyladı/.test(A.text('.zor-card')) && /Oy ver/.test(A.text('[data-g=zor]')), 'A oyu görüyor, kendisininki değil');
     noErr(A, 'A HocaÖlçer'); noErr(B, 'B HocaÖlçer');
@@ -340,8 +343,9 @@ async function signup(t, be, local, prof) {
     await A.go('#/ders/MATH131'); await sleep(120);
     A.$('[data-g=req-new]').click(); await sleep(60);
     await A.submit('.modal form', 400);
-    const rq = (await be.pool.query("select id from public.docs where col = 'requests'")).rows[0];
+    const rq = (await be.pool.query("select id, data from public.docs where col = 'requests'")).rows[0];
     ok(!!rq, 'istek kaydedildi');
+    ok(rq && rq.data.text === '' && rq.data.kind === 'genel', 'türsüz istek: sunucu eski tür alanını genel yazar');
     await B.go('#/istekler'); await sleep(200);
     await B.until(() => /MATH 131/.test(B.text('#main')), 'B istekleri görüyor');
     await B.go(`#/paylas?ders=MATH131&istek=${rq.id}`); await sleep(120);

@@ -223,11 +223,13 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     const wr = t.store.log.slice(n0);
     eq(wr.length, 1, 'tek yazma'); eq(wr[0].path, 'users/' + t.me, 'oy hesap kaydına yazıldı'); eq(wr[0].op, 'update', 'güncelleme');
     eq(JSON.stringify(Object.keys(wr[0].data.zor)), '["DENT115"]', 'oy anahtarı');
+    eq(JSON.stringify([wr[0].data.zor.DENT115.z, wr[0].data.zor.DENT115.y]), '[2,4]', 'kayıtta derece tutulur: puan 4 (kolay) → derece 2, puan 2 (ağır) → derece 4');
     ok(!t.store.docs.has('courses/DENT115'), 'ders kaydı açılmadı');
-    ok(/1 öğrenci oyladı/.test(t.text('.zor-card')) && /4,0/.test(t.text('.zor-card')), 'kart güncellendi: ' + t.text('.zor-card'));
+    ok(/1 öğrenci oyladı/.test(t.text('.zor-card')) && /4,0/.test(t.text('.zor-card .dol-z')) && /2,0/.test(t.text('.zor-card .dol-y')), 'kart güncellendi: ' + t.text('.zor-card'));
+    eq(t.text('.zor-card .dol-z .dol-word') + '|' + t.text('.zor-card .dol-y .dol-word'), 'Kolay|Ağır', 'puan 4 kolay, puan 2 ağır');
     eq(t.text('[data-g=zor]'), 'Oyunu değiştir', 'düğme metni');
     await t.go('#/dersler?b=dis-hekimligi');
-    ok(/🌶️ 4,0/.test(t.text('[data-r=list]')), 'planda zorluk rozeti');
+    { const zc = t.$('[data-r=list] .zchip'); ok(zc && t.text('[data-r=list] .zchip') === '4,0' && !!zc.querySelector('svg.chili') && !/🌶/.test(t.text('[data-r=list]')), 'planda zorluk rozeti: çizim biber ve puan, emoji yok'); }
     await t.go('#/ders/DENT115');
     t.$('[data-g=zor]').click(); await t.wait(60);
     ok(t.$('.modal input[name=z][value="4"]').checked, 'eski oy seçili geliyor');
@@ -398,7 +400,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     const t = await asStudent(seed);
     eq(t.ev('zorStats("CSE211").n'), 1, 'eski oy sayılıyor');
     t.store.put('users/' + t.me, Object.assign(student(), { zor: { CSE211: { z: 3, y: 1, at: 2 } } })); await t.wait(80);
-    eq(t.ev('zorStats("CSE211").n'), 2, 'yeni oy eklendi'); eq(t.ev('zorStats("CSE211").z'), 4, 'ortalama');
+    eq(t.ev('zorStats("CSE211").n'), 2, 'yeni oy eklendi'); eq(t.ev('zorStats("CSE211").zor'), 2, 'ortalama puan: derece 5 ve 3 → 6 − 4 = 2');
     t.store.put('users/baskasi', Object.assign(student(), { username: 'baskasi', zor: { CSE211: null } })); await t.wait(80);
     eq(t.ev('zorStats("CSE211").n'), 1, 'hesap kaydındaki boş oy eskisini siliyor');
     noErr(t, 'eski oylar');
@@ -1184,6 +1186,85 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     { const secs = t.$$('.home-left > section .sec-head h2').map(h => h.textContent); const i = secs.indexOf('Son yorumlar');
       ok(i >= 0 && secs[i + 1] === 'Gündemdeki dersler', 'Gündemdeki dersler son yorumların hemen altında: ' + secs.join(' | ')); }
     noErr(t, 'profil ve düzen');
+  }
+
+  console.log('18) paylaşma formu dörtlüsü, ana sayfada Derslerim yok, DersÖlçer çizimleri, türsüz not isteği');
+  {
+    const t = await asStudent();
+    t.w.localStorage.setItem('yw:welcomed:' + t.me, 'true');
+    // paylaşma formu: Ders / Not başlıkları yok; ders kodu, hoca, dönem ve hoca araması dörtlü; tür seçimi anonim seçimin hemen üstünde
+    await t.go('#/paylas?ders=CSE211');
+    { const f = t.$('[data-r=form]'), all = [...f.querySelectorAll('*')], pos = sel => all.indexOf(f.querySelector(sel));
+      eq(t.$$('[data-r=form] h2').length, 0, 'formda bölüm başlığı (Ders, Not) yok');
+      eq(t.$$('[data-r=quad] > .field').map(x => (x.querySelector('input,select') || {}).id).join(), 'sh-code,sh-hoca,sh-term,sh-hoca-q', 'dörtlü: ders kodu, hoca, dönem, hoca araması');
+      ok(t.$('.q-term #sh-term') && t.$('.q-code #sh-code'), 'dönem ders kodunun altındaki hücrede');
+      ok(pos('[data-r=quad]') < pos('#sh-title') && pos('#sh-title') < pos('#sh-drive') && pos('#sh-drive') < pos('#sh-desc'), 'başlık dönemin hemen ardından, altında dosya ve açıklama');
+      ok(pos('#sh-desc') < pos('.typepick') && pos('.typepick') < pos('[data-anon]') && pos('[data-anon]') < pos('[data-r=rules]'), 'tür seçimi en altta, anonim seçimin üstünde');
+      eq(t.$$('.typepick input[name=type]:checked').map(x => x.value).join(), 'not', 'ders notu seçili gelir');
+      eq(t.text('label[for=sh-desc]').replace(/\s+/g, ' '), 'Açıklama isteğe bağlı', 'açıklama alan etiketiyle'); }
+    t.$('.typepick input[value=sinav]').click(); await t.wait(20);
+    t.$('#sh-title').value = 'Final çıkmışları'; t.$('#sh-drive').value = 'https://drive.google.com/file/d/xyz789/view'; t.$('[data-r=rules]').checked = true;
+    t.$('[data-r=form]').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(250);
+    { const nn = [...t.store.docs.values()].find(d => d && d.title === 'Final çıkmışları'); ok(nn && nn.type === 'sinav' && nn.cid === 'CSE211', 'aşağıdaki tür seçimi kayda geçti'); }
+    // ana sayfada ayrı Derslerim bölümü yok; Dersler > Derslerim'de yeni not rozeti
+    t.ev("toggleMyCourse('MATH131')"); await t.wait(120);
+    await t.go('#/');
+    ok(!t.$('[data-r=mycs]') && !t.$$('.home-left .sec-head h2').some(h => /Derslerim/.test(h.textContent)), 'ana sayfada Derslerim bölümü yok');
+    eq(t.$$('.home-left > section .sec-head h2')[0].textContent, 'Notlar', 'ana sayfa notlarla başlıyor');
+    t.w.localStorage.setItem('yw:cseen:' + t.me + ':MATH131', '1');
+    await t.go('#/dersler?b=__mine');
+    ok(/MATH 131/.test(t.text('[data-r=list]')) && /\d+ yeni not/.test(t.text('[data-r=list] .fresh-n')), 'Derslerim listesinde yeni not rozeti: ' + t.text('[data-r=list]').slice(0, 120));
+    // DersÖlçer: 1 en zor / en ağır; biber ve kitap çizimi, emoji yok
+    t.store.put('users/zz-a', { username: 'zz.a', zor: { CSE211: { z: 5, y: 5, at: 1 } }, at: 1 });
+    t.store.put('users/zz-b', { username: 'zz.b', zor: { CSE211: { z: 4, y: 5, at: 1 } }, at: 1 });
+    await t.wait(120);
+    await t.go('#/ders/CSE211');
+    { const card = t.$('.zor-card');
+      ok(card && card.closest('.course-top') && card.closest('.course-dol'), 'DersÖlçer ders başlığının yanında kendi kutusunda');
+      ok(!!t.$('.zor-card .dol-z svg.chili') && !!t.$('.zor-card .dol-y svg.books') && !/[🌶📚]/u.test(t.text('.zor-card')), 'biber ve kitap çizimleri, emoji yok');
+      eq(t.text('.zor-card .dol-z .dol-num'), '1,5/5', 'derece 5 ve 4 → zorluk puanı 1,5');
+      eq(t.text('.zor-card .dol-z .dol-word'), 'Zor', 'düşük puan zor demek');
+      eq(t.text('.zor-card .dol-y .dol-num'), '1,0/5', 'iş yükü puanı 1,0');
+      eq(t.text('.zor-card .dol-y .dol-word'), 'Çok ağır', 'puan 1 en ağır');
+      eq(t.$$('.zor-card .dol-y svg.books .bk').length, 5, 'en ağır iş yükünde beş kitaplık yığın');
+      eq(t.$$('.zor-card .dol-z .ch-heat').length, 2, 'zor derste biberden ısı dalgaları çıkıyor');
+      ok(/1 en zor/.test(t.text('.zor-card .dol-z .dol-ends')) && /5 en kolay/.test(t.text('.zor-card .dol-z .dol-ends')) && /1 en ağır/.test(t.text('.zor-card .dol-y .dol-ends')), 'ölçeğin uçları yazıyor');
+      eq(t.$('.zor-card .dol-z .dol-track i').style.left, '12.5%', 'işaret ölçekte puanın yerinde'); }
+    t.$('[data-g=zor]').click(); await t.wait(60);
+    eq(t.$$('.modal input[name=z]').map(x => x.parentElement.textContent.trim()).join('|'), '1Çok zor|2Zor|3Orta|4Kolay|5Çok kolay', 'oy penceresinde 1 en zor');
+    eq(t.$$('.modal input[name=y]').map(x => x.parentElement.textContent.trim()).join('|'), '1Çok ağır|2Ağır|3Orta|4Hafif|5Çok hafif', 'oy penceresinde 1 en ağır');
+    eq(t.$$('.modal .zs svg.chili').length + t.$$('.modal .zs svg.books').length, 10, 'her seçenekte çizim');
+    t.$('.modal input[name=z][value="1"]').checked = true; t.$('.modal input[name=y][value="5"]').checked = true;
+    t.$('.modal form').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(150);
+    eq(JSON.stringify([t.store.get('users/' + t.me).zor.CSE211.z, t.store.get('users/' + t.me).zor.CSE211.y]), '[5,1]', 'puan 1 → derece 5, puan 5 → derece 1');
+    eq(t.text('.zor-card .dol-z .dol-num'), '1,3/5', 'üç oyla zorluk puanı');
+    t.$('[data-g=zor]').click(); await t.wait(60);
+    ok(t.$('.modal input[name=z][value="1"]').checked && t.$('.modal input[name=y][value="5"]').checked, 'kendi oyu puan olarak seçili gelir');
+    t.$('.modal [data-close]').click(); await t.wait(40);
+    // not isteği: tür yok, kısa açıklama yeter; aynı istek ikinci kez açılmaz
+    { const b = t.$('[data-g=req-new]'); b.click(); await t.wait(60);
+      ok(!t.$('.modal input[name=rk]') && !/Vize notu|Final notu|Konu özeti|Çıkmış sorular/.test(t.text('.modal')), 'istek penceresinde tür seçimi yok');
+      t.$('#rq-text').value = '  3. hafta,   bağlı listeler ';
+      const r0 = t.store.count('requests');
+      t.$('.modal form').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(150);
+      eq(t.store.count('requests'), r0 + 1, 'istek kaydedildi');
+      const rq = [...t.store.docs.entries()].filter(([p]) => p.startsWith('requests/')).map(([, d]) => d).find(d => d.text === '3. hafta, bağlı listeler');
+      ok(rq && !('kind' in rq), 'istekte tür alanı yok, açıklama toparlandı');
+      ok(/3\. hafta, bağlı listeler/.test(t.text('.reqbox .req-top b')), 'istek açıklamasıyla listede');
+      t.$('[data-g=req-new]').click(); await t.wait(60);
+      t.$('#rq-text').value = '3. HAFTA, bağlı listeler';
+      t.$('.modal form').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(120);
+      ok(/aynı isteğin zaten açık/.test(t.text('.modal .err')) && t.store.count('requests') === r0 + 1, 'aynı istek ikinci kez açılmaz');
+      t.$('.modal [data-close]').click(); await t.wait(40); }
+    // eski türlü istek de türsüz görünür
+    t.store.put('requests/eski-1', { cid: 'CSE211', kind: 'vize', text: '', by: 'zz-a', at: Date.now() - 1000, plus: {}, done: false, nid: '', doneBy: '', doneAt: 0 });
+    await t.wait(120);
+    ok(!/Vize notu|Final notu|Konu özeti|Çıkmış sorular/.test(t.text('.reqbox')) && /Not isteği/.test(t.text('.reqbox')), 'eski türlü istek “Not isteği” olarak görünür');
+    await t.go('#/paylas?ders=CSE211&istek=eski-1'); await t.wait(800);
+    ok(/CSE 211 dersinden not istiyor/.test(t.text('.req-banner')) && !/vize/i.test(t.text('.req-banner')), 'paylaşma afişinde tür yok: ' + t.text('.req-banner'));
+    await t.go('#/');
+    ok(!/Vize notu|Final notu|Konu özeti|Çıkmış sorular/.test(t.text('#main')), 'ana sayfada istek türü yazmıyor');
+    noErr(t, 'form, DersÖlçer ve istek');
   }
 
   console.log(`\n${pass} geçti, ${fail} kaldı`);
