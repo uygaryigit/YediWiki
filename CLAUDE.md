@@ -67,6 +67,11 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
   - Dosya yükleme yok; notlar yalnızca Google Drive bağlantısı olabilir. Bu sunucuda da zorunlu tutuluyor.
   - Kadro verisinde yalnızca mesleki bilgi bulunur.
 - **Veritabanı değişikliği:** Önce yerelde test et (`npm run test:db`, `npm run test:site`), sonra göç olarak uygula.
+- **Limit tasarrufu:** Kullanıcının kullanım limiti dar.
+  - Ekran görüntüsü alma, doğrulamayı testlerle yap. Tasarım işinde en sonda en fazla bir iki görüntü al.
+  - Büyük dosyaları baştan okuma, gereken yeri `grep` ile bul.
+  - Adım sayısını az tut. Testleri en sonda bir kez çalıştır.
+  - Oturum uzadıysa her yeni iş grubu için yeni oturum öner.
 
 ## Ortam
 
