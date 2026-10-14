@@ -989,9 +989,29 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     eq(t.text('.modal [data-r=prev] .avatar.harf'), 'YÖ', 'ön izlemede harfler');
     typeIn(t, t.$('.modal [data-r=color-in]'), '#203040');
     ok(t.$('.modal [data-r=prev] .avatar').classList.contains('on-dark'), 'koyu arka planda harf açık renk');
-    t.$('#au-user').value = 'yeni.ogrenci'; t.$('#au-first').value = 'Yeni'; t.$('#au-last').value = 'Öğrenci';
+    eq(t.$('#au-user').value, 'yeni.ogrenci', 'kullanıcı adı okul e-postasının baş kısmından geldi');
+    eq(t.$$('.modal .su-prog li').map(x => x.className).join(), 'on,', 'adım 1/2: profil');
+    ok(!t.$('.modal #au-no') && !t.$('.modal #au-bolum'), 'ilk adımda telefon ve bölüm yok');
+    eq(t.$('.modal [data-vis=showName]').getAttribute('aria-pressed') + '/' + t.$('.modal [data-vis=showYil]').getAttribute('aria-pressed'), 'false/true', 'göz düğmeleri: ad gizli, yıl görünür');
+    t.$('.modal [data-vis=showName]').click(); await t.wait(20);
+    ok(t.$('.modal [data-vis=showName]').getAttribute('aria-pressed') === 'true' && /Profilde görünür/.test(t.text('.modal [data-vis=showName]')), 'göz açıldı');
+    t.$('.modal [data-vis=showName]').click(); await t.wait(20);
+    t.$('#au-first').value = 'Yeni'; t.$('#au-last').value = 'Öğrenci';
+    await submit(t, 120);
+    eq(t.$$('.modal .su-prog li').map(x => x.className).join(), 'done,on', 'adım 2/2: bölüm');
+    ok(!!t.$('.modal [data-bpick] #au-bolum') && t.$$('.modal .bp-opt').length >= 60, 'bölüm seçici: ' + t.$$('.modal .bp-opt').length + ' bölüm');
+    await submit(t, 80);
+    ok(/Listeden bölümünü seç/.test(t.text('.modal .err')) && !t.store.get('users/' + t.ev('S.me')), 'bölüm seçmeden ilerlemez (ya da sonra seçerim)');
+    { const q = t.$('.modal [data-r=bp-q]'); typeIn(t, q, 'bilgisayar müh');
+      const vis = t.$$('.modal .bp-opt').filter(o => !o.hidden).map(o => o.dataset.bid);
+      eq(vis.join(), 'bilgisayar-muhendisligi', 'aramada adı eşleşen bölüm'); typeIn(t, q, 'eczacılık fakültesi');
+      ok(t.$$('.modal .bp-opt').filter(o => !o.hidden).length >= 1, 'adında yoksa fakülte adında arar'); typeIn(t, q, ''); }
+    t.$('.modal .bp-opt[data-bid="bilgisayar-muhendisligi"]').click(); await t.wait(20);
+    ok(/Bilgisayar Mühendisliği/.test(t.text('.modal .bp-prev')) && /yıllık program/.test(t.text('.modal .bp-prev')) && t.$$('.modal .bp-prev .code').length > 0, 'seçilen bölümün planı özetlendi: ' + t.text('.modal .bp-prev'));
     await submit(t, 250);
     const me = t.ev('S.me'), nu = t.store.get('users/' + me);
+    eq(nu && nu.bolum, 'bilgisayar-muhendisligi', 'hesap bölümüyle açıldı');
+    eq(nu && nu.username, 'yeni.ogrenci', 'kullanıcı adı kaydedildi');
     ok(nu && nu.avk === 'harf' && nu.harf === 'YÖ' && nu.color === '#203040' && nu.pic === '', 'hesap harfli profil resmiyle açıldı: ' + JSON.stringify(nu && { avk: nu.avk, harf: nu.harf, color: nu.color }));
     eq((t.store.get('data/users/viewer-d/private') || {}).email, 'yeni.ogrenci@std.yeditepe.edu.tr', 'özel kayıtta tam adres');
     ok(t.$('[data-r=acc] .avatar.harf') && t.text('[data-r=acc] .avatar') === 'YÖ', 'üst çubukta harfler');
@@ -1017,7 +1037,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(((t.store.get('data/users/viewer-e/private-deneme123') || {}).myc || []).includes('CSE211'), 'deneme hesabının Derslerim’i kendi kaydında');
     eq(JSON.stringify(t.store.get('data/users/viewer-e/private').myc), '["MATH131"]', 'kendi hesabının kaydı değişmedi');
     await t.go('#/profil');
-    ok(/deneme123@std\.yeditepe\.edu\.tr/.test(t.text('#main')) && t.$('[data-g=logout-shared]') && /hediye 10000/.test(t.text('#main')), 'profilde e-posta, çıkış ve hediye');
+    ok(/deneme123@std\.yeditepe\.edu\.tr/.test(t.text('#main')) && t.$('[data-g=logout-shared]') && t.$$('#main .led-row').some(r => /Hediye/.test(r.textContent) && /10000/.test(r.textContent)), 'profilde e-posta, çıkış ve hediye');
     t.$('[data-g=profile-edit]').click(); await t.wait(60);
     ok(t.$('.modal #pe-user'), 'deneme hesabının profili düzenlenebilir');
     typeIn(t, t.$('.modal [data-r=emoji-in]'), '🐸');
@@ -1108,6 +1128,62 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     if (t.$('.modal [data-ok]')) { t.$('.modal [data-ok]').click(); await t.wait(200); }
     eq(t.ev(`hocaStats(S.hocas.get(${JSON.stringify(hid)})).cnt`), 0, 'puan kaldırıldı');
     noErr(t, 'akademik kadro');
+  }
+
+  console.log('17) bölümler katalogdan, profil, Katkılarım ve ana sayfa düzeni');
+  {
+    // veritabanında bölüm kaydı olmasa da bölümler katalogdan gelir
+    const seed = clone(SEED); for (const k of Object.keys(seed)) if (k.startsWith('bolumler/')) delete seed[k];
+    const t = await boot({ html: HTML, seed });
+    await t.wait(200);
+    ok(t.ev('S.bolumler.size') >= 70 && t.ev('S.dbBolumler.size') === 0, 'bölümler katalogdan: ' + t.ev('S.bolumler.size'));
+    eq(t.ev("bolumName('bilgisayar-muhendisligi')"), 'Bilgisayar Mühendisliği', 'bölüm adı katalogdan');
+    ok(/Mühendislik/.test(t.ev("S.bolumler.get('bilgisayar-muhendisligi').fakulte")), 'fakülte katalogdan');
+    await t.go('#/dersler?b=bilgisayar-muhendisligi');
+    ok(t.$$('#main select option').some(o => o.value === 'bilgisayar-muhendisligi'), 'Dersler sayfasında bölüm seçilebiliyor');
+    // e-postadan kullanıcı adı
+    eq(t.ev("userFromMail('Ahmet13@std.yeditepe.edu.tr')"), 'ahmet13', 'ahmet13@ → ahmet13');
+    eq(t.ev("userFromMail('ayse-nur.k')"), 'ayse.nur.k', 'tire noktaya döner');
+    eq(t.ev("userFromMail('ab')"), 'ab1', 'kısa ad tamamlanır');
+    const taken = t.ev("[...S.users.values()].map(u => u.username).filter(Boolean)[0]");
+    ok(taken && t.ev(`userFromMail(${JSON.stringify(taken)})`) === taken.slice(0, 19) + '2', 'alınmış ada sayı eklenir: ' + taken);
+    noErr(t, 'bölümler katalogdan');
+  }
+  {
+    const t = await boot({ html: HTML, seed: clone(SEED) });
+    await t.wait(200);
+    const me = t.ev('S.me');
+    t.store.put('users/' + me, { username: 'test.ogrenci', first: 'Test', last: 'Öğrenci', showName: false, yil: 2024, showYil: true, bolum: 'psikoloji', avk: 'emoji', emoji: '🦊', color: '#9DB0FF', pic: '', bonus: 50, spent: 0, items: {}, at: Date.now(), verifiedAt: Date.now() });
+    t.w.localStorage.setItem('yw:welcomed:' + me, 'true');
+    await t.wait(120);
+    await t.go('#/profil');
+    ok(!!t.$('#main .pf-cover .pf-sticker .avatar.hero') && t.$('#main .pf-cover').getAttribute('style').includes('#9DB0FF'), 'kapak profil resminin rengiyle, büyük çıkartma profil resmi');
+    eq(t.text('#main .pf-user').replace(/\s+/g, ''), '@test.ogrenci', 'kullanıcı adı büyük başlıkta');
+    ok(t.$('#main .pf-tag.dept') && t.$('#main .pf-tag.dept').getAttribute('href') === '#/dersler?b=psikoloji', 'bölüm etiketi ders planına götürür');
+    ok(!t.$$('#main a.btn, #main button.btn').some(b => b.getAttribute('href') === '#/kubbe'), 'profilde Kubbe ve market düğmesi yok');
+    ok(/Profili düzenle/.test(t.text('#main .pf-acts')) && /Katkılarım/.test(t.text('#main .pf-acts')), 'profil düğmeleri');
+    { const b = t.$('#main [data-g=vis-toggle][data-k=showName]'); eq(b && b.getAttribute('aria-pressed'), 'false', 'ad gizli (göz kapalı)');
+      b.click(); await t.wait(150);
+      eq(t.store.get('users/' + me).showName, true, 'gözle ad profilde gösterildi');
+      ok(/Profilde görünür/.test(t.text('#main [data-g=vis-toggle][data-k=showName]')), 'göz açık görünüyor'); }
+    ok(/Bakiyen/.test(t.text('#main .pf-ledger')) && /50 kubbe/.test(t.text('#main .led-sum')), 'kubbe dökümünde bakiye');
+    t.ev('openProfileEdit()'); await t.wait(60);
+    ok(t.$('.modal [data-bpick] #pe-bolum') && t.$('.modal #pe-bolum').value === 'psikoloji' && t.$('.modal .bp-opt[aria-checked="true"]').dataset.bid === 'psikoloji', 'düzenlemede bölüm seçici, bölümün seçili');
+    ok(t.$('.modal .eye-tg[data-vis=showName]') && t.$('.modal .eye-tg[data-vis=showYil]'), 'düzenlemede göz düğmeleri');
+    t.$('.modal .bp-opt[data-bid="bilgisayar-muhendisligi"]').click(); await t.wait(20);
+    t.$('.modal form').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(200);
+    eq(t.store.get('users/' + me).bolum, 'bilgisayar-muhendisligi', 'bölüm değiştirildi');
+    await t.go('#/katkilarim');
+    ok(!t.$$('#main a').some(a => a.getAttribute('href') === '#/kubbe'), 'Katkılarım’da Kubbe ve market yok');
+    eq(t.$$('#main .head-actions .btn').map(b => b.textContent.trim()).join('|'), 'Profil ayarları', 'yalnızca Profil ayarları düğmesi');
+    eq(t.$$('#main .km-sec .km-head h2').map(h => h.textContent).join(','), 'Notlarım,HocaÖlçer puanlarım,Yorumlarım', 'Katkılarım bölümleri');
+    ok(t.$$('#main .km-empty .btn').length === 3, 'boş bölümlerde yönlendiren düğme');
+    await t.go('#/');
+    ok(t.$$('[data-r=notes] .ncard').length <= 6, 'ana sayfada en çok 6 not kartı');
+    ok(t.$$('[data-r=cms] li').length <= 3 && t.$$('[data-r=cms] li').length > 0, 'son yorumlardan en çok 3');
+    { const secs = t.$$('.home-left > section .sec-head h2').map(h => h.textContent); const i = secs.indexOf('Son yorumlar');
+      ok(i >= 0 && secs[i + 1] === 'Gündemdeki dersler', 'Gündemdeki dersler son yorumların hemen altında: ' + secs.join(' | ')); }
+    noErr(t, 'profil ve düzen');
   }
 
   console.log(`\n${pass} geçti, ${fail} kaldı`);

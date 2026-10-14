@@ -39,6 +39,10 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - `uygaryigt@gmail.com` hesabında yanlışlıkla açılmış boş bir "YediWiki" projesi (`yediwiki`) var; silinebilir.
 - **Gizlilik sayfası:** `site/gizlilik.html` → `https://yediwiki.com/gizlilik` (OAuth onay ekranında gizlilik bağlantısı).
 - **Yeni sürüm:** Derleme `dist/ver.txt` yazar; açık sekme sekmeye dönünce bakar, yeni sürüm varsa bir sonraki sayfa geçişinde kendini yeniler.
+- **Bölümler katalogdan (14 Ekim):** Bölüm adı, fakültesi ve dili `data/catalog.json`'dan derlemede gömülür (`CAT.bols`); veritabanındaki `bolumler` kayıtları üstüne biner (`mergeBolumler`). Canlı veritabanında bölüm kaydı yok, gerek de yok.
+- **Hesap açma (14 Ekim):** Kod doğrulandıktan sonra iki adım: Profilin (kullanıcı adı e-postanın baş kısmından, `userFromMail`; ad soyad ve giriş yılında göz düğmesi) → Bölümün (aranabilir bölüm seçici, ders planı özeti; "sonra seçerim" var). Telefon yalnızca profil düzenlemede.
+- **Profil sayfası (14 Ekim):** Profil resminin rengiyle boyalı kareli kapak, bantlı çıkartma büyük profil resmi, kubbe biçiminde bakiye, bölüm etiketi ders planına gider; gözle ad ve giriş yılı tek dokunuşla gizlenir/gösterilir (`toggleVis`). Profilde ve Katkılarım'da "Kubbe ve market" düğmesi yok (kullanıcı istemiyor).
+- **Ana sayfa:** Notlarda en çok 6 kart (+ haftanın notu), Son yorumlar 3, hemen altında Gündemdeki dersler (6).
 - **Yenilikler bölümü kaldırıldı (14 Ekim):** Kullanıcı istemiyor; yenilik penceresi ve test listesi geri eklenmesin. Ayhan Abi turu Hakkında sayfasındaki düğmeyle de başlar.
 
 ## Sıradaki işler
@@ -64,4 +68,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1399/1399, `npm run test:site` 104/104, `npm run test:db` 95/95.
+- **Beklenen sonuçlar:** `npm test` 1441/1441, `npm run test:site` 108/108, `npm run test:db` 95/95.

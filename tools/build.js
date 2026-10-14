@@ -16,7 +16,21 @@ const count = (s, sub) => s.split(sub).length - 1;
 
 const parts = {};
 for (const f of ['pre.html', 'style.css', 'mid.html', 'app.js', 'post.html']) parts[f] = read(P('site', f));
-const cat = read(P('data', 'catalog.min.json')); JSON.parse(cat);
+// Ders kataloğu + bölümlerin adı, fakültesi ve öğretim dili (tam katalogdan): bölümler veritabanına bağlı kalmadan her yerde görünür
+const catMin = JSON.parse(read(P('data', 'catalog.min.json')));
+{
+  const full = JSON.parse(read(P('data', 'catalog.json')));
+  const pl = full.planlar || {}, bf = [];
+  catMin.b = {};
+  for (const slug of Object.keys(pl)) {
+    const x = pl[slug]; if (!x || !x.ad) continue;
+    let i = bf.indexOf(x.fakulte || ''); if (i < 0) { bf.push(x.fakulte || ''); i = bf.length - 1; }
+    catMin.b[slug] = [x.ad, i, x.dil_akts || ''];
+  }
+  catMin.bf = bf;
+  must(Object.keys(catMin.b).length >= 60, 'katalogda bölüm adları');
+}
+const cat = JSON.stringify(catMin);
 const kad = read(P('data', 'kadro.min.json')); JSON.parse(kad);
 let mid = parts['mid.html'];
 must(count(mid, '<!--KATALOG-->') === 1 && count(mid, '<!--KADRO-->') === 1, 'mid.html yer tutucuları');

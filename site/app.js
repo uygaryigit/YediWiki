@@ -72,6 +72,12 @@ const ICONS = {
   shrink: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
   eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  eyeoff: '<path d="M3 3l18 18"/><path d="M10.6 5.6c.5-.1.9-.1 1.4-.1 6 0 9.5 6.5 9.5 6.5a17.6 17.6 0 0 1-3.1 3.9M6.4 6.5C3.9 8.2 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.3-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  grad: '<path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.6v4.1c1.4 1.4 3.3 2.3 5.5 2.3s4.1-.9 5.5-2.3v-4.1"/><path d="M21.5 9.5v5"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  out: '<path d="M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/><path d="M10 16l-4-4 4-4M6 12h10"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   cl: '<path d="m15 5-7 7 7 7"/>',
   cr: '<path d="m9 5 7 7-7 7"/>',
   home: '<path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/>',
@@ -208,7 +214,7 @@ const S = {
   db: null, user: null, downloads: null, me: null, owner: false, ownerId: false, out: false, login: null, canWrite: null, readOnly: false,
   supa: false, sb: null, sec: '', email: '', session: null, sesUid: '', authPending: false, liveSeen: false,
   dbState: 'loading', subErr: null, version: 0,
-  courses: new Map(), dbCourses: new Map(), hocas: new Map(), dbHocas: new Map(), notes: new Map(), comments: new Map(), users: new Map(), bolumler: new Map(), requests: new Map(), zor: new Map(), priv: null, privLoaded: false, pendingHash: null, adminProv: 'idle', usersVer: 0,
+  courses: new Map(), dbCourses: new Map(), hocas: new Map(), dbHocas: new Map(), notes: new Map(), comments: new Map(), users: new Map(), bolumler: new Map(), dbBolumler: new Map(), requests: new Map(), zor: new Map(), priv: null, privLoaded: false, pendingHash: null, adminProv: 'idle', usersVer: 0,
   loaded: { courses: false, hocas: false, notes: false, comments: false, users: false, requests: false, zor: false },
   photoCache: new Map(), revealed: new Set()
 };
@@ -224,7 +230,7 @@ function memoized(key, fn) {
 /* ================= Ders kataloğu =================
    Ders adları, AKTS/kredi ve bölüm planları sayfaya gömülü gelir (kaynak: Yeditepe AKTS Bilgi Paketi; seçmeli havuzları fakülte sitelerinden).
    Veritabanındaki courses/<kod> kaydı yalnızca değişen veriyi taşır ve katalogdaki dersin üstüne biner. */
-const CAT = { v: '', courses: new Map(), plans: new Map(), bolOf: new Map(), pools: [], elOf: new Map() };
+const CAT = { v: '', courses: new Map(), plans: new Map(), bolOf: new Map(), pools: [], elOf: new Map(), bols: new Map() };
 (function loadCatalog() {
   try {
     const el = document.getElementById('yw-katalog');
@@ -248,9 +254,14 @@ const CAT = { v: '', courses: new Map(), plans: new Map(), bolOf: new Map(), poo
       }
       CAT.plans.set(slug, { plan, el: els, yillik: !!y, url: U[raw.p[slug][2]] || '' });
     }
+    const BF = Array.isArray(raw.bf) ? raw.bf : [];
+    for (const slug of Object.keys(raw.b || {})) { const [ad, fi, dil] = raw.b[slug]; if (ad) CAT.bols.set(slug, { ad, fakulte: BF[fi] || '', dil: dil || '', kaynak: 'katalog' }); }
   } catch (e) { console.error('katalog okunamadı', e); }
 })();
 S.courses = new Map(CAT.courses);
+S.bolumler = new Map(CAT.bols);
+/* Bölümler: katalogdaki ad ve fakülte; veritabanındaki bolumler/<slug> kaydı (yönetici) üstüne biner */
+function mergeBolumler(db) { const m = new Map(CAT.bols); for (const [id, d] of db) m.set(id, Object.assign({}, CAT.bols.get(id) || {}, d)); return m; }
 /* Akademik kadro: Yeditepe'nin kişi sayfalarından (ad, unvan, fakülte, bölüm, verdiği dersler) sayfaya gömülü gelir.
    Veritabanındaki hocas/<id> kaydı puanları ve yöneticinin düzeltmesini taşır, kadrodaki kaydın üstüne biner. */
 CAT.hocas = new Map(); CAT.kv = '';
@@ -631,7 +642,7 @@ function subscribe() {
       q.onSnapshot(snap => {
         const m = new Map();
         for (const d of snap.docs) { const v = d.data(); if (v && typeof v === 'object') { if (S.supa) v.$k = name + '/' + d.id; m.set(d.id, v); } }
-        if (name === 'courses') { S.dbCourses = m; S.courses = mergeCourses(m); } else if (name === 'hocas') { S.dbHocas = m; S.hocas = mergeHocas(m); } else S[name] = m;
+        if (name === 'courses') { S.dbCourses = m; S.courses = mergeCourses(m); } else if (name === 'hocas') { S.dbHocas = m; S.hocas = mergeHocas(m); } else if (name === 'bolumler') { S.dbBolumler = m; S.bolumler = mergeBolumler(m); } else S[name] = m;
         S.loaded[name] = true; S.version++; if (name === 'users') S.usersVer++; changed();
       }, err => {
         console.error(name, err);
@@ -2116,9 +2127,61 @@ function bolumOptions(sel, first = 'Bölüm seç') {
   const list = [...S.bolumler.entries()].sort((a, b) => bolumName(a[0]).localeCompare(bolumName(b[0]), 'tr'));
   return `<option value="">${esc(first)}</option>` + list.map(([id]) => `<option value="${esc(id)}"${id === sel ? ' selected' : ''}>${esc(bolumName(id))}</option>`).join('');
 }
-function bolumFieldHtml(id, sel) {
+/* Bölüm seçici: aranabilir, fakülteye göre gruplu liste; seçilince ders planının özeti. Değer gizli kutuda (id) durur */
+function planFacts(bid) {
+  const P = planOf(bid); if (!P) return null;
+  const sems = Object.keys(P.plan).map(Number).filter(Boolean).sort((a, b) => a - b);
+  let n = 0; for (const s of sems) n += (P.plan[s] || []).length + ((P.el && P.el[s]) || []).length;
+  return { sems, n, yil: P.yillik ? sems.length : Math.ceil(sems.length / 2), first: (P.plan[sems[0]] || []).slice() };
+}
+function bolumPrevHtml(bid) {
+  if (!bid || !S.bolumler.has(bid)) return '<p class="bp-hint">Listeden bölümünü seç; ders planın hazır gelsin.</p>';
+  const f = planFacts(bid), b = S.bolumler.get(bid) || {};
+  const codes = f ? f.first.slice(0, 6).map(c => `<span class="code">${esc(codeOf(c))}</span>`).join('') + (f.first.length > 6 ? `<span class="bp-more">+${f.first.length - 6}</span>` : '') : '';
+  return `<div class="bp-card"><span class="bp-ico" aria-hidden="true">${icon('grad')}</span><div class="bp-txt"><b>${esc(bolumName(bid))}</b>`
+    + `<span>${esc(b.fakulte || '')}${f ? `, ${f.yil} yıllık program, ${f.n} ders` : ''}${b.dil ? `, ${esc(b.dil)}` : ''}</span>`
+    + (f ? `<span class="bp-say">İlk dönemin hazır; ders planın Dersler sayfasında seni bekliyor.</span><span class="bp-codes">${codes}</span>` : '') + '</div></div>';
+}
+function bolumPickHtml(id, sel, { big = false } = {}) {
   if (!S.bolumler.size) return '';
-  return `<div class="field"><label for="${id}">Bölüm</label><select id="${id}" class="select">${bolumOptions(sel)}</select><p class="help">Bölüm sıralamasında yer alırsın.</p></div>`;
+  const facs = new Map();
+  for (const [bid, b] of S.bolumler) { if (!planOf(bid) && bid !== sel) continue; const f = (b && b.fakulte) || 'Diğer'; if (!facs.has(f)) facs.set(f, []); facs.get(f).push(bid); }
+  const fk = [...facs.keys()].sort((a, b) => a.localeCompare(b, 'tr'));
+  const opt = (bid, f) => { const dil = (S.bolumler.get(bid) || {}).dil; return `<button type="button" class="bp-opt" role="radio" data-bid="${esc(bid)}" aria-checked="${bid === sel}" data-k="${esc(fold(bolumName(bid)))}" data-f="${esc(fold(f))}"><span class="bp-dot" aria-hidden="true">${icon('check')}</span><span class="bp-nm">${esc(bolumName(bid))}</span>${dil ? `<span class="bp-dil">${esc(dil)}</span>` : ''}</button>`; };
+  return `<div class="bpick${big ? ' big' : ''}" data-bpick><input type="hidden" id="${id}" value="${esc(S.bolumler.has(sel) ? sel : '')}">
+    <label class="search sm bp-q">${icon('search')}<input class="input" data-r="bp-q" placeholder="Bölümünü ara, örneğin bilgisayar" aria-label="Bölüm ara" autocomplete="off"></label>
+    <div class="bp-list" role="radiogroup" aria-label="Bölüm">${fk.map(f => `<div class="bp-fac"><p class="bp-fh">${esc(f)}</p>${facs.get(f).sort((a, b) => bolumName(a).localeCompare(bolumName(b), 'tr')).map(bid => opt(bid, f)).join('')}</div>`).join('')}<p class="bp-none" hidden>Bu adla bölüm bulunamadı.</p></div>
+    <div class="bp-prev" data-r="bp-prev" aria-live="polite">${bolumPrevHtml(sel)}</div></div>`;
+}
+function wireBolumPick(root, onPick) {
+  const box = $('[data-bpick]', root); if (!box) return;
+  const hid = $('input[type=hidden]', box), q = $('[data-r=bp-q]', box), prev = $('[data-r=bp-prev]', box);
+  const pick = bid => {
+    hid.value = bid;
+    $$('.bp-opt', box).forEach(o => o.setAttribute('aria-checked', String(o.dataset.bid === bid)));
+    prev.innerHTML = bolumPrevHtml(bid); popFx(prev.firstElementChild);
+    if (onPick) onPick(bid);
+  };
+  $$('.bp-opt', box).forEach(o => o.addEventListener('click', () => pick(o.dataset.bid)));
+  q.addEventListener('input', () => {
+    // önce bölüm adında ara; adında yoksa fakülte adında
+    const f = fold(q.value), byName = !f || $$('.bp-opt', box).some(o => o.dataset.k.includes(f)); let any = false;
+    $$('.bp-fac', box).forEach(g => { let vis = 0; $$('.bp-opt', g).forEach(o => { const on = !f || (byName ? o.dataset.k.includes(f) : o.dataset.f.includes(f)); o.hidden = !on; if (on) vis++; }); g.hidden = !vis; if (vis) any = true; });
+    $('.bp-none', box).hidden = any;
+  });
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const o = $$('.bp-opt', box).find(x => !x.hidden); if (o) pick(o.dataset.bid); } });
+  const cur = $('.bp-opt[aria-checked="true"]', box);
+  if (cur) setTimeout(() => { try { const l = $('.bp-list', box); l.scrollTop = Math.max(0, cur.offsetTop - l.offsetTop - 48); } catch (e) { /* yok */ } }, 0);
+}
+/* Kayıtta kullanıcı adı okul e-postasının baş kısmından gelir: ahmet13@std.yeditepe.edu.tr → ahmet13 (alınmışsa sonuna sayı) */
+function userFromMail(mail) {
+  let u = String(mail || '').split('@')[0].toLocaleLowerCase('tr').replace(/[çğıöşü]/g, c => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' })[c])
+    .replace(/[^a-z0-9._]+/g, '.').replace(/[._]{2,}/g, '.').replace(/^[._]+|[._]+$/g, '').slice(0, 20).replace(/[._]+$/, '');
+  if (!u) return '';
+  while (u.length < 3) u += '1';
+  if (!userTaken(u, S.me)) return u;
+  for (let i = 2; i < 100; i++) { const c = u.slice(0, 20 - String(i).length) + i; if (!userTaken(c, S.me)) return c; }
+  return '';
 }
 const coursesOfBolum = id => { const P = planOf(id); const out = new Set(); if (P) Object.values(P.plan).forEach(a => (Array.isArray(a) ? a : []).forEach(c => out.add(c))); return out; };
 function yearOptions(sel) {
@@ -2158,9 +2221,17 @@ async function mailTaken(mail) {
   try { const snap = await S.db.doc('emails/' + (await mailKey(f))).get(); return !!(snap && snap.exists && snap.data().uid !== S.me); }
   catch (e) { return false; }
 }
-function toggleChip(key, on, label = 'Profilde göster') { return `<button type="button" class="chip vis" data-vis="${key}" aria-pressed="${!!on}">${esc(label)}</button>`; }
+/* Profilde görünsün mü: göz açık (herkes görür) ya da kapalı (gizli) */
+const eyeInner = on => `${icon(on ? 'eye' : 'eyeoff')}<span>${on ? 'Profilde görünür' : 'Gizli'}</span>`;
+function eyeToggle(key, on, what) { return `<button type="button" class="eye-tg" data-vis="${key}" data-what="${esc(what)}" aria-pressed="${!!on}" aria-label="${esc(what)}: ${on ? 'profilde görünür' : 'gizli'}">${eyeInner(!!on)}</button>`; }
+const visIc = (on, what) => `<span class="vis-ic ${on ? 'on' : 'off'}" title="${esc(what)} ${on ? 'profilinde herkese görünür' : 'gizli, yalnızca sen görürsün'}">${icon(on ? 'eye' : 'eyeoff')}<span class="sr">${on ? 'profilde görünür' : 'gizli'}</span></span>`;
 function wireToggles(root, st) {
-  $$('[data-vis]', root).forEach(b => b.addEventListener('click', () => { st[b.dataset.vis] = !st[b.dataset.vis]; b.setAttribute('aria-pressed', String(st[b.dataset.vis])); }));
+  $$('[data-vis]', root).forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.vis; st[k] = !st[k];
+    b.setAttribute('aria-pressed', String(!!st[k])); b.innerHTML = eyeInner(!!st[k]);
+    b.setAttribute('aria-label', (b.dataset.what || '') + ': ' + (st[k] ? 'profilde görünür' : 'gizli'));
+    popFx(b);
+  }));
 }
 function userTaken(name, exceptUid) {
   const f = String(name).toLowerCase();
@@ -2284,18 +2355,21 @@ function openAuth(opts = {}) {
     const nx = S.pendingHash; S.pendingHash = null;
     if (nx && nx !== location.hash) location.hash = nx; else route();
   }
+  /* Son adımlar: önce profil (kullanıcı adı e-postadan gelir), sonra bölüm. Telefon sonradan profilden eklenir */
+  const progHtml = n => `<ol class="su-prog" aria-label="Son adımlar"><li class="${n === 1 ? 'on' : 'done'}"${n === 1 ? ' aria-current="step"' : ''}>Profilin</li><li class="${n === 2 ? 'on' : ''}"${n === 2 ? ' aria-current="step"' : ''}>Bölümün</li></ol>`;
   function step3() {
+    if (st.username == null) st.username = userFromMail(st.email || S.email || '');
+    const twoSteps = S.bolumler.size > 0;
     host.innerHTML = `<form novalidate>
-      <p class="help ok">${esc(st.email || S.email)} doğrulandı. Son adım: profilin.</p>
+      ${twoSteps ? progHtml(1) : ''}
+      <p class="help ok">${esc(st.email || S.email)} doğrulandı. ${twoSteps ? 'İki küçük adım kaldı.' : 'Son adım: profilin.'}</p>
       ${avatarPickerHtml(st)}
-      <div class="field"><label for="au-user">Kullanıcı adı</label><input id="au-user" class="input" maxlength="20" placeholder="kubbeli.kedi"><p class="help">Yorumlarda ve sıralamada bu ad görünür. Küçük harf, rakam ve nokta.</p></div>
-      <div class="field"><div class="lbl-row"><span class="label">Ad soyad</span>${toggleChip('showName', st.showName)}</div>
-        <div class="two"><input id="au-first" class="input" maxlength="40" autocomplete="given-name" placeholder="Ad" aria-label="Ad"><input id="au-last" class="input" maxlength="40" autocomplete="family-name" placeholder="Soyad" aria-label="Soyad"></div></div>
-      <div class="field"><div class="lbl-row"><label class="label" for="au-year">Giriş yılı</label>${toggleChip('showYil', st.showYil)}</div><select id="au-year" class="select">${yearOptions(new Date().getFullYear())}</select></div>
-      ${bolumFieldHtml('au-bolum', '')}
-      <div class="field"><label for="au-no">Telefon numarası <span class="opt">isteğe bağlı, yalnızca sen görürsün</span></label><input id="au-no" class="input" type="tel" inputmode="tel" maxlength="16" placeholder="05xx xxx xx xx"></div>
+      <div class="field"><label for="au-user">Kullanıcı adı</label><input id="au-user" class="input" maxlength="20" placeholder="kubbeli.kedi" autocapitalize="none" autocorrect="off" spellcheck="false" value="${esc(st.username || '')}"><p class="help">Okul e-postandan aldık; yorumlarda ve sıralamada bu ad görünür. İstersen değiştir: küçük harf, rakam ve nokta.</p></div>
+      <div class="field"><div class="lbl-row"><span class="label">Ad soyad</span>${eyeToggle('showName', st.showName, 'Ad soyad')}</div>
+        <div class="two"><input id="au-first" class="input" maxlength="40" autocomplete="given-name" placeholder="Ad" aria-label="Ad" value="${esc(st.first || '')}"><input id="au-last" class="input" maxlength="40" autocomplete="family-name" placeholder="Soyad" aria-label="Soyad" value="${esc(st.last || '')}"></div></div>
+      <div class="field"><div class="lbl-row"><label class="label" for="au-year">Giriş yılı</label>${eyeToggle('showYil', st.showYil, 'Giriş yılı')}</div><select id="au-year" class="select">${yearOptions(st.yil || new Date().getFullYear())}</select></div>
       <p class="err" role="alert"></p>
-      <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Sonra</button><button class="btn btn-primary" type="submit">Hesabı oluştur</button></div></form>`;
+      <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Sonra</button><button class="btn btn-primary" type="submit">${twoSteps ? 'Devam' : 'Hesabı oluştur'}</button></div></form>`;
     wireAvatarPicker(host, st);
     wireToggles(host, st);
     const err = $('.err', host);
@@ -2304,39 +2378,58 @@ function openAuth(opts = {}) {
       err.textContent = '';
       const first = $('#au-first', host).value.trim(), last = $('#au-last', host).value.trim();
       const username = $('#au-user', host).value.trim().toLowerCase();
+      st.first = first; st.last = last; st.username = username; st.yil = +$('#au-year', host).value || 0;
       if (first.length < 2 || last.length < 2) { err.textContent = 'Adını ve soyadını yaz.'; return; }
       if (!USER_RE.test(username)) { err.textContent = 'Kullanıcı adı 3-20 karakter olmalı; küçük harf, rakam ve nokta kullan.'; return; }
       if (userTaken(username)) { err.textContent = 'Bu kullanıcı adı alınmış.'; return; }
       { const ae = avError(st, first + ' ' + last); if (ae) { err.textContent = ae; return; } }
-      const btn = $('[type=submit]', host); btn.disabled = true;
-      const phone = $('#au-no', host).value.replace(/[^\d+]/g, '').slice(0, 16);
-      const mk = S.supa ? '' : await mailKey(st.email);
-      const ok = await write(async () => {
-        if (S.supa) {
-          if (!S.session) throw { code: 'unauthenticated' };
-          await S.db.doc('private/' + S.me).set({ phone, at: Date.now() });
-          await S.db.doc('users/' + S.me).set({
-            first: niceName(first).slice(0, 40), last: niceName(last).slice(0, 40), showName: !!st.showName, username,
-            yil: +$('#au-year', host).value || 0, showYil: !!st.showYil, bolum: ($('#au-bolum', host) || { value: '' }).value, ...avPayload(st)
-          });
-          return;
-        }
-        if (!privPath()) throw { code: 'no_identity' };
-        await S.db.doc(privPath()).set({ email: st.email, phone, at: Date.now(), verifiedAt: Date.now() });
-        await S.db.doc('emails/' + mk).set({ uid: S.me, at: Date.now() });
-        await S.db.doc('users/' + S.me).set({
-          first: niceName(first).slice(0, 40), last: niceName(last).slice(0, 40), showName: !!st.showName, username,
-          yil: +$('#au-year', host).value || 0, showYil: !!st.showYil, bolum: ($('#au-bolum', host) || { value: '' }).value, ...avPayload(st),
-          bonus: KUBBE.signup, spent: 0, items: {}, at: Date.now(), verifiedAt: Date.now()
-        });
-      }, `Hoş geldin, @${username}. Hesabına ${KUBBE.signup} kubbe eklendi.`);
-      btn.disabled = false;
-      if (ok) {
-        m.close();
-        const nx = S.pendingHash; S.pendingHash = null;
-        if (nx && nx !== location.hash) location.hash = nx;
-      }
+      if (twoSteps) step4(); else await createAcc(err, $('[type=submit]', host));
     });
+  }
+  function step4() {
+    host.innerHTML = `<form novalidate>
+      ${progHtml(2)}
+      <h3 class="su-h">Bölümünü seç</h3>
+      <p class="help">Ders planın hazır gelsin: dönem dönem derslerin, aldıklarını ✓ ile işaretleyeceğin mezuniyet yolu ve bölümünün kubbe sıralaması.</p>
+      ${bolumPickHtml('au-bolum', st.bolum || '', { big: true })}
+      <p class="err" role="alert"></p>
+      <div class="modal-foot"><button type="button" class="btn btn-ghost" data-r="back">Geri</button><button class="btn btn-primary" type="submit">Hesabı oluştur</button></div>
+      <p class="auth-alt su-skip"><button type="button" class="linkbtn" data-r="skip">Bölümümü sonra seçerim</button></p></form>`;
+    wireBolumPick(host, v => { st.bolum = v; });
+    const err = $('.err', host), btn = $('[type=submit]', host);
+    $('[data-r=back]', host).addEventListener('click', () => { st.bolum = $('#au-bolum', host).value; step3(); });
+    $('[data-r=skip]', host).addEventListener('click', () => { st.bolum = ''; createAcc(err, btn); });
+    $('form', host).addEventListener('submit', e => {
+      e.preventDefault();
+      err.textContent = '';
+      st.bolum = $('#au-bolum', host).value;
+      if (!st.bolum) { err.textContent = 'Listeden bölümünü seç ya da “Bölümümü sonra seçerim”e bas.'; return; }
+      createAcc(err, btn);
+    });
+    setTimeout(() => { const i = $('[data-r=bp-q]', host); if (i && !st.bolum && !('ontouchstart' in window)) i.focus(); }, 40);
+  }
+  async function createAcc(err, btn) {
+    const { first, last, username } = st, yil = +st.yil || 0, bolum = st.bolum && S.bolumler.has(st.bolum) ? st.bolum : '';
+    if (btn) btn.disabled = true;
+    const mk = S.supa ? '' : await mailKey(st.email);
+    const prof = { first: niceName(first).slice(0, 40), last: niceName(last).slice(0, 40), showName: !!st.showName, username, yil, showYil: !!st.showYil, bolum, ...avPayload(st) };
+    const ok = await write(async () => {
+      if (S.supa) {
+        if (!S.session) throw { code: 'unauthenticated' };
+        await S.db.doc('private/' + S.me).set({ phone: '', at: Date.now() });
+        await S.db.doc('users/' + S.me).set(prof);
+        return;
+      }
+      if (!privPath()) throw { code: 'no_identity' };
+      await S.db.doc(privPath()).set({ email: st.email, phone: '', at: Date.now(), verifiedAt: Date.now() });
+      await S.db.doc('emails/' + mk).set({ uid: S.me, at: Date.now() });
+      await S.db.doc('users/' + S.me).set(Object.assign(prof, { bonus: KUBBE.signup, spent: 0, items: {}, at: Date.now(), verifiedAt: Date.now() }));
+    }, `Hoş geldin, @${username}. Hesabına ${KUBBE.signup} kubbe eklendi.`);
+    if (btn) btn.disabled = false;
+    if (!ok) { if (err && !err.textContent) err.textContent = 'Hesap açılamadı, yeniden dene.'; return; }
+    m.close();
+    const nx = S.pendingHash; S.pendingHash = null;
+    if (nx && nx !== location.hash) location.hash = nx;
   }
   function stepLogin() {
     host.innerHTML = `<form novalidate>
@@ -2388,18 +2481,19 @@ function openProfileEdit() {
   const u = myAcc();
   const pv = S.priv || {};
   const st = { avk: avKind(u), emoji: avEmoji(u), harf: u.harf || '', urun: u.urun || '', color: avColor(u), pic: u.pic || '', items: u.items || {}, showName: !!u.showName, showYil: u.showYil !== false };
-  const m = openModal({ title: 'Profilini düzenle', sub: pv.email || u.email || S.email || '', body: `<form novalidate>
+  const m = openModal({ title: 'Profilini düzenle', sub: pv.email || u.email || S.email || '', body: `<form novalidate class="pe-form">
     ${avatarPickerHtml(st)}
-    <div class="field"><label for="pe-user">Kullanıcı adı</label><input id="pe-user" class="input" maxlength="20" value="${esc(u.username || '')}"></div>
-    <div class="field"><div class="lbl-row"><span class="label">Ad soyad</span>${toggleChip('showName', st.showName)}</div>
+    <div class="field"><label for="pe-user">Kullanıcı adı</label><input id="pe-user" class="input" maxlength="20" autocapitalize="none" autocorrect="off" spellcheck="false" value="${esc(u.username || '')}"><p class="help">Yorumlarda ve sıralamada bu ad görünür.</p></div>
+    <div class="field"><div class="lbl-row"><span class="label">Ad soyad</span>${eyeToggle('showName', st.showName, 'Ad soyad')}</div>
       <div class="two"><input id="pe-first" class="input" maxlength="40" value="${esc(u.first || pv.first || '')}" aria-label="Ad"><input id="pe-last" class="input" maxlength="40" value="${esc(u.last || pv.last || '')}" aria-label="Soyad"></div></div>
-    <div class="field"><div class="lbl-row"><label class="label" for="pe-year">Giriş yılı</label>${toggleChip('showYil', st.showYil)}</div><select id="pe-year" class="select">${yearOptions(u.yil || pv.yil)}</select></div>
-    ${bolumFieldHtml('pe-bolum', u.bolum || '')}
-    <div class="field"><label for="pe-no">Telefon numarası <span class="opt">isteğe bağlı, yalnızca sen görürsün</span></label><input id="pe-no" class="input" type="tel" inputmode="tel" maxlength="16" value="${esc(pv.phone || '')}"></div>
+    <div class="field"><div class="lbl-row"><label class="label" for="pe-year">Giriş yılı</label>${eyeToggle('showYil', st.showYil, 'Giriş yılı')}</div><select id="pe-year" class="select">${yearOptions(u.yil || pv.yil)}</select></div>
+    ${S.bolumler.size ? `<div class="field"><span class="label">Bölüm</span>${bolumPickHtml('pe-bolum', u.bolum || '')}</div>` : ''}
+    <div class="field"><div class="lbl-row"><label class="label" for="pe-no">Telefon numarası <span class="opt">isteğe bağlı</span></label><span class="vis-note">${icon('lock')}Yalnızca sen görürsün</span></div><input id="pe-no" class="input" type="tel" inputmode="tel" maxlength="16" placeholder="05xx xxx xx xx" value="${esc(pv.phone || '')}"></div>
     <p class="err" role="alert"></p>
-    <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">Kaydet</button></div></form>` });
+    <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">${icon('check')}Kaydet</button></div></form>` });
   wireAvatarPicker(m.el, st);
   wireToggles(m.el, st);
+  wireBolumPick(m.el);
   const err = $('.err', m.el);
   $('form', m.el).addEventListener('submit', async e => {
     e.preventDefault();
@@ -2420,6 +2514,15 @@ function openProfileEdit() {
     }, 'Profilin güncellendi');
     if (ok) m.close();
   });
+}
+/* Profil sayfasındaki göz: adın ya da giriş yılın profilde görünsün mü (sunucu gizlenenleri özel kayda taşır, bu yüzden değer de gönderilir) */
+function toggleVis(k) {
+  const u = myAcc();
+  if (!u || !needAcc() || (k !== 'showName' && k !== 'showYil')) return;
+  const pv = S.priv || {};
+  const on = k === 'showName' ? !u.showName : u.showYil === false;
+  const patch = k === 'showName' ? { showName: on, first: u.first || pv.first || '', last: u.last || pv.last || '' } : { showYil: on, yil: u.yil || +pv.yil || 0 };
+  write(() => S.db.doc('users/' + S.me).update(patch), (k === 'showName' ? 'Adın' : 'Giriş yılın') + (on ? ' artık profilinde görünüyor' : ' gizlendi'));
 }
 function openUserCard(uid) {
   const u = userOf(uid);
@@ -3317,6 +3420,10 @@ ROUTES[''] = function viewHome(root) {
         <div class="sec-head"><h2>Son yorumlar</h2><a class="sec-link" href="#/hocaolcer">HocaÖlçer</a></div>
         <div data-r="cms"></div>
       </section>
+      <section class="home-sec">
+        <div class="sec-head"><h2>Gündemdeki dersler</h2><a class="sec-link" href="#/dersler">Tüm dersler</a></div>
+        <div data-r="hot"></div>
+      </section>
     </div>
     <aside class="lead" data-r="lead" aria-label="Kubbe sıralaması">
       <div class="lead-top"><h2>Kubbe sıralaması</h2><a class="sec-link" href="#/kubbe">Kubbe ve market</a></div>
@@ -3328,11 +3435,7 @@ ROUTES[''] = function viewHome(root) {
       <div data-r="board"></div>
       <button type="button" class="btn btn-sm lead-more" data-r="more" hidden>${icon('chart')}Tümünü gör</button>
     </aside>
-  </div>
-  <section class="wrap home-sec">
-    <div class="sec-head"><h2>Gündemdeki dersler</h2><a class="sec-link" href="#/dersler">Tüm dersler</a></div>
-    <div data-r="hot"></div>
-  </section>`;
+  </div>`;
   const input = $('#home-q', root), form = $('[data-r=form]', root);
   combobox(input, { source: globalResults, onPick: goItem });
   form.addEventListener('submit', e => {
@@ -3400,11 +3503,11 @@ ROUTES[''] = function viewHome(root) {
       { const list = openRequests().slice(0, 3), h = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>` : '', el2 = R('reqs'); R('reqsec').hidden = !h; if (el2.dataset.h !== h) { el2.dataset.h = h; el2.innerHTML = h; } }
       // Revaçta: oy ve tazelik (▼ alan aşağı iner, eksiye düşen burada görünmez); Yeni: son paylaşılanlar. Haftanın notu üstte, listede tekrar etmez.
       const shown = notesWhere(n => !isHidden(n)), wk = shown.length ? weekNote() : null;
-      const notes = (ns === 'new' ? shown.sort((a, b) => b.at - a.at) : shown.filter(n => voteScore(n) >= 0).sort(byHot)).filter(n => !wk || n.id !== wk.n.id).slice(0, 5);
+      const notes = (ns === 'new' ? shown.sort((a, b) => b.at - a.at) : shown.filter(n => voteScore(n) >= 0).sort(byHot)).filter(n => !wk || n.id !== wk.n.id).slice(0, 6);
       R('notes').innerHTML = notes.length || wk ? `${wk ? weekNoteHtml() : ''}${notes.length ? `<ul class="ncards${introCls()}">${notes.map(n => noteCard(n)).join('')}</ul>` : ''}`
         : emptyHtml(ns === 'new' || !shown.length ? 'Henüz not paylaşılmadı' : 'Revaçta not yok', 'Notunu Google Drive’dan seç, ilk notu sen paylaş.', '<a class="btn btn-primary" href="#/paylas">Not paylaş</a>');
       lazyPhotos(R('notes'));
-      const cms = commentsWhere(c => !isHidden(c)).sort((a, b) => b.at - a.at).slice(0, 6);
+      const cms = commentsWhere(c => !isHidden(c)).sort((a, b) => b.at - a.at).slice(0, 3);
       R('cms').innerHTML = cms.length ? `<ul class="list">${cms.map(c => {
         const where = c.tt === 'course' ? { href: '#/ders/' + c.tid + '?tab=yorumlar', label: codeOf(c.tid) }
           : c.tt === 'hoca' ? { href: '#/hoca/' + c.tid, label: hocaName(c.tid) || 'Hoca' }
@@ -3414,7 +3517,7 @@ ROUTES[''] = function viewHome(root) {
       }).join('')}</ul>` : emptyHtml('Henüz yorum yok', 'Bir dersi ya da hocayı ilk yorumlayan sen ol.');
       applyWidths(R('cms'));
       renderLead();
-      const hot = top.slice(0, 8);
+      const hot = top.slice(0, 6);
       R('hot').innerHTML = hot.length ? `<ul class="list">${hot.map(id => {
         const a = act.get(id);
         return `<li><a class="row-link" href="#/ders/${esc(id)}"><span class="code">${esc(codeOf(id))}</span><span class="row-main"><span class="row-title">${esc(courseName(id) || 'Ders adı girilmemiş')}</span></span><span class="row-end">${a.notes} not, ${a.comments} yorum</span></a></li>`;
@@ -4065,9 +4168,9 @@ ROUTES['paylas'] = function viewShare(root, r) {
 /* ================= Katkılarım ================= */
 ROUTES['katkilarim'] = function viewMine(root) {
   root.innerHTML = `<div class="wrap">
-    <div class="page-intro"><h1>Katkılarım</h1><p>Paylaştığın notlar, yorumların ve HocaÖlçer puanların. Buradan silebilir ya da güncelleyebilirsin. Bu liste yalnızca sana görünür.</p></div>
-    <div class="head-actions"><a class="btn" href="#/profil">Profil ayarları</a><a class="btn btn-ghost" href="#/kubbe">Kubbe ve market</a></div>
-    <div data-r="body"></div></div>`;
+    <div class="page-intro km-intro"><h1>Katkılarım</h1><p>Paylaştığın notlar, HocaÖlçer puanların ve yorumların. Buradan silebilir ya da güncelleyebilirsin. Bu sayfayı yalnızca sen görürsün.</p>
+      <div class="head-actions"><a class="btn btn-solid btn-press" href="#/profil">${icon('edit')}Profil ayarları</a></div></div>
+    <div class="km-body" data-r="body"></div></div>`;
   return {
     refresh() {
       const el = $('[data-r=body]', root), st = waitState();
@@ -4077,11 +4180,12 @@ ROUTES['katkilarim'] = function viewMine(root) {
       const cms = commentsWhere(c => isMine(c)).sort((a, b) => b.at - a.at);
       const rates = [];
       for (const [hid, h] of S.hocas) { const r = h.ratings && h.ratings[pk('hocas', hid)]; if (r && typeof r === 'object' && typeof r.a === 'number') rates.push({ hid, h, r }); }
-      const sec = (t, inner) => `<section class="grp"><h2 class="sub-h">${t}</h2>${inner}</section>`;
+      const sec = (t, n, inner) => `<section class="km-sec"><div class="km-head"><h2>${t}</h2><span class="km-count">${n}</span></div>${inner}</section>`;
+      const empty = (txt, href, cta) => `<div class="km-empty"><p>${txt}</p><a class="btn btn-sm btn-primary" href="${href}">${cta}</a></div>`;
       el.innerHTML =
-        sec(`Notlarım (${notes.length})`, notes.length ? `<ul class="list">${notes.map(n => noteRow(n, { showCourse: true }).replace('</li>', `<div class="cm-actions pad"><button type="button" class="iconbtn" data-g="del-note" data-id="${esc(n.id)}">${icon('trash')}Sil</button></div></li>`)).join('')}</ul>` : '<p class="help">Henüz not paylaşmadın.</p>') +
-        sec(`HocaÖlçer puanlarım (${rates.length})`, rates.length ? `<ul class="list">${rates.map(x => { const avg = CRIT.reduce((s, c) => s + x.r[c.k], 0) / CRIT.length; return `<li><div class="row-link"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><a class="row-title" href="#/hoca/${esc(x.hid)}">${esc(hocaFull(x.h))}</a><span class="row-sub">${CRIT.map(c => `${esc(c.name)} ${fmt1(x.r[c.k])}`).join(', ')}</span></span><span class="row-end"><span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span><button type="button" class="iconbtn" data-g="rate" data-hid="${esc(x.hid)}">${icon('edit')}Güncelle</button><button type="button" class="iconbtn" data-g="unrate" data-id="${esc(x.hid)}">${icon('trash')}Kaldır</button></span></div></li>`; }).join('')}</ul>` : '<p class="help">Henüz bir hocayı puanlamadın.</p>') +
-        sec(`Yorumlarım (${cms.length})`, cms.length ? `<ul class="list">${cms.map(c => { const where = c.tt === 'course' ? `#/ders/${c.tid}?tab=yorumlar` : c.tt === 'hoca' ? `#/hoca/${c.tid}` : `#/not/${c.tid}`; const label = c.tt === 'course' ? codeOf(c.tid) : c.tt === 'hoca' ? hocaName(c.tid) : ((S.notes.get(c.tid) || {}).title || 'Not'); return `<li><div class="row-link"><span class="row-main"><a class="row-title" href="${esc(where)}">${esc(label || 'Silinmiş içerik')}</a><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end"><span>${esc(ago(c.at))}</span><button type="button" class="iconbtn" data-g="del-comment" data-id="${esc(c.id)}">${icon('trash')}Sil</button></span></div></li>`; }).join('')}</ul>` : '<p class="help">Henüz yorum yazmadın.</p>');
+        sec('Notlarım', notes.length, notes.length ? `<ul class="list">${notes.map(n => noteRow(n, { showCourse: true }).replace('</li>', `<div class="cm-actions pad"><button type="button" class="iconbtn" data-g="del-note" data-id="${esc(n.id)}">${icon('trash')}Sil</button></div></li>`)).join('')}</ul>` : empty(`Henüz not paylaşmadın. Her not ${KUBBE.note} kubbe kazandırır.`, '#/paylas', `${icon('up')}Not paylaş`)) +
+        sec('HocaÖlçer puanlarım', rates.length, rates.length ? `<ul class="list">${rates.map(x => { const avg = CRIT.reduce((s, c) => s + x.r[c.k], 0) / CRIT.length; return `<li><div class="row-link"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><a class="row-title" href="#/hoca/${esc(x.hid)}">${esc(hocaFull(x.h))}</a><span class="row-sub">${CRIT.map(c => `${esc(c.name)} ${fmt1(x.r[c.k])}`).join(', ')}</span></span><span class="row-end"><span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span><button type="button" class="iconbtn" data-g="rate" data-hid="${esc(x.hid)}">${icon('edit')}Güncelle</button><button type="button" class="iconbtn" data-g="unrate" data-id="${esc(x.hid)}">${icon('trash')}Kaldır</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz bir hocayı puanlamadın. Her HocaÖlçer puanı ${KUBBE.rating} kubbe kazandırır.`, '#/hocaolcer', `${icon('star')}HocaÖlçer’e git`)) +
+        sec('Yorumlarım', cms.length, cms.length ? `<ul class="list">${cms.map(c => { const where = c.tt === 'course' ? `#/ders/${c.tid}?tab=yorumlar` : c.tt === 'hoca' ? `#/hoca/${c.tid}` : `#/not/${c.tid}`; const label = c.tt === 'course' ? codeOf(c.tid) : c.tt === 'hoca' ? hocaName(c.tid) : ((S.notes.get(c.tid) || {}).title || 'Not'); return `<li><div class="row-link"><span class="row-main"><a class="row-title" href="${esc(where)}">${esc(label || 'Silinmiş içerik')}</a><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end"><span>${esc(ago(c.at))}</span><button type="button" class="iconbtn" data-g="del-comment" data-id="${esc(c.id)}">${icon('trash')}Sil</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz yorum yazmadın. Her yorum ${KUBBE.comment} kubbe kazandırır.`, '#/dersler', `${icon('book')}Derslere göz at`));
       lazyPhotos(el); applyWidths(el);
     }
   };
@@ -4101,8 +4205,8 @@ ROUTES['moderasyon'] = function viewMod(root) {
         .sort((a, b) => b.n - a.n || b.at - a.at);
       let photoCount = 0;
       for (const n of S.notes.values()) photoCount += Array.isArray(n.photos) ? n.photos.length : 0;
-      const used = S.dbCourses.size + S.dbHocas.size + S.notes.size + S.comments.size + S.users.size + S.bolumler.size + S.requests.size + photoCount;
-      el.innerHTML = S.supa ? `<p class="help mb">Veritabanında ${used} kayıt (${S.notes.size} not, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbHocas.size} hoca kaydı, ${S.requests.size} istek, ${S.zor.size} DersÖlçer belgesi).</p>` + (items.length ? `<ul class="list">${items.map(x => `<li><div class="row-link"><span class="row-main"><a class="row-title clip" href="${esc(x.link)}">${esc(x.title)}</a><span class="row-sub">${x.col === 'notes' ? 'Not' : 'Yorum'}, ${esc(x.where || '')}, ${x.n} bildirim${x.n >= REPORT_LIMIT ? ', gizlendi' : ''}</span></span><span class="row-end"><button type="button" class="iconbtn" data-g="mod-ok" data-col="${x.col}" data-id="${esc(x.id)}">Uygun</button><button type="button" class="iconbtn" data-g="mod-del" data-col="${x.col}" data-id="${esc(x.id)}">${icon('trash')}Sil</button></span></div></li>`).join('')}</ul>` : emptyHtml('Bildirilen içerik yok', 'Her şey yolunda görünüyor.')) : `<p class="help mb">Veritabanı kullanımı yaklaşık ${used} / 5000 kayıt (${S.notes.size} not, ${photoCount} fotoğraf, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbCourses.size} ders kaydı, ${S.dbHocas.size} hoca kaydı, ${S.bolumler.size} bölüm, ${S.requests.size} istek). Ders kataloğu (${CAT.courses.size} ders, ${CAT.plans.size} bölüm planı) ve akademik kadro (${CAT.hocas.size} hoca) sayfanın içinde durur, bu kotayı kullanmaz.</p>` +
+      const used = S.dbCourses.size + S.dbHocas.size + S.notes.size + S.comments.size + S.users.size + S.dbBolumler.size + S.requests.size + photoCount;
+      el.innerHTML = S.supa ? `<p class="help mb">Veritabanında ${used} kayıt (${S.notes.size} not, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbHocas.size} hoca kaydı, ${S.requests.size} istek, ${S.zor.size} DersÖlçer belgesi).</p>` + (items.length ? `<ul class="list">${items.map(x => `<li><div class="row-link"><span class="row-main"><a class="row-title clip" href="${esc(x.link)}">${esc(x.title)}</a><span class="row-sub">${x.col === 'notes' ? 'Not' : 'Yorum'}, ${esc(x.where || '')}, ${x.n} bildirim${x.n >= REPORT_LIMIT ? ', gizlendi' : ''}</span></span><span class="row-end"><button type="button" class="iconbtn" data-g="mod-ok" data-col="${x.col}" data-id="${esc(x.id)}">Uygun</button><button type="button" class="iconbtn" data-g="mod-del" data-col="${x.col}" data-id="${esc(x.id)}">${icon('trash')}Sil</button></span></div></li>`).join('')}</ul>` : emptyHtml('Bildirilen içerik yok', 'Her şey yolunda görünüyor.')) : `<p class="help mb">Veritabanı kullanımı yaklaşık ${used} / 5000 kayıt (${S.notes.size} not, ${photoCount} fotoğraf, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbCourses.size} ders kaydı, ${S.dbHocas.size} hoca kaydı, ${S.dbBolumler.size} bölüm, ${S.requests.size} istek). Ders kataloğu (${CAT.courses.size} ders, ${CAT.plans.size} bölüm planı) ve akademik kadro (${CAT.hocas.size} hoca) sayfanın içinde durur, bu kotayı kullanmaz.</p>` +
         (items.length ? `<ul class="list">${items.map(x => `<li><div class="row-link"><span class="row-main"><a class="row-title clip" href="${esc(x.link)}">${esc(x.title)}</a><span class="row-sub">${x.col === 'notes' ? 'Not' : 'Yorum'}, ${esc(x.where || '')}, ${x.n} bildirim${x.n >= REPORT_LIMIT ? ', gizlendi' : ''}</span></span><span class="row-end"><button type="button" class="iconbtn" data-g="mod-ok" data-col="${x.col}" data-id="${esc(x.id)}">Uygun</button><button type="button" class="iconbtn" data-g="mod-del" data-col="${x.col}" data-id="${esc(x.id)}">${icon('trash')}Sil</button></span></div></li>`).join('')}</ul>` : emptyHtml('Bildirilen içerik yok', 'Her şey yolunda görünüyor.'));
     }
   };
@@ -4154,6 +4258,7 @@ Object.assign(G, {
   user: id => openUserCard(id),
   acc: () => { if (hasAcc()) location.hash = '#/profil'; else openAuth(); },
   'profile-edit': () => openProfileEdit(),
+  'vis-toggle': (id, el) => toggleVis(el.dataset.k),
   buy: (id) => buyItem(id),
   'av-urun': id => setAvatarItem(id)
 });
@@ -4249,33 +4354,56 @@ ROUTES['profil'] = function viewProfile(root) {
       const accRow = S.supa
         ? `<div><dt>${u.role === 'admin' ? 'Hesap' : 'E-posta'}</dt><dd>${u.role === 'admin' ? 'Yönetici ' : ''}${esc(S.email || '')} <span class="tag ok-tag">doğrulandı</span> <button type="button" class="btn btn-sm" data-g="logout">Çıkış yap</button></dd></div>`
         : u.shared ? `<div><dt>E-posta</dt><dd>${esc(u.email || '')} <span class="tag ok-tag">doğrulandı</span> <button type="button" class="btn btn-sm" data-g="logout-shared">Çıkış yap</button></dd></div>` : u.role === 'admin' ? `<div><dt>Hesap</dt><dd>Yönetici <span class="opt">${S.login && S.login.email ? esc(S.login.email) : 'sıralamada görünmez'}</span>${S.login && S.login.hash && S.me === S.baseMe ? ' <button type="button" class="btn btn-sm" data-g="logout-base">Çıkış yap</button>' : ''}</dd></div>` : `<div><dt>E-posta</dt><dd>${esc((S.priv && S.priv.email) || u.email || '')} <span class="tag ok-tag">doğrulandı</span></dd></div>`;
-      el.innerHTML = `<div class="page-intro"><h1>Profilim</h1></div>
-        <div class="prof-card">
-          ${avatarHtml(S.me, { cls: 'xl' })}
-          <div class="prof-main">
-            <p class="kh-name">${esc(u.username || '')}</p>
-            <p class="muted">${esc(myName)}</p>
-            <dl class="prof-list">
-              ${accRow}
-              ${S.bolumler.size || u.bolum ? `<div><dt>Bölüm</dt><dd>${esc(bolumName(u.bolum) || 'seçilmedi')}</dd></div>` : ''}
-              <div><dt>Telefon</dt><dd>${esc((S.priv && S.priv.phone) || 'girilmedi')} <span class="opt">yalnızca sen</span></dd></div>
-              <div><dt>Ad soyad</dt><dd>${esc(myName || 'girilmedi')} <span class="opt">${u.showName ? 'profilde görünüyor' : 'gizli'}</span></dd></div>
-              <div><dt>Giriş yılı</dt><dd>${myYil ? esc(String(myYil)) : 'girilmedi'} <span class="opt">${u.showYil !== false ? 'profilde görünüyor' : 'gizli'}</span></dd></div>
-              <div><dt>Kubbe</dt><dd>${balanceOf(S.me)} (toplam ${k.all}${giftOf(S.me) ? ', hediye ' + giftOf(S.me) : ''}, harcanan ${spentOf(S.me)})</dd></div>
-              <div><dt>Sıralama</dt><dd>Tüm zamanlar ${rankOf(S.me, 'all')}. sıra, ${esc(termLabel(currentTk()))} ${rankOf(S.me, 'term')}. sıra${S.supa ? ' <span class="opt">yalnızca adınla yaptıkların sayılır</span>' : ''}</dd></div>
-            </dl>
-            <div class="head-actions"><button type="button" class="btn" data-g="profile-edit">${icon('edit')}Bilgileri düzenle</button><a class="btn btn-ghost" href="#/katkilarim">Katkılarım</a><a class="btn btn-ghost" href="#/kubbe">Kubbe ve market</a></div>
+      // Kapak: profil resminin rengiyle boyanır; profil resmi bantla yapıştırılmış bir çıkartma, altta kubbe sırası
+      const color = okHex(u.color) ? u.color : AV_COLORS[0], bol = u.bolum && S.bolumler.has(u.bolum) ? u.bolum : '';
+      const eyeBtn = (key, on, what) => `<button type="button" class="vis-st ${on ? 'on' : 'off'}" data-g="vis-toggle" data-k="${key}" aria-pressed="${on}" aria-label="${esc(what)}: ${on ? 'profilde görünür, gizlemek için dokun' : 'gizli, göstermek için dokun'}">${icon(on ? 'eye' : 'eyeoff')}<span>${on ? 'Profilde görünür' : 'Gizli'}</span></button>`;
+      const led = (ic, label, val, note = '') => `<li class="led-row"><span class="led-ic" aria-hidden="true">${icon(ic)}</span><span class="led-l">${label}${note ? ` <span class="opt">${note}</span>` : ''}</span><span class="led-dots" aria-hidden="true"></span><b class="led-v">${val}</b></li>`;
+      el.innerHTML = `<section class="pf-cover" style="--pf-c:${color}" aria-label="Profilin">
+          <div class="pf-in">
+            <div class="pf-sticker">${avatarHtml(S.me, { cls: 'hero' })}</div>
+            <div class="pf-id">
+              <h1 class="pf-user"><span class="pf-at" aria-hidden="true">@</span>${nameHtml(u, u.username || '')}${badgesHtml(u)}</h1>
+              ${myName ? `<p class="pf-real">${esc(myName)}${visIc(!!u.showName, 'Adın')}</p>` : ''}
+              <div class="pf-tags">
+                ${bol ? `<a class="pf-tag dept" href="#/dersler?b=${esc(bol)}" title="Ders planını aç">${icon('grad')}<span>${esc(bolumName(bol))}</span></a>` : S.bolumler.size ? `<button type="button" class="pf-tag add" data-g="profile-edit">${icon('plus')}<span>Bölümünü seç</span></button>` : ''}
+                ${myYil ? `<span class="pf-tag">${esc(String(myYil))} girişli${visIc(u.showYil !== false, 'Giriş yılın')}</span>` : ''}
+              </div>
+              <div class="pf-acts"><button type="button" class="btn btn-primary btn-press" data-g="profile-edit">${icon('edit')}Profili düzenle</button><a class="btn btn-solid btn-press" href="#/katkilarim">${icon('list')}Katkılarım</a></div>
+            </div>
+            <div class="pf-kubbe" role="group" aria-label="Kubben">
+              <span class="pf-k-ico" aria-hidden="true">${icon('kubbe')}</span>
+              <b class="pf-k-num">${balanceOf(S.me)}</b><span class="pf-k-lbl">kubbe</span>
+              <span class="pf-k-rank"><span>${esc(termLabel(currentTk()))}</span><b>${rankOf(S.me, 'term')}. sıra</b></span>
+              <span class="pf-k-rank"><span>Tüm zamanlar</span><b>${rankOf(S.me, 'all')}. sıra</b></span>
+            </div>
           </div>
-        </div>
-        <section class="home-sec"><h2 class="sub-h">Kubbe dökümü</h2>
-          <ul class="list"><li class="kd-row"><span>${k.notes} not</span><b>${k.notes * KUBBE.note} kubbe ve üzeri</b></li>
-          <li class="kd-row"><span>${k.comments} yorum</span><b>${k.comments * KUBBE.comment} kubbe</b></li>
-          <li class="kd-row"><span>${k.ratings} HocaÖlçer puanı</span><b>${k.ratings * KUBBE.rating} kubbe</b></li>
-          <li class="kd-row"><span>Notlarına ${k.ups || 0} ▲ geldi</span><b>${(k.ups || 0) * KUBBE.up} kubbe</b></li>
-          <li class="kd-row"><span>Yorumların ${k.likes} beğeni aldı</span><b>${k.likes * KUBBE.like} kubbe</b></li>
-          <li class="kd-row"><span>${k.fills || 0} not isteği karşıladın</span><b>${(k.fills || 0) * KUBBE.fill} kubbe</b></li>
-          <li class="kd-row"><span>Hesap açma</span><b>${Math.max(0, +u.bonus || 0)} kubbe</b></li>${giftOf(S.me) ? `<li class="kd-row"><span>Hediye <span class="opt">sıralamaya sayılmaz</span></span><b>${giftOf(S.me)} kubbe</b></li>` : ''}</ul>
         </section>
+        <div class="pf-grid">
+          <section class="pf-sec"><h2 class="sub-h">Hesabın</h2>
+            <dl class="pf-rows">
+              ${accRow}
+              <div><dt>Ad soyad</dt><dd><span class="pf-val">${esc(myName || 'girilmedi')}</span>${myName ? eyeBtn('showName', !!u.showName, 'Ad soyad') : ''}</dd></div>
+              <div><dt>Giriş yılı</dt><dd><span class="pf-val">${myYil ? esc(String(myYil)) : 'girilmedi'}</span>${myYil ? eyeBtn('showYil', u.showYil !== false, 'Giriş yılı') : ''}</dd></div>
+              ${S.bolumler.size || u.bolum ? `<div><dt>Bölüm</dt><dd><span class="pf-val">${esc(bolumName(u.bolum) || 'seçilmedi')}</span></dd></div>` : ''}
+              <div><dt>Telefon</dt><dd><span class="pf-val">${esc((S.priv && S.priv.phone) || 'girilmedi')}</span><span class="vis-note">${icon('lock')}Yalnızca sen</span></dd></div>
+            </dl>
+            ${S.supa ? '<p class="fine">Sıralamaya yalnızca adınla yaptıkların sayılır; anonim paylaşımlar ve hoca puanları bakiyene eklenir.</p>' : ''}
+          </section>
+          <section class="pf-sec"><h2 class="sub-h">Kubbe dökümü</h2>
+            <ul class="pf-ledger">
+              ${led('kubbe', 'Hesap açma', Math.max(0, +u.bonus || 0))}
+              ${led('book', `${k.notes} not`, k.notes * KUBBE.note, k.notes ? 've üzeri' : '')}
+              ${led('vup', `Notlarına ${k.ups || 0} ▲ geldi`, (k.ups || 0) * KUBBE.up)}
+              ${led('comment', `${k.comments} yorum`, k.comments * KUBBE.comment)}
+              ${led('heart', `Yorumların ${k.likes} beğeni aldı`, k.likes * KUBBE.like)}
+              ${led('star', `${k.ratings} HocaÖlçer puanı`, k.ratings * KUBBE.rating)}
+              ${led('bookmark', `${k.fills || 0} not isteği karşıladın`, (k.fills || 0) * KUBBE.fill)}
+              ${giftOf(S.me) ? led('plus', 'Hediye', giftOf(S.me), 'sıralamaya sayılmaz') : ''}
+              ${spentOf(S.me) ? led('cr', 'Markette harcadın', '−' + spentOf(S.me)) : ''}
+              <li class="led-row led-sum"><span class="led-l">Bakiyen</span><span class="led-dots" aria-hidden="true"></span><b class="led-v">${balanceOf(S.me)} kubbe</b></li>
+            </ul>
+          </section>
+        </div>
         ${badgesSectionHtml(S.me)}
         <section class="home-sec"><h2 class="sub-h">Aldıkların</h2>
           ${items.length ? `<div class="shop">${items.map(id => lootHtml(MARKET_BY_ID[id], { u, buy: false })).join('')}</div>` : '<p class="help">Henüz market ürünü almadın. <a href="#/kubbe">Markete göz at</a></p>'}

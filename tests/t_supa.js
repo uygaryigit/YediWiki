@@ -101,9 +101,13 @@ async function signup(t, be, local, prof) {
   t.$('#au-code').value = lastCode(be, email);
   await t.submit('.modal form', 250);
   await t.until(() => t.$('#au-user'), 'profil adımı ' + local);
+  eq(t.$('#au-user').value, local.replace(/[^a-z0-9._]+/g, '.'), 'kullanıcı adı e-postadan geldi: ' + local);
   t.$('#au-user').value = prof.username; t.$('#au-first').value = prof.first; t.$('#au-last').value = prof.last;
   if (prof.showName) t.$('.modal [data-vis=showName]').click();
-  await t.submit('.modal form', 300);
+  await t.submit('.modal form', 200);
+  await t.until(() => t.$('.modal [data-bpick]'), 'bölüm adımı ' + local);
+  if (prof.bolum) { t.$(`.modal .bp-opt[data-bid="${prof.bolum}"]`).click(); await t.submit('.modal form', 300); }
+  else { t.$('.modal [data-r=skip]').click(); await sleep(300); }
   await t.until(() => !t.$('.modal') && t.ev('!!myAcc()'), 'hesap açıldı ' + local);
 }
 
@@ -178,14 +182,15 @@ async function signup(t, be, local, prof) {
     ok(/\(sen\)/.test(A.text('[data-r=meta]')), 'anonim notunda "(sen)" yalnızca sana');
     ok(!!A.$('[data-g=del-note]') && !A.$('[data-g=report-note]'), 'kendi anonim notunu silebilir, bildiremez');
     await A.go('#/katkilarim');
-    await A.until(() => /Notlarım \(2\)/.test(A.text('#main')), 'Katkılarım iki notu gösterir (anonim dahil)');
+    await A.until(() => A.text('#main .km-sec:nth-child(1) .km-count') === '2', 'Katkılarım iki notu gösterir (anonim dahil)');
     noErr(A, 'not paylaşma');
 
     console.log('4) ikinci öğrenci: beğeni, bildirim, yorum (canlı)');
     const B = await tab(be, { name: 'B' });
-    await signup(B, be, 'bora.kaya', { username: 'borakaya', first: 'Bora', last: 'Kaya', showName: true });
+    await signup(B, be, 'bora.kaya', { username: 'borakaya', first: 'Bora', last: 'Kaya', showName: true, bolum: 'bilgisayar-muhendisligi' });
     const bid = B.ev('S.me');
-    { const u = await doc(be, 'users', bid); ok(u.first === 'Bora', 'adını gösteren öğrencinin adı açık profilde'); }
+    { const u = await doc(be, 'users', bid); ok(u.first === 'Bora', 'adını gösteren öğrencinin adı açık profilde'); eq(u.bolum, 'bilgisayar-muhendisligi', 'hesap açarken seçilen bölüm kaydedildi'); }
+    ok(B.ev('S.bolumler.size') >= 70 && B.ev('S.dbBolumler.size') === 0, 'sitede bölümler katalogdan (veritabanında bölüm kaydı yok)');
     await B.go('#/not/' + n2); await sleep(150);
     ok(/Anonim/.test(B.text('[data-r=meta]')) && !/\(sen\)/.test(B.text('[data-r=meta]')), 'B için not anonim');
     ok(!B.$('[data-g=del-note]'), 'B anonim notu silemez');
@@ -409,7 +414,7 @@ async function signup(t, be, local, prof) {
     ok(B.ev('S.sec') === '' && B.ev('S.priv') === null, 'gizli ve özel kayıt temizlendi');
     const B2 = await tab(be, { name: 'B yeniden', session: sesB, hash: '#/katkilarim' });
     await B2.until(() => B2.ev('myAcc() && myAcc().username') === 'borakaya', 'oturum geri geldi');
-    await B2.until(() => /Notlarım \(1\)/.test(B2.text('#main')) && /HocaÖlçer puanlarım \(1\)/.test(B2.text('#main')), 'Katkılarım: anonim not ve puan tanındı');
+    await B2.until(() => B2.text('#main .km-sec:nth-child(1) .km-count') === '1' && B2.text('#main .km-sec:nth-child(2) .km-count') === '1', 'Katkılarım: anonim not ve puan tanındı');
     noErr(B2, 'oturum');
 
     for (const t of [v, A, B, C, Dn, B2]) t.close();
