@@ -1,5 +1,10 @@
 {
   "url": "https://efyrrbqdiilpqnqzsphk.supabase.co",
   "key": "sb_publishable_V00R7AeJGhZyZ1rOcs-sDQ_iPYLuyzV",
-  "siteUrl": "https://yediwiki.com/"
+  "siteUrl": "https://yediwiki.com/",
+  "google": {
+    "apiKey": "AIzaSyBQgR7lcAVvpW4nKK0kLm0oWhq8gYGLi_g",
+    "clientId": "1008166841421-a3gdab0rj2vc037hqimvfd0soccdjuth.apps.googleusercontent.com",
+    "appId": "1008166841421"
+  }
 }

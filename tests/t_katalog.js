@@ -244,6 +244,10 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(/El yazısı notlar için/.test(t.text('.aside')), 'yan kutu: el yazısı notları taramak');
     eq(t.$$('#main .typepick input[name=type]').map(x => x.value).join(), 'not,sinav', 'not türü iki: ders notu ve çıkmış sınav');
     ok(t.ev("noteType({ type: 'ozet' }).name === 'Ders notu' && noteType({ type: 'lab' }).k === 'not' && noteType({ type: 'sinav' }).name === 'Çıkmış sınav'"), 'eski türler ders notu sayılır');
+    { const f = t.$('[data-r=form]'), all = [...f.querySelectorAll('*')], pos = sel => all.indexOf(f.querySelector(sel));
+      ok(pos('#sh-title') > 0 && pos('#sh-title') < pos('#sh-drive') && pos('#sh-drive') < pos('#sh-desc') && pos('#sh-desc') < pos('[data-r=rules]'), 'form sırası: başlık, dosya, açıklama, onay');
+      ok(t.$('[data-r=gpick]').hidden && !/Drive’dan seç/.test(t.text('.aside')), 'claude.ai sürümünde Drive seçici gizli');
+      eq(t.text('label[for=sh-drive]'), 'Google Drive linki', 'link kutusunun etiketi'); }
     t.$('#sh-title').value = 'Vize özeti'; t.$('[data-r=rules]').checked = true;
     const nLinksiz = t.store.count('notes');
     t.$('[data-r=form]').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(80);
@@ -253,7 +257,8 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     t.$('[data-r=form]').dispatchEvent(new t.w.Event('submit', { cancelable: true, bubbles: true })); await t.wait(250);
     eq(t.store.count('notes'), n1 + 1, 'not kaydedildi');
     { const nn = [...t.store.docs.entries()].filter(([p, d]) => p.startsWith('notes/') && d.title === 'Vize özeti').map(([, d]) => d)[0];
-      ok(nn && nn.drive === 'https://drive.google.com/file/d/abc123/view' && Array.isArray(nn.photos) && !nn.photos.length, 'not yalnızca Drive linkiyle kaydedildi'); }
+      ok(nn && nn.drive === 'https://drive.google.com/file/d/abc123/view' && Array.isArray(nn.photos) && !nn.photos.length, 'not yalnızca Drive linkiyle kaydedildi');
+      ok(nn && JSON.stringify(nn.likes) === '{}' && JSON.stringify(nn.downs) === '{}', 'yeni notta oylar boş'); }
     ok(!t.store.docs.has('courses/DENT115'), 'not için ders kaydı gerekmedi');
     await t.go('#/ders/DENT115');
     ok(/Vize özeti/.test(t.text('[data-r=panel]')), 'not ders sayfasında');
@@ -261,8 +266,50 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     eq(t.$$('[data-r=panel] [data-type]').map(x => x.dataset.type).join(), 'all,not,sinav', 'tür süzgeci: Tümü, Ders notu, Çıkmış sınav');
     { const nid = [...t.store.docs.keys()].find(p => p.startsWith('notes/') && t.store.get(p).title === 'Vize özeti').slice(6);
       await t.go('#/not/' + nid);
-      ok(!!t.$('#main .dcard') && !t.$('#main iframe') && !t.$('#main img.dthumb'), 'claude.ai sürümünde önizleme yok, Drive kartı var'); }
+      ok(!!t.$('#main .dcard') && !t.$('#main iframe') && !t.$('#main img.dthumb'), 'claude.ai sürümünde önizleme yok, Drive kartı var');
+      // kendi notuna oy verilmez
+      t.$('#main [data-g=vote-up]').click(); await t.wait(80);
+      ok(/Kendi notuna oy veremezsin/.test(t.text('#toasts')), 'kendi notuna ▲ verilemez: ' + t.text('#toasts'));
+      eq(JSON.stringify(t.store.get('notes/' + nid).likes), '{}', 'kendi notunda oy yazılmadı');
+      eq(t.text('#main .vote-hint'), 'Notunun puanı', 'kendi notunda ipucu'); }
     noErr(t, 'not paylaşma');
+
+    console.log('7e) not oyları: yeşil ▲, kırmızı ▼, kubbe ve sıralama');
+    { const me = t.ev('S.me'), au = t.store.get('notes/seed-n1').by, ups0 = t.store.get('notes/seed-n1').likes ? Object.values(t.store.get('notes/seed-n1').likes).filter(v => v === true).length : 0;
+      const kb0 = JSON.parse(t.ev(`JSON.stringify(kubbeOf(${JSON.stringify(au)}))`));
+      await t.go('#/not/seed-n1');
+      ok(!!t.$('#main .vote.big .vup') && !!t.$('#main .vote.big .vdown') && !t.$('#main [data-g=like-note]'), 'not sayfasında ▲ ▼ oylama, beğeni düğmesi yok');
+      eq(t.text('#main .vote .vnum'), String(ups0), 'başlangıç puanı: ' + ups0);
+      eq(t.text('#main .vote-hint'), 'İşine yaradı mı?', 'oy ipucu');
+      t.$('#main [data-g=vote-up]').click(); await t.wait(120);
+      { const d = t.store.get('notes/seed-n1'); ok(d.likes[me] === true && !(d.downs && d.downs[me]), '▲ yazıldı'); }
+      eq(t.text('#main .vote .vnum'), String(ups0 + 1), 'puan 1 arttı');
+      ok(t.$('#main .vote').classList.contains('is-up') && t.$('#main .vup').getAttribute('aria-pressed') === 'true', '▲ basılı görünüyor');
+      { const kb = JSON.parse(t.ev(`JSON.stringify(kubbeOf(${JSON.stringify(au)}))`)); eq(kb.all - kb0.all, 1, 'yazar ▲ başına 1 kubbe'); eq(kb.ups - kb0.ups, 1, 'yazarın ▲ sayısı'); }
+      t.$('#main [data-g=vote-down]').click(); await t.wait(120);
+      { const d = t.store.get('notes/seed-n1'); ok(d.downs[me] === true && d.likes[me] !== true, '▼ verince ▲ kalktı'); }
+      eq(t.text('#main .vote .vnum'), String(ups0 - 1), 'puan ▼ ile düştü');
+      ok(t.$('#main .vote').classList.contains('is-down'), '▼ basılı görünüyor');
+      { const kb = JSON.parse(t.ev(`JSON.stringify(kubbeOf(${JSON.stringify(au)}))`)); eq(kb.all, kb0.all, '▼ kubbe düşürmez, ▲ kubbesi geri gitti'); }
+      t.$('#main [data-g=vote-down]').click(); await t.wait(120);
+      { const d = t.store.get('notes/seed-n1'); ok(d.downs[me] !== true && d.likes[me] !== true, 'aynı oya yeniden basınca geri alındı'); }
+      await t.go('#/ders/CSE211');
+      eq(t.$$('[data-r=panel] [data-r=sort] option').map(o => o.value).join(), 'hot,new,top', 'sıralama: öne çıkan, en yeni, en çok oy');
+      eq(t.$('[data-r=panel] [data-r=sort]').value, 'hot', 'ders sayfasında öne çıkanlar önce');
+      ok(!!t.$('[data-r=panel] .note-row .vote .vup') && !t.$('[data-r=panel] [data-g=like-note]'), 'not listesinde oylama');
+      t.$('[data-r=panel] .note-row [data-g=vote-up]').click(); await t.wait(120);
+      ok(t.$$('[data-r=panel] .note-row .vote.is-up').length === 1, 'listeden ▲ verildi'); }
+    eq(t.ev("[{ id: 'a', at: Date.now(), likes: {}, downs: { x: true, y: true } }, { id: 'b', at: Date.now() - 864e5, likes: {}, downs: {} }].sort(byHot).map(n => n.id).join()"), 'b,a', '▼ alan yeni not, eski nötr notun altına iner');
+    eq(t.ev("[{ id: 'd', at: Date.now(), likes: {}, downs: {} }, { id: 'c', at: Date.now() - 3 * 864e5, likes: { a: true, b: true, c: true, d: true }, downs: {} }].sort(byHot).map(n => n.id).join()"), 'c,d', '▲ alan not yeni nota karşı öne çıkar');
+    eq(t.ev("[{ id: 'e', at: Date.now() - 400 * 864e5, likes: { a: true, b: true }, downs: {} }, { id: 'f', at: Date.now() - 864e5, likes: { a: true }, downs: {} }].sort(byHot).map(n => n.id).join()"), 'f,e', 'eski not zamanla söner');
+    await t.go('#/');
+    eq(t.$$('[data-ns]').map(b => b.dataset.ns + ':' + b.getAttribute('aria-pressed')).join(), 'hot:true,new:false', 'ana sayfada Revaçta seçili');
+    ok(t.$$('[data-r=notes] .ncard').length > 0, 'Revaçta notları listelendi');
+    t.$('[data-ns=new]').click(); await t.wait(60);
+    eq(t.$$('[data-ns]').map(b => b.getAttribute('aria-pressed')).join(), 'false,true', 'Yeni seçildi');
+    { const titles = t.$$('[data-r=notes] .ncard-title').map(x => x.textContent); ok(titles.includes('Vize özeti'), 'Yeni: son paylaşılan not listede: ' + titles.join(' | ')); }
+    t.$('[data-ns=hot]').click(); await t.wait(60);
+    noErr(t, 'not oyları');
 
     console.log('7b) yorum, not isteği ve hoca puanı (katalog dersinde)');
     await t.go('#/ders/DENT115?tab=yorumlar');
@@ -340,8 +387,8 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     for (const h of ['#/', '#/hocaolcer', '#/kubbe', '#/profil', '#/katkilarim', '#/istekler', '#/hakkinda', '#/dersler?b=__mine', '#/not/yok', '#/moderasyon']) { await t.go(h); ok((t.text('#main') || '').length > 40, h + ' boş değil'); }
     await t.go('#/');
     ok(new RegExp((N_KATALOG + 1) + '</b> ders').test(t.$('[data-r=stats]').innerHTML), 'ana sayfa sayacı: ' + t.text('[data-r=stats]'));
-    t.$('[data-g=whatsnew]').click(); await t.wait(40);
-    ok(/Tüm bölümlerin ders planı/.test(t.text('.modal')), 'Yenilikler penceresi');
+    ok(!t.$('[data-g=whatsnew]') && !/Yenilikler/.test(t.text('footer.foot')), 'Yenilikler bölümü kaldırıldı');
+    eq(t.$('footer.foot a[href="/gizlilik"]') && t.$('footer.foot a[href="/gizlilik"]').textContent, 'Gizlilik', 'alt menüde Gizlilik sayfası');
     noErr(t, 'diğer sayfalar');
   }
 
@@ -382,7 +429,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     eq(t.text('[data-r=name]'), 'Veri Yapıları ve Algoritmalar', 'var olan kayıtta düzenleme');
     await t.go('#/moderasyon');
     ok(/171 ders kaydı/.test(t.text('#main')) && new RegExp(N_KATALOG + ' ders, 72 bölüm planı').test(t.text('#main')), 'kullanım satırı: ' + (t.text('.help.mb') || ''));
-    ok(/Tüm bölümlerin ders planı/.test(t.text('[data-r=tests]')), 'test listesinde yeni tur');
+    ok(!t.$('[data-r=tests]'), 'moderasyonda test listesi yok');
     await t.go('#/dersler');
     ok(!t.$('[data-g=add-course]').closest('[data-owner]').hidden, 'Ders ekle yöneticide açık');
     t.$('[data-g=add-course]').click(); await t.wait(60);
@@ -788,24 +835,6 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     eq(t.text('[data-r=dept]'), 'Tıp Fakültesi, 5 kredi, 5 AKTS', 'Tıp seçmelisinin kredisi ayrıntı sayfasından');
     noErr(t, 'tek bölümlü fakülte havuzları');
 
-    // Yenilikler: "Dene" bağlantısı hem pencereyi kapatır hem sayfaya götürür
-    await t.go('#/');
-    t.ev('openWhatsNew()'); await t.wait(60);
-    const wn = t.$('.modal');
-    ok(/Seçmeliler planda ders satırı/.test(wn.textContent) && /ÇAP ve yandal/.test(wn.textContent) && /6\. tur/.test(wn.textContent) && /5\. tur/.test(wn.textContent) && /4\. tur/.test(wn.textContent), 'yenilikler listesi güncel');
-    ok(/Ders sayfası sadeleşti/.test(wn.textContent) && /Notlar yalnızca Drive linkiyle/.test(wn.textContent) && /Not hocanın sayfasına da düşer/.test(wn.textContent), 'bu turun yenilikleri');
-    ok(!/Yönetici hesabından çık/.test(wn.textContent), 'öğrenci yönetici maddesini görmez');
-    ok(/E-postanın yalnızca ilk kısmı/.test(wn.textContent) && /Profil resmini sen seç/.test(wn.textContent) && /Market ürünü profil resmi/.test(wn.textContent) && /Deneme hesabı normal hesap gibi/.test(wn.textContent) && /7\. tur/.test(wn.textContent), 'sürüm 31 yenilikleri');
-    ok(!/rozet olarak|“Seçmeli havuzunda” rozetleri/.test(wn.textContent), 'kaldırılan rozetler yeniliklerde anlatılmıyor');
-    const hFak = [...new Set(HAVUZLU.map(s => CATJ.planlar[s].fakulte.replace(/ Fakültesi$/, '')))].sort((a, b) => a.localeCompare(b, 'tr'));
-    ok(wn.textContent.includes(HAVUZLU.length + ' bölümde (' + (hFak.length > 3 ? hFak.length + ' fakülte' : hFak.join(', ')) + ')'), 'yenilikler: havuzlu bölüm ve fakülteler -> ' + wn.querySelector('.wn span').textContent);
-    ok(wn.textContent.includes(new Set(Object.values(CATJ.havuzlar).flat()).size + ' seçmeli ders katalogda'), 'yenilikler: seçmeli ders sayısı');
-    ok(!/Kalan (fakülteler|bölüm)/.test(wn.textContent) && !/hakkının/.test(wn.textContent), 'yenilikler: "kalan" ve "hak" ifadeleri yok');
-    const dene = [...wn.querySelectorAll('.wn li')].find(li => /Seçmeliler planda ders satırı/.test(li.textContent)).querySelector('a.btn');
-    eq(dene.getAttribute('href'), '#/dersler?b=bilgisayar-muhendisligi', 'seçmeli satırı Dene bağlantısı');
-    dene.click(); await t.wait(120);
-    ok(!t.$('.modal'), 'Dene: pencere kapandı');
-    eq(t.w.location.hash, '#/dersler?b=bilgisayar-muhendisligi', 'Dene: sayfaya gitti');
     // Ayhan Abi: ana sayfada gezer, dokununca konuşur; hoş geldin turunu o yapar
     await t.go('#/');
     const ay = t.$('[data-r=ayhan] .ay-roam');
@@ -819,15 +848,13 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(t.text('[data-r=ayhan] .ay-say').length > 2 && t.text('[data-r=ayhan] .ay-say') !== 'Ben Ayhan Abi. Hav!', 'sonraki dokunuşta başka söz: ' + t.text('[data-r=ayhan] .ay-say'));
     t.ev('tourEnd()');   // yeni hesaba kendiliğinden açılan tur varsa kapanır
     await t.go('#/hakkinda');
-    t.ev('openWhatsNew()'); await t.wait(60);
-    ok([...t.$$('.modal .wn li')].some(li => /Hoş geldin turunu Ayhan Abi yapıyor/.test(li.textContent)), 'yenilikte eski tur maddesi duruyor');
-    const tr = [...t.$$('.modal .wn li')].find(li => /Ayhan Abi seni sayfa sayfa gezdiriyor/.test(li.textContent));
-    ok(tr, 'yenilikte yeni Ayhan Abi turu');
+    const tr = t.$('#main [data-g=welcome]');
+    ok(tr && /Ayhan Abi/.test(tr.textContent), 'Hakkında sayfasında Ayhan Abi turu düğmesi');
     // jsdom'da yerleşim yok: her öğe görünür ve aynı kutuda sayılır
     const EP = t.w.Element.prototype, gcr = EP.getClientRects, gbr = EP.getBoundingClientRect;
     EP.getClientRects = function () { return [{}]; };
     EP.getBoundingClientRect = function () { return { left: 120, top: 140, right: 520, bottom: 200, width: 400, height: 60, x: 120, y: 140 }; };
-    tr.querySelector('a.btn').click(); await t.wait(150);
+    tr.click(); await t.wait(150);
     ok(t.$('.tour .tour-card') && !t.$('.modal'), 'tur açıldı, yenilikler penceresi kapandı');
     eq(t.w.location.hash, '#/hakkinda', 'tanışma bulunduğun sayfada');
     ok(/Ben Ayhan Abi, kampüsün köpeği/.test(t.text('.tour [data-t=say]')) && /yedi durak/.test(t.text('.tour [data-t=say]')), 'Ayhan Abi kendini tanıtıyor: ' + t.text('.tour [data-t=say]'));
@@ -875,7 +902,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(/Ayhan Abi/.test(t.$('.dog-btn').getAttribute('aria-label')), 'boş sayfadaki köpek de Ayhan Abi');
     await t.go('#/dersler'); await t.go('#/');
     noErr(t, 'Ayhan Abi');
-    noErr(t, 'yenilikler');
+    noErr(t, 'Ayhan Abi turu');
   }
 
   console.log('14) yönetici girişi: çık, deneme hesabına gir, e-posta ve şifreyle dön');

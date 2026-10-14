@@ -2,12 +2,13 @@
 
 Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma kurallarını tutar.
 
-## Durum (13 Ekim 2026)
+## Durum (14 Ekim 2026)
 
 - **Kod:** bu depo, `main` dalı.
 - **Supabase (canlı):** proje `efyrrbqdiilpqnqzsphk`.
   - Göçler 0001, kadro kimlikleri ve 0002 (gizlilik ve özel hesaplar) uygulandı. `supabase/hesaplari_duzelt.sql` de uygulandı.
   - 0002 SQL Editor'den uygulandığı için göç geçmişinde görünmeyebilir.
+  - 0003 (`not_oylari`, notlara ▲/▼ oy) 14 Ekim'de bağlayıcıyla uygulandı; canlıdaki işlevler yereldekiyle aynı (md5 denetlendi).
 - **Hesaplar:**
   - `yonetici@yediwiki.com`: yönetici, şifreyle girer.
   - `deneme123@std.yeditepe.edu.tr`: ortak deneme hesabı, şifreyle girer.
@@ -24,14 +25,25 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - Resend'de yediwiki.com doğrulandı (eu-west-1). DNS kayıtları Cloudflare'de: `resend._domainkey` TXT, `rsend` ve `send` CNAME (DNS only), `_dmarc` TXT.
   - "Magic link or OTP" ve "Confirm sign up" şablonları Türkçe; gövdede ve konuda `{{ .Token }}` (kod) var, bağlantı yok.
   - Supabase Site URL `https://yediwiki.com`.
-  - Gerçek bir okul adresiyle kodun gelişi henüz denenmedi. Resend ücretsiz planı günde 100 e-posta.
+  - Gerçek bir okul adresiyle denendi (14 Ekim): kod geliyor, hesap açılıyor. Resend ücretsiz planı günde 100 e-posta.
 - **Ayhan Abi turu:** Pencere değil, sayfa değişince kapanmayan 7 duraklı tur (`openWelcome`, `TOUR`); her durakta ilgili öğe ışıkla gösterilir.
 - **Drive önizlemesi (14 Ekim):** Yalnızca sitede (`S.supa`): not sayfasında gömülü önizleme ve tam ekran (`drivePreviewHtml`, `dviewMax`), not listelerinde küçük resim (`driveThumbHtml`), paylaşırken anlık önizleme. Artifact eski kartı gösterir.
 - **Not türleri:** Yalnızca "Ders notu" (`not`) ve "Çıkmış sınav" (`sinav`); eski türler ders notu sayılır (`noteType`).
+- **Not oyları (14 Ekim):** Notta `likes` ▲ (yeşil), `downs` ▼ (kırmızı); takma adla, aynı kişide ikisi birlikte olmaz. ▲ yazara 1 kubbe (`KUBBE.up`), ▼ kubbe almaz, yalnızca sıralamada aşağı iter. Yorum beğenisi 2 kubbe kalır. `kb.ups` not ▲ sayısı, `kb.likes` yorum beğenileri.
+  - Sıralama `hotScore`: (oy farkı + 1) / (gün + 2)^1.5. Ana sayfada "Revaçta / Yeni", ders sayfasında "Öne çıkan / En yeni / En çok oy alan".
+- **Paylaşma formu:** Ders → Tür ve başlık → Dosya ("Drive'dan seç" ya da link) → Açıklama → onay.
+- **Google Drive seçici (14 Ekim):** Google Cloud projesi `yediwiki-511523` (numara 1008166841421), sahibi `yediwiki@gmail.com`.
+  - Picker API ve Drive API açık. OAuth onay ekranı "YediWiki", External, yayında; yalnızca `drive.file` (hassas olmayan, doğrulama gerekmez); destek e-postası yediwiki@gmail.com.
+  - Web istemcisi "YediWiki site" (köken `https://yediwiki.com`); tarayıcı anahtarı "YediWiki Picker" (`https://yediwiki.com/*` ve yalnızca Picker API). Herkese açık değerler `site/config.json` → `google`; gizli anahtar yok.
+  - Seçilen dosya "bağlantıya sahip olan herkes görüntüleyebilir" yapılır (`gdShare`); erişim belirteci yalnızca sekmenin belleğinde.
+  - `uygaryigt@gmail.com` hesabında yanlışlıkla açılmış boş bir "YediWiki" projesi (`yediwiki`) var; silinebilir.
+- **Gizlilik sayfası:** `site/gizlilik.html` → `https://yediwiki.com/gizlilik` (OAuth onay ekranında gizlilik bağlantısı).
+- **Yeni sürüm:** Derleme `dist/ver.txt` yazar; açık sekme sekmeye dönünce bakar, yeni sürüm varsa bir sonraki sayfa geçişinde kendini yeniler.
+- **Yenilikler bölümü kaldırıldı (14 Ekim):** Kullanıcı istemiyor; yenilik penceresi ve test listesi geri eklenmesin. Ayhan Abi turu Hakkında sayfasındaki düğmeyle de başlar.
 
 ## Sıradaki işler
 
-1. **Kod e-postasını dene:** Gerçek bir `@std.yeditepe.edu.tr` adresiyle yediwiki.com'da kod iste; e-posta geliyor mu, kod çalışıyor mu bak. Resend → Logs'ta gönderim görünür.
+1. **Drive seçiciyi dene:** yediwiki.com'da "Drive'dan seç" ile gerçek bir Google hesabından dosya seç; paylaşım ayarı ve önizleme.
 2. **Hız sınırı:** Supabase Auth → Rate Limits'te e-posta sınırını kullanıma göre ayarla (Resend ücretsiz planı günde 100).
 3. **Deneme:** Yönetici ve deneme hesabıyla şifreli giriş; yeni öğrenci hesabında Ayhan Abi turu; Supabase advisors.
 
@@ -52,4 +64,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1378/1378, `npm run test:site` 76/76, `npm run test:db` 84/84.
+- **Beklenen sonuçlar:** `npm test` 1399/1399, `npm run test:site` 104/104, `npm run test:db` 95/95.

@@ -31,7 +31,10 @@ const cfg = JSON.parse(read(P('site', 'config.json')));
 must(/^https:\/\//.test(cfg.url) && /^sb_publishable_/.test(cfg.key), 'yalnızca herkese açık (publishable) anahtar gömülür');
 const umd = read(P('node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'));
 const supa = read(P('site', 'supa.js'));
-const conf = 'window.YW_SUPA=' + JSON.stringify({ url: cfg.url, key: cfg.key }) + ';';
+// Google Drive seçici: tarayıcı anahtarı (yalnızca yediwiki.com ve Picker API'ye kısıtlı) ve OAuth istemci kimliği herkese açıktır; gizli anahtar yok
+const g = cfg.google || null;
+must(!g || (/^AIza[0-9A-Za-z_-]{35}$/.test(g.apiKey) && /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(g.clientId) && /^\d+$/.test(g.appId) && !('secret' in g) && !('clientSecret' in g)), 'Google ayarı: yalnızca tarayıcı anahtarı, istemci kimliği ve proje numarası');
+const conf = 'window.YW_SUPA=' + JSON.stringify({ url: cfg.url, key: cfg.key }) + ';' + (g ? 'window.YW_GOOGLE=' + JSON.stringify({ apiKey: g.apiKey, clientId: g.clientId, appId: g.appId }) + ';' : '');
 const desc = 'Yeditepe öğrencileri için ders notları, bölüm ders planları, HocaÖlçer ve Kubbe.';
 const icon = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Cpath d=%22M4 26a16 15 0 0 1 32 0z%22 fill=%22%23FFD23F%22 stroke=%22%23111C4E%22 stroke-width=%222.5%22/%3E%3Cpath d=%22M20 11V5%22 stroke=%22%23111C4E%22 stroke-width=%222.5%22 stroke-linecap=%22round%22/%3E%3Ccircle cx=%2220%22 cy=%224%22 r=%222.5%22 fill=%22%23FFD23F%22 stroke=%22%23111C4E%22 stroke-width=%222%22/%3E%3C/svg%3E';
 const headExtra =
@@ -47,20 +50,28 @@ let pre = parts['pre.html'];
 must(count(pre, '<title>YediWiki</title>') === 1, 'pre.html başlığı');
 pre = pre.replace('<title>YediWiki</title>', () => '<title>YediWiki</title>\n' + headExtra);
 const cut = mid.trimEnd().lastIndexOf('<script>');
-const siteMid = mid.slice(0, cut) + '<script id="yw-sb">' + jsSafe(umd) + '</script>\n<script>' + jsSafe(supa) + '</script>\n<script>' + conf + '</script>\n<script>';
-const site = pre + parts['style.css'] + siteMid + parts['app.js'] + parts['post.html'];
+const siteMid = mid.slice(0, cut) + '<script id="yw-sb">' + jsSafe(umd) + '</script>\n<script>' + jsSafe(supa) + '</script>\n<script>' + conf + 'window.YW_VER="__YWVER__";</script>\n<script>';
+const site0 = pre + parts['style.css'] + siteMid + parts['app.js'] + parts['post.html'];
+// sürüm: sayfanın özeti. Açık sekmeler /ver.txt ile karşılaştırır, yenisi yayımlanınca bir sonraki geçişte sayfayı yeniler
+const ver = require('crypto').createHash('sha256').update(site0).digest('hex').slice(0, 12);
+must(count(site0, '__YWVER__') === 1, 'sürüm yer tutucusu');
+const site = site0.replace('__YWVER__', ver);
 
 // dist/ yayımlanır (yalnızca site); claude.ai sürümü build/ altına
 fs.rmSync(P('dist'), { recursive: true, force: true });
 fs.mkdirSync(P('dist'), { recursive: true });
 fs.mkdirSync(P('build'), { recursive: true });
 fs.writeFileSync(P('dist', 'index.html'), site);
+fs.writeFileSync(P('dist', 'ver.txt'), ver + '\n');
+fs.writeFileSync(P('dist', 'gizlilik.html'), read(P('site', 'gizlilik.html')));
 fs.writeFileSync(P('dist', '_headers'), [
   '/*',
   '  X-Content-Type-Options: nosniff',
   '  Referrer-Policy: strict-origin-when-cross-origin',
   '  X-Frame-Options: DENY',
   '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
+  '/ver.txt',
+  '  Cache-Control: no-store',
   ''].join('\n'));
 fs.writeFileSync(P('build', 'artifact.html'), artifact);
 console.log('dist/index.html', Buffer.byteLength(site), 'bayt; build/artifact.html', Buffer.byteLength(artifact), 'bayt');

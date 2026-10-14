@@ -67,6 +67,28 @@ async function tab(be, { hash = '#/', session = null, name = 'sekme' } = {}) {
   return t;
 }
 const q1 = async (be, sql, args = []) => (await be.pool.query(sql, args)).rows[0];
+const CFG = JSON.parse(fs.readFileSync(path.join(ROOT, 'site/config.json'), 'utf8'));
+/* Google Identity + Picker + Drive API taklidi: istekleri log'a yazar */
+function googleMock(w, log) {
+  Object.assign(log, { prompts: [], fetch: [], picker: null });
+  const P = {
+    ViewId: { DOCS: 'all' }, Response: { ACTION: 'action', DOCUMENTS: 'docs' }, Action: { PICKED: 'picked', CANCEL: 'cancel' },
+    Document: { ID: 'id', NAME: 'name', URL: 'url', MIME_TYPE: 'mimeType' }, Feature: { SUPPORT_DRIVES: 'sdr' },
+    DocsView: class { setIncludeFolders() { return this; } setSelectFolderEnabled(v) { log.folders = v; return this; } },
+    DocsUploadView: class { setIncludeFolders() { return this; } },
+    PickerBuilder: class {
+      constructor() { this.o = { views: 0 }; }
+      setAppId(v) { this.o.appId = v; return this; } setOAuthToken(v) { this.o.token = v; return this; } setDeveloperKey(v) { this.o.key = v; return this; }
+      addView() { this.o.views++; return this; } setLocale(v) { this.o.locale = v; return this; } setTitle(v) { this.o.title = v; return this; } setOrigin(v) { this.o.origin = v; return this; }
+      enableFeature(f) { this.o.feature = f; return this; } setCallback(cb) { this.o.cb = cb; return this; }
+      build() { const o = this.o; return { setVisible: () => { log.picker = o; setTimeout(() => o.cb(log.pick || { action: 'cancel' }), 5); } }; }
+    }
+  };
+  w.google = { picker: P, accounts: { oauth2: { initTokenClient: c => { log.client = c.client_id; log.scope = c.scope;
+    return { requestAccessToken: o => { log.prompts.push(o && o.prompt); setTimeout(() => (log.deny ? c.error_callback({ type: 'popup_closed' }) : c.callback({ access_token: 'tok-1', expires_in: 3600 })), 5); } }; } } } };
+  w.fetch = async (url, opt = {}) => { log.fetch.push({ url: String(url), method: opt.method || 'GET', body: opt.body || '', auth: opt.headers && opt.headers.Authorization });
+    return { ok: !(log.shareFail && opt.method === 'POST'), json: async () => ({ permissions: log.alreadyPublic ? [{ type: 'anyone', role: 'reader' }] : [] }), text: async () => '' }; };
+}
 const doc = async (be, col, id) => { const r = await q1(be, 'select data from public.docs where col = $1 and id = $2', [col, id]); return r ? r.data : null; };
 const lastCode = (be, email) => { const m = [...be.mails].reverse().find(x => x.email === email); return m ? m.code : null; };
 
@@ -187,17 +209,85 @@ async function signup(t, be, local, prof) {
     B.typeIn(B.$('#sh-drive'), 'https://example.com/not'); await sleep(80);
     ok(!B.$('[data-r=dmini] iframe'), 'Drive linki değilse önizleme kalkar');
     B.typeIn(B.$('#sh-drive'), ''); await sleep(30);
+    // Drive'dan seç: Google ile giriş (drive.file), Picker, dosyayı bağlantıya sahip olan herkese açma
+    { const f = B.$('[data-r=form]'), all = [...f.querySelectorAll('*')], pos = sel => all.indexOf(f.querySelector(sel));
+      ok(pos('#sh-title') < pos('[data-r=gbtn]') && pos('[data-r=gbtn]') < pos('#sh-drive') && pos('#sh-drive') < pos('#sh-desc'), 'form sırası: başlık, Drive’dan seç, link, açıklama');
+      ok(!B.$('[data-r=gpick]').hidden && /Drive’dan seç/.test(B.text('[data-r=gbtn]')), 'sitede Drive’dan seç düğmesi');
+      eq(B.text('label[for=sh-drive]'), 'Ya da Drive linkini yapıştır', 'link kutusu yedek');
+      const log = {}; googleMock(B.w, log);
+      const F1 = 'https://drive.google.com/file/d/F1abcdefghij/view?usp=drive_web';
+      log.pick = { action: 'picked', docs: [{ id: 'F1abcdefghij', name: 'Vize_1 çözümleri.pdf', url: F1, mimeType: 'application/pdf' }] };
+      B.$('#sh-title').value = '';
+      B.$('[data-r=gbtn]').click();
+      await B.until(() => B.$('#sh-drive').value === F1, 'seçilen dosyanın linki kutuya yazıldı');
+      eq(log.client, CFG.google.clientId, 'OAuth istemci kimliği'); eq(log.scope, 'https://www.googleapis.com/auth/drive.file', 'yalnızca drive.file izni');
+      eq(log.prompts.join(), 'select_account', 'ilk seferde Google hesabı seçtirilir');
+      ok(log.picker && log.picker.appId === CFG.google.appId && log.picker.key === CFG.google.apiKey && log.picker.token === 'tok-1' && log.picker.locale === 'tr' && log.picker.origin === 'https://yediwiki.test' && log.picker.views === 2, 'Picker ayarı: ' + JSON.stringify(log.picker && { a: log.picker.appId, l: log.picker.locale, o: log.picker.origin, v: log.picker.views }));
+      eq(log.folders, false, 'klasör seçilmez (yalnızca dosya)');
+      eq(log.fetch.length, 1, 'tek Drive isteği');
+      ok(log.fetch[0].url === 'https://www.googleapis.com/drive/v3/files/F1abcdefghij/permissions?supportsAllDrives=true' && log.fetch[0].method === 'POST' && log.fetch[0].auth === 'Bearer tok-1', 'paylaşım isteği: ' + JSON.stringify(log.fetch[0]));
+      eq(log.fetch[0].body, JSON.stringify({ role: 'reader', type: 'anyone', allowFileDiscovery: false }), 'bağlantıya sahip olan herkes görüntüleyebilir');
+      eq(B.$('#sh-title').value, 'Vize 1 çözümleri', 'boş başlık dosya adından doldu');
+      ok(B.$('[data-r=gmsg]').classList.contains('ok') && /“Vize_1 çözümleri\.pdf” seçildi/.test(B.text('[data-r=gmsg]')), 'seçildi iletisi: ' + B.text('[data-r=gmsg]'));
+      await sleep(550);
+      { const fr = B.$('[data-r=dmini] .dview.mini iframe'); ok(fr && fr.getAttribute('src') === 'https://drive.google.com/file/d/F1abcdefghij/preview', 'seçilen dosyanın önizlemesi'); }
+      ok(B.$('[data-r=dbox]').classList.length > 0 && /Dosya|PDF|tanındı/.test(B.text('[data-r=dbox]')), 'link kutusu dosyayı tanıdı');
+      // ikinci seçim: belirteç yeniden sorulmaz, dolu başlık değişmez
+      log.pick = { action: 'picked', docs: [{ id: 'D2abcdefghij', name: 'Final notları', url: 'https://docs.google.com/document/d/D2abcdefghij/edit?usp=drive_web', mimeType: 'application/vnd.google-apps.document' }] };
+      B.$('[data-r=gbtn]').click();
+      await B.until(() => /D2abcdefghij/.test(B.$('#sh-drive').value), 'ikinci dosya seçildi');
+      eq(log.prompts.length, 1, 'belirteç bir saat geçerli, yeniden giriş istenmez');
+      eq(B.$('#sh-title').value, 'Vize 1 çözümleri', 'dolu başlığa dokunulmaz');
+      // paylaşım ayarı değiştirilemezse uyarı; dosya zaten açıksa sorun yok
+      log.shareFail = true; log.pick = { action: 'picked', docs: [{ id: 'X3abcdefghij', name: 'Başkasının dosyası', url: 'https://drive.google.com/file/d/X3abcdefghij/view' }] };
+      B.$('[data-r=gbtn]').click();
+      await B.until(() => B.$('[data-r=gmsg]').classList.contains('warn'), 'paylaşılamayan dosyada uyarı');
+      ok(/Bağlantıya sahip olan herkes/.test(B.text('[data-r=gmsg]')) && log.fetch.slice(-2).map(x => x.method).join() === 'POST,GET', 'uyarı ve izin denetimi: ' + B.text('[data-r=gmsg]'));
+      log.alreadyPublic = true; B.$('[data-r=gbtn]').click();
+      await B.until(() => B.$('[data-r=gmsg]').classList.contains('ok'), 'zaten herkese açık dosya kabul edilir');
+      log.shareFail = false; log.alreadyPublic = false;
+      // vazgeçince bir şey değişmez
+      const before = B.$('#sh-drive').value; log.pick = { action: 'cancel' };
+      B.$('[data-r=gbtn]').click(); await sleep(80);
+      eq(B.$('#sh-drive').value, before, 'vazgeçince link aynı');
+      // Google penceresi kapanırsa açıklama
+      B.ev("GD.token = ''"); log.deny = true;
+      B.$('[data-r=gbtn]').click();
+      await B.until(() => B.$('[data-r=gmsg]').classList.contains('err'), 'giriş penceresi kapandı iletisi');
+      ok(/Google penceresi kapandı/.test(B.text('[data-r=gmsg]')), 'ileti: ' + B.text('[data-r=gmsg]'));
+      eq(log.prompts.slice(-1)[0], '', 'sonraki girişte hesap seçimi zorlanmaz');
+      log.deny = false;
+      B.typeIn(B.$('#sh-drive'), ''); B.$('#sh-title').value = ''; await sleep(30);
+      // yeni sürüm: ver.txt farklıysa bir sonraki geçişte sayfa yenilenir (aynı sürüm için bir kez)
+      const ver = fs.readFileSync(path.join(ROOT, 'dist/ver.txt'), 'utf8').trim();
+      eq(B.ev('VER.cur'), ver, 'sayfanın sürümü ver.txt ile aynı');
+      B.w.fetch = async u => ({ ok: true, text: async () => (/\/ver\.txt\?t=\d+$/.test(String(u)) ? 'aaaaaaaaaaaa\n' : '') });
+      B.ev('VER.at = 0'); await B.ev('checkVer()');
+      eq(B.ev('VER.next'), 'aaaaaaaaaaaa', 'yeni sürüm fark edildi');
+      B.w.sessionStorage.setItem('yw:verReload', 'aaaaaaaaaaaa');
+      eq(B.ev('verReload()'), false, 'aynı sürüm için ikinci kez yenilenmez');
+      B.ev("VER.next = ''"); delete B.w.fetch; }
     await B.go('#/not/' + n2); await sleep(150);
-    B.$('[data-g=like-note]').click(); await sleep(300);
-    { const d = await doc(be, 'notes', n2), k = B.ev(`pk('notes', ${JSON.stringify(n2)})`);
-      ok(d.likes && d.likes[k] === true && !d.likes[bid], 'beğeni B\'nin bu nottaki takma adıyla'); }
-    eq(await usersCtid(aid), ct0, 'anonim nota beğeni de açık profili değiştirmedi');
-    await A.until(() => A.text('[data-r=kubbechip] b') === '102', 'A\'nın bakiyesi canlı güncellendi (102)');
-    await B.until(() => /Beğendin/.test(B.text('[data-g=like-note]')), 'B beğendiğini görüyor');
+    ok(!B.$('[data-g=like-note]') && !!B.$('#main .vote.big'), 'notta beğeni yerine ▲ ▼ oy');
+    B.$('#main [data-g=vote-up]').click(); await sleep(300);
+    const k2 = B.ev(`pk('notes', ${JSON.stringify(n2)})`);
+    { const d = await doc(be, 'notes', n2); ok(d.likes && d.likes[k2] === true && !d.likes[bid] && !(d.downs && d.downs[k2]), '▲ B\'nin bu nottaki takma adıyla'); }
+    eq(await usersCtid(aid), ct0, 'anonim nota ▲ de açık profili değiştirmedi');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '101', 'A\'nın bakiyesi canlı güncellendi (101: ▲ 1 kubbe)');
+    await B.until(() => B.$('#main .vote.is-up') && B.text('#main .vote .vnum') === '1', 'B ▲ verdiğini görüyor');
+    B.$('#main [data-g=vote-down]').click(); await sleep(300);
+    { const d = await doc(be, 'notes', n2); ok(d.downs && d.downs[k2] === true && d.likes[k2] === null, '▼ verince sunucuda ▲ kalktı'); }
+    await A.until(() => A.text('[data-r=kubbechip] b') === '100', '▼ kubbe vermez, ▲ kubbesi geri gitti (100)');
+    await B.until(() => B.$('#main .vote.is-down') && B.text('#main .vote .vnum') === '-1', 'B ▼ verdiğini görüyor');
+    B.$('#main [data-g=vote-up]').click(); await sleep(300);
+    await A.until(() => A.text('[data-r=kubbechip] b') === '101', 'yeniden ▲ (101)');
     await B.go('#/not/' + n1); await sleep(150);
-    B.$('[data-g=like-note]').click(); await sleep(300);
-    await A.until(() => A.text('[data-r=kubbechip] b') === '104', 'adıyla nota beğeni (104)');
-    { const u = await doc(be, 'users', aid); eq(u.kb.all, 77, 'açık kubbe: hesap + adıyla not + beğenisi'); }
+    B.$('#main [data-g=vote-up]').click(); await sleep(300);
+    await A.until(() => A.text('[data-r=kubbechip] b') === '102', 'adıyla nota ▲ (102)');
+    { const u = await doc(be, 'users', aid); eq(u.kb.all, 76, 'açık kubbe: hesap + adıyla not + ▲'); eq(u.kb.ups, 1, 'açık profilde ▲ sayısı'); eq(u.kb.likes, 0, 'yorum beğenisi yok'); }
+    await A.go('#/not/' + n1); await sleep(150);
+    A.$('#main [data-g=vote-down]').click(); await sleep(200);
+    await A.until(() => /Kendi notuna oy veremezsin/.test(A.text('#toasts')), 'kendi notuna ▼ verilemez');
     // yorum: anonim
     await B.go('#/not/' + n1 + '?tab=yorumlar'); await sleep(150);
     { const ta = B.$('#main textarea'); ok(!!ta, 'yorum kutusu');

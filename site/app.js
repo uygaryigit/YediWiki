@@ -34,7 +34,7 @@ function mailOf(raw) {
   return v + MAIL_DOMAIN;
 }
 const mailLocal = mail => String(mail || '').replace(MAIL_DOMAIN, '');
-const KUBBE = { signup: 50, note: 25, photos: 10, comment: 5, rating: 10, grade: 5, dist: 15, like: 2, fill: 10 };
+const KUBBE = { signup: 50, note: 25, photos: 10, comment: 5, rating: 10, grade: 5, dist: 15, like: 2, up: 1, fill: 10 };   // up: notuna gelen her ▲
 const AV_EMOJI = ['🦉', '🦊', '🐼', '🐧', '🦁', '🐢', '🐝', '🦄', '🐳', '🦖', '🐙', '🦕', '🌵', '🍀', '⚡', '🎧', '📚', '☕', '🧩', '🚀', '🎸', '🧠', '🛰️', '🥐'];
 const AV_COLORS = ['#FFE14D', '#9DB0FF', '#8ED6B2', '#FFB4A2', '#C9B6FF', '#9AD8FF', '#F7C1E0', '#E3E7F2'];
 const RARITY = {
@@ -60,6 +60,8 @@ const REPORT_LIMIT = 3;
 const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
   heart: '<path d="M12 20s-7.2-4.4-7.2-10.1A4.1 4.1 0 0 1 12 7.4a4.1 4.1 0 0 1 7.2 2.5C19.2 15.6 12 20 12 20z"/>',
+  vup: '<path d="M12 4.5 20 14h-4.6v5.5H8.6V14H4z"/>',
+  vdown: '<path d="M12 19.5 4 10h4.6V4.5h6.8V10H20z"/>',
   flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
@@ -76,6 +78,7 @@ const ICONS = {
   book: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18M12.5 8h3.5M12.5 12h3.5"/>',
   star: '<path d="M12 3.4l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.7l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/>',
   up: '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
+  folder: '<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 9.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><path d="M12 17v-5M9.6 14.3 12 11.9l2.4 2.4"/>',
   dl: '<path d="M12 4v12M7 11l5 5 5-5M5 20h14"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
@@ -345,6 +348,14 @@ function okey(o) {
 /* Veri erişimi */
 const likeCount = o => Object.values((o && o.likes) || {}).filter(v => v === true).length;
 const likedByMe = o => { const k = okey(o); return !!(k && o && o.likes && o.likes[k] === true); };
+/* Notlarda likes ▲ (yukarı), downs ▼ (aşağı) oylardır; aynı kişide ikisi birlikte olmaz */
+const downCount = o => Object.values((o && o.downs) || {}).filter(v => v === true).length;
+const voteScore = o => likeCount(o) - downCount(o);
+const myVote = o => { const k = okey(o); if (!k || !o) return 0; return o.likes && o.likes[k] === true ? 1 : o.downs && o.downs[k] === true ? -1 : 0; };
+/* Öne çıkan sıralaması: oy farkı + 1, notun yaşıyla (gün) yavaşça söner; ▼ alan not aşağı iner */
+const hotScore = n => (voteScore(n) + 1) / Math.pow(Math.max(0, (Date.now() - (+(n && n.at) || 0)) / 864e5) + 2, 1.5);
+const byHot = (a, b) => hotScore(b) - hotScore(a) || (b.at || 0) - (a.at || 0);
+const byScore = (a, b) => voteScore(b) - voteScore(a) || (b.at || 0) - (a.at || 0);
 const reportCount = o => { const ok = +((o && o.ok) || 0); return Object.values((o && o.reports) || {}).filter(t => typeof t === 'number' && t > ok).length; };
 const reportedByMe = o => { const k = okey(o); return !!(k && o && o.reports && typeof o.reports[k] === 'number' && o.reports[k] > (+o.ok || 0)); };
 const isHidden = o => reportCount(o) >= REPORT_LIMIT;
@@ -547,14 +558,14 @@ function termStartMs(tk) { const y = Math.floor(tk / 10), k = tk % 10; return (k
 function kubbeStats() {
   return memoized('kubbe', () => {
     const m = new Map(), start = termStartMs(currentTk());
-    const ent = uid => { let o = m.get(uid); if (!o) { o = { all: 0, term: 0, notes: 0, comments: 0, ratings: 0, grades: 0, likes: 0, fills: 0 }; m.set(uid, o); } return o; };
+    const ent = uid => { let o = m.get(uid); if (!o) { o = ZK(); m.set(uid, o); } return o; };
     const add = (uid, pts, at, kind) => { if (!uid || !pts) return; const o = ent(uid); o.all += pts; if (at && at >= start) o.term += pts; if (kind) o[kind]++; };
     for (const [uid, u] of S.users) { const o = ent(uid), b = Math.max(0, +u.bonus || 0); o.all += b; if (u.at && u.at >= start) o.term += Math.min(b, KUBBE.signup); }
     for (const n of S.notes.values()) {
       if (!n || isHidden(n)) continue;
       const photos = Array.isArray(n.photos) ? n.photos.length : 0;
       add(n.by, KUBBE.note + (photos ? KUBBE.photos : 0), n.at, 'notes');
-      const lk = likeCount(n); if (lk) { add(n.by, lk * KUBBE.like, n.at); ent(n.by).likes += lk; }
+      const up = likeCount(n); if (up) { add(n.by, up * KUBBE.up, n.at); ent(n.by).ups += up; }   // ▼ kubbe almaz
     }
     for (const c of S.comments.values()) {
       if (!c || isHidden(c)) continue;
@@ -568,7 +579,7 @@ function kubbeStats() {
     return m;
   });
 }
-const ZK = () => ({ all: 0, term: 0, notes: 0, comments: 0, ratings: 0, grades: 0, likes: 0, fills: 0 });
+const ZK = () => ({ all: 0, term: 0, notes: 0, comments: 0, ratings: 0, grades: 0, likes: 0, ups: 0, fills: 0 });   // likes: yorum beğenisi, ups: not ▲
 /* Sitede kubbe sunucuda sayılır. users.kb herkese açık: yalnızca adla yapılanlar (sıralama). private.kb yalnızca sahibine:
    hoca puanları ve anonim paylaşımlar dahil her şey (bakiye). Böylece puanlar ve anonim paylaşımlar kimseye bağlanamaz. */
 function kbNorm(k) {
@@ -638,11 +649,37 @@ function subscribe() {
   if (S.supa) sub('zor', S.db.collection('zor'));
   subPriv();
 }
+/* Yeni sürüm: yayından sonra açık kalan sekmeler eski kodla kalmasın. Sekmeye dönünce /ver.txt'ye bakılır; yenisi varsa
+   bir sonraki sayfa geçişinde sayfa sessizce yenilenir (adres korunur). Aynı sürüm için yalnızca bir kez denenir. */
+const VER = { cur: typeof window.YW_VER === 'string' ? window.YW_VER : '', next: '', at: 0 };
+async function checkVer() {
+  if (!S.supa || !/^[0-9a-f]{12}$/.test(VER.cur) || VER.next || typeof fetch !== 'function' || Date.now() - VER.at < 60e3) return;
+  VER.at = Date.now();
+  try {
+    const r = await fetch('/ver.txt?t=' + Date.now(), { cache: 'no-store' });
+    const v = r && r.ok ? String(await r.text()).trim() : '';
+    if (/^[0-9a-f]{12}$/.test(v) && v !== VER.cur) VER.next = v;
+  } catch (e) { /* çevrimdışı */ }
+}
+function verReload() {
+  if (!VER.next) return false;
+  let tried = '';
+  try { tried = sessionStorage.getItem('yw:verReload') || ''; } catch (e) { /* yok */ }
+  if (tried === VER.next) return false;
+  try { sessionStorage.setItem('yw:verReload', VER.next); } catch (e) { return false; }
+  location.reload();
+  return true;
+}
 async function init() {
-  window.addEventListener('hashchange', route);
+  window.addEventListener('hashchange', () => { if (!verReload()) route(); });
   if (!(window.claude && typeof window.claude.use === 'function') && window.YW_SUPA && window.supabase && window.YWSupa) { S.supa = true; S.authPending = true; }
   route();
-  if (S.supa) { await initSupa(); return; }
+  if (S.supa) {
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVer(); });
+    window.addEventListener('focus', () => checkVer());
+    setInterval(() => { if (!document.hidden) checkVer(); }, 10 * 60e3);
+    await initSupa(); return;
+  }
   const c = window.claude;
   const use = async name => { try { return c && typeof c.use === 'function' ? await c.use(name) : null; } catch (e) { return null; } };
   const [db, user, downloads] = await Promise.all([use('db'), use('user'), use('downloads')]);
@@ -1074,6 +1111,26 @@ function toggleLike(col, id) {
   const next = !likedByMe(o);
   write(() => S.db.doc(col + '/' + id).update({ likes: { [pk(col, id)]: next } }));
 }
+/* Not oyu: ▲ (1) ya da ▼ (-1); aynısına yeniden basınca geri alınır. ▲ yazara 1 kubbe, ▼ yalnızca sıralamada aşağı iter */
+function voteNote(id, dir, el) {
+  const n = S.notes.get(id);
+  if (!n || !okId(id)) return;
+  if (isMine(n)) { toast('Kendi notuna oy veremezsin.'); return; }
+  if (!needAcc()) return;
+  const k = pk('notes', id);
+  if (!k) return;
+  const next = myVote(n) === dir ? 0 : dir;
+  if (next === 1 && el && !reduceMotion()) { const [x, y] = centerOf(el); burst(x, y, { glyphs: ['▲', '+1'], n: 6, cls: 'up', spread: 44 }); }
+  write(() => S.db.doc('notes/' + id).update({ likes: { [k]: next === 1 ? true : null }, downs: { [k]: next === -1 ? true : null } }));
+}
+function voteHtml(n, { big = false } = {}) {
+  const v = myVote(n), sc = voteScore(n), id = esc(n.id);
+  return `<span class="vote${big ? ' big' : ''}${v > 0 ? ' is-up' : v < 0 ? ' is-down' : ''}" role="group" aria-label="Not oyu, puan ${sc}">`
+    + `<button type="button" class="vbtn vup" data-g="vote-up" data-id="${id}" aria-pressed="${v > 0}" aria-label="Yukarı oy: işime yaradı" title="İşime yaradı">${icon('vup')}</button>`
+    + `<b class="vnum">${sc}</b>`
+    + `<button type="button" class="vbtn vdown" data-g="vote-down" data-id="${id}" aria-pressed="${v < 0}" aria-label="Aşağı oy: işe yaramadı" title="İşe yaramadı">${icon('vdown')}</button></span>`;
+}
+const voteBadge = n => { const sc = voteScore(n); return sc ? `<span class="vscore${sc < 0 ? ' neg' : ''}">${sc > 0 ? '▲' : '▼'} ${Math.abs(sc)}</span>` : ''; };
 async function reportItem(col, id) {
   const o = (col === 'notes' ? S.notes : S.comments).get(id);
   if (!o || !okId(id)) return;
@@ -1116,7 +1173,8 @@ async function removeRating(hid) {
   write(() => hocaUpdate(hid, { ratings: { [pk('hocas', hid)]: null } }), 'Puanın kaldırıldı');
 }
 const G = {
-  'like-note': (id, el) => { likeFx(el, S.notes.get(id)); toggleLike('notes', id); },
+  'vote-up': (id, el) => voteNote(id, 1, el),
+  'vote-down': (id, el) => voteNote(id, -1, el),
   'like-comment': (id, el) => { likeFx(el, S.comments.get(id)); toggleLike('comments', id); },
   'report-note': id => reportItem('notes', id),
   'report-comment': id => reportItem('comments', id),
@@ -1153,8 +1211,6 @@ const G = {
   'bark': (id, el) => petDog(el),
   'dview-max': (id, el) => dviewMax(el.closest('.dview')),
   'welcome': () => { if (hasAcc()) openWelcome(); else openAuth(); },
-  'whatsnew': () => openWhatsNew(),
-  'tests-reset': () => { CHANGES.flatMap(g => g.items).forEach(i => ls.set('test:' + i.id, false)); changed(); },
   'edit-hoca': id => openEditHoca(id),
   'mod-ok': (id, el) => modApprove(el.dataset.col, id),
   'mod-del': (id, el) => (el.dataset.col === 'notes' ? deleteNote(id) : deleteComment(id)),
@@ -1563,6 +1619,121 @@ function dviewMax(box, on) {
   if (b) { b.setAttribute('aria-pressed', String(on)); b.innerHTML = icon(on ? 'shrink' : 'expand') + `<span class="dv-lbl">${on ? 'Küçült' : 'Tam ekran'}</span>`; }
 }
 document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const mx = document.querySelector('.dview.max'); if (mx && !modalStack.length) { e.stopImmediatePropagation(); dviewMax(mx, false); } }, true);   // önce tam ekran kapanır, tur ve pencereler sonra
+/* ================= Google Drive seçici (yalnızca sitede) =================
+   Google ile giriş yalnızca drive.file izniyle: YediWiki kullanıcının seçtiği dosyaya erişir, Drive'ın geri kalanını göremez.
+   Google Picker'da dosya seçilir (ya da "Yükle" sekmesiyle Drive'a eklenir), seçilen dosya "bağlantıya sahip olan herkes
+   görüntüleyebilir" yapılır ve linki forma yazılır. Erişim belirteci yalnızca bu sekmenin belleğinde durur, sunucuya gitmez. */
+const DRIVE_LOGO = icon('folder');
+const GD = { load: null, tc: null, token: '', exp: 0, onTok: null, onErr: null, asked: false };
+function gdCfg() {
+  const c = window.YW_GOOGLE;
+  return S.supa && c && typeof c.apiKey === 'string' && /^AIza/.test(c.apiKey) && typeof c.clientId === 'string' && /\.apps\.googleusercontent\.com$/.test(c.clientId) && /^\d+$/.test(String(c.appId || '')) ? c : false;
+}
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const old = document.querySelector(`script[data-src="${src}"]`);
+    if (old && old.dataset.ok) { res(); return; }
+    const el = old || document.createElement('script');
+    el.addEventListener('load', () => { el.dataset.ok = '1'; res(); });
+    el.addEventListener('error', () => { el.remove(); rej(new Error('load')); });
+    if (!old) { el.src = src; el.async = true; el.dataset.src = src; document.head.appendChild(el); }
+  });
+}
+function gdLoad() {
+  if (!gdCfg()) return Promise.reject(new Error('cfg'));
+  const has = () => !!(window.google && window.google.accounts && window.google.accounts.oauth2 && window.google.picker);
+  if (has()) return Promise.resolve();
+  if (!GD.load) {
+    const gis = window.google && window.google.accounts && window.google.accounts.oauth2 ? Promise.resolve() : loadScript('https://accounts.google.com/gsi/client');
+    const pick = window.google && window.google.picker ? Promise.resolve() : loadScript('https://apis.google.com/js/api.js').then(() => new Promise((res, rej) => {
+      if (window.google && window.google.picker) { res(); return; }
+      window.gapi.load('picker', { callback: res, onerror: () => rej(new Error('picker')), timeout: 15000, ontimeout: () => rej(new Error('picker')) });
+    }));
+    GD.load = Promise.all([gis, pick]).catch(e => { GD.load = null; throw e; });
+  }
+  return GD.load;
+}
+/* Google penceresi tıklamanın içinde açılmalı (açılır pencere engeli); belirteç bir saat geçerli, sekme açıkken yeniden sorulmaz */
+function gdToken() {
+  if (GD.token && Date.now() < GD.exp - 60e3) return Promise.resolve(GD.token);
+  return new Promise((res, rej) => {
+    if (!GD.tc) GD.tc = window.google.accounts.oauth2.initTokenClient({
+      client_id: gdCfg().clientId, scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: r => { if (GD.onTok) GD.onTok(r); }, error_callback: e => { if (GD.onErr) GD.onErr(e); }
+    });
+    GD.onTok = r => {
+      if (r && r.access_token) { GD.token = r.access_token; GD.exp = Date.now() + (+r.expires_in || 3600) * 1000; res(GD.token); }
+      else rej(Object.assign(new Error('token'), { code: String((r && r.error) || 'token') }));
+    };
+    GD.onErr = e => rej(Object.assign(new Error('popup'), { code: String((e && e.type) || 'popup') }));
+    GD.tc.requestAccessToken({ prompt: GD.asked ? '' : 'select_account' });
+    GD.asked = true;
+  });
+}
+function gdPicker(token) {
+  return new Promise(res => {
+    const c = gdCfg(), P = window.google.picker;
+    const docs = new P.DocsView(P.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(false);
+    const up = new P.DocsUploadView().setIncludeFolders(true);
+    const b = new P.PickerBuilder().setAppId(String(c.appId)).setOAuthToken(token).setDeveloperKey(c.apiKey)
+      .addView(docs).addView(up).setLocale('tr').setTitle('Notunu seç').setOrigin(location.protocol + '//' + location.host);
+    if (P.Feature && P.Feature.SUPPORT_DRIVES) b.enableFeature(P.Feature.SUPPORT_DRIVES);
+    b.setCallback(d => {
+      const a = d && d[P.Response.ACTION];
+      if (a === P.Action.PICKED) {
+        const x = ((d && d[P.Response.DOCUMENTS]) || [])[0];
+        res(x && x[P.Document.ID] ? { id: String(x[P.Document.ID]), name: String(x[P.Document.NAME] || ''), url: String(x[P.Document.URL] || ''), mime: String(x[P.Document.MIME_TYPE] || '') } : null);
+      } else if (a === P.Action.CANCEL) res(null);
+    });
+    b.build().setVisible(true);
+  });
+}
+/* Seçilen dosyayı bağlantıya sahip olan herkese okunur yap; olmazsa zaten açık mı diye bak */
+async function gdShare(f, token) {
+  const base = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(f.id);
+  try {
+    const r = await fetch(base + '/permissions?supportsAllDrives=true', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone', allowFileDiscovery: false }) });
+    if (r.ok) return true;
+  } catch (e) { /* aşağıda bakılır */ }
+  try {
+    const r = await fetch(base + '?supportsAllDrives=true&fields=permissions(type%2Crole)', { headers: { Authorization: 'Bearer ' + token } });
+    const j = r.ok ? await r.json() : null;
+    return !!(j && Array.isArray(j.permissions) && j.permissions.some(p => p && p.type === 'anyone'));
+  } catch (e) { return false; }
+}
+const gdUrl = f => (/^https:\/\/(drive|docs)\.google\.com\/\S+$/.test(f.url) ? f.url : 'https://drive.google.com/file/d/' + encodeURIComponent(f.id) + '/view');
+async function pickFromDrive(root) {
+  const msg = $('[data-r=gmsg]', root), btn = $('[data-r=gbtn]', root);
+  if (!msg || !btn || btn.disabled || !gdCfg()) return;
+  const say = (t, kind = '') => { msg.textContent = t; msg.className = 'gpick-msg' + (kind ? ' ' + kind : ''); };
+  say('');
+  if (!(window.google && window.google.accounts && window.google.accounts.oauth2 && window.google.picker)) {
+    btn.disabled = true; say('Google Drive hazırlanıyor…');
+    try { await gdLoad(); } catch (e) { btn.disabled = false; say('Google Drive’a bağlanılamadı. İnternetini kontrol et ya da linki aşağıya yapıştır.', 'err'); return; }
+    btn.disabled = false; say('');
+  }
+  let tok = '';
+  try { tok = await gdToken(); } catch (e) {
+    const c = (e && e.code) || '';
+    say(/access_denied/.test(c) ? 'İzin verilmedi. Dosyanı seçebilmen için Google’da YediWiki’ye izin vermen gerekiyor.'
+      : /popup_closed/.test(c) ? 'Google penceresi kapandı. Yeniden “Drive’dan seç”e bas.'
+      : /popup_failed/.test(c) ? 'Google penceresi açılamadı. Yeniden “Drive’dan seç”e bas; olmazsa açılır pencerelere izin ver.'
+      : 'Google ile giriş yapılamadı. Yeniden dene ya da linki aşağıya yapıştır.', 'err');
+    return;
+  }
+  let f = null;
+  try { f = await gdPicker(tok); } catch (e) { console.error(e); say('Drive penceresi açılamadı. Linki aşağıya yapıştırabilirsin.', 'err'); return; }
+  if (!f) return;
+  btn.disabled = true; say('Paylaşım ayarı yapılıyor…');
+  const pub = await gdShare(f, tok);
+  btn.disabled = false;
+  const inp = $('#sh-drive', root);
+  if (inp) { inp.value = gdUrl(f); inp.dispatchEvent(new Event('input', { bubbles: true })); }
+  const t = $('#sh-title', root);
+  if (t && !t.value.trim() && f.name) t.value = f.name.replace(/\.[A-Za-z0-9]{2,5}$/, '').replace(/[_]+/g, ' ').trim().slice(0, 80);
+  const nm = f.name || 'Dosya';
+  say(pub ? `“${nm}” seçildi. Bağlantıya sahip olan herkes görüntüleyebilir.` : `“${nm}” seçildi ama paylaşım ayarı değiştirilemedi. Drive’da dosyanın genel erişimini “Bağlantıya sahip olan herkes” yap.`, pub ? 'ok' : 'warn');
+}
 function popFx(el) { if (!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 let drivePasteOn = false;
 function wireDriveBox(root) {
@@ -1704,14 +1875,14 @@ function openNotifs() {
     const who = x.c.anon ? 'Anonim' : displayName(x.c.by, false, x.c.nick);
     return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.c.tid)}" data-close>${avatarHtml(x.c.anon ? '' : x.c.by, { cls: 'sm' })}<span><span><b>${esc(who)}</b>, “${esc(n.title || 'notun')}” notuna yorum yazdı</span><span class="nf-text">${esc(String(x.c.text || '').slice(0, 90))}</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
   }).join('');
-  const lk = st.newLk ? `<li class="nf-row new nf-like"><span class="nf-ico">${icon('heart')}</span><span>Notların ve yorumların <b>${st.newLk}</b> yeni beğeni aldı.</span></li>` : '';
-  openModal({ title: 'Bildirimler', body: (lk || rows) ? `<ul class="nf-list">${lk}${rows}</ul>` : emptyHtml('Henüz bildirim yok', 'Notuna yorum ya da beğeni gelince burada görünecek.') });
+  const lk = st.newLk ? `<li class="nf-row new nf-like"><span class="nf-ico">${icon('heart')}</span><span>Notların ve yorumların <b>${st.newLk}</b> yeni ▲ ve beğeni aldı.</span></li>` : '';
+  openModal({ title: 'Bildirimler', body: (lk || rows) ? `<ul class="nf-list">${lk}${rows}</ul>` : emptyHtml('Henüz bildirim yok', 'Notuna yorum ya da ▲ gelince burada görünecek.') });
   ls.set('nseen:' + S.me, Date.now()); ls.set('lseen:' + S.me, st.lt);
   renderChrome();
 }
 function weekNote() {
-  const now = Date.now(), pool = notesWhere(n => !isHidden(n) && likeCount(n) > 0);
-  const pick = arr => arr.sort((a, b) => likeCount(b) - likeCount(a) || (b.at || 0) - (a.at || 0))[0] || null;
+  const now = Date.now(), pool = notesWhere(n => !isHidden(n) && voteScore(n) > 0);
+  const pick = arr => arr.sort(byScore)[0] || null;
   const w = pick(pool.filter(n => now - (n.at || 0) < 7 * 864e5));
   if (w) return { n: w, label: 'Haftanın notu' };
   const m = pick(pool.filter(n => now - (n.at || 0) < 30 * 864e5));
@@ -1721,11 +1892,11 @@ function weekNoteHtml() {
   const w = weekNote(); if (!w) return '';
   const n = w.n, photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [], di = driveInfo(n.drive) || { k: 'drive', name: 'Not' };
   const c = S.courses.get(n.cid) || {};
-  return `<a class="week-note" href="#/not/${esc(n.id)}"><span class="wk-rib">${icon('star')}${esc(w.label)}</span><span class="wk-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`}</span><span class="wk-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span>${c.name ? `<span class="wk-cname">${esc(c.name)}</span>` : ''}</span><b class="wk-title">${esc(n.title)}</b><span class="meta"><span>${esc(displayName(n.by, n.anon, n.nick))}</span><span>${likeCount(n)} beğeni</span></span></span></a>`;
+  return `<a class="week-note" href="#/not/${esc(n.id)}"><span class="wk-rib">${icon('star')}${esc(w.label)}</span><span class="wk-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`}</span><span class="wk-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span>${c.name ? `<span class="wk-cname">${esc(c.name)}</span>` : ''}</span><b class="wk-title">${esc(n.title)}</b><span class="meta"><span>${esc(displayName(n.by, n.anon, n.nick))}</span>${voteBadge(n)}</span></span></a>`;
 }
 function fillMoreNotes(root, n, nid) {
   const el = $('[data-r=more]', root); if (!el) return;
-  const more = notesWhere(x => x.cid === n.cid && x.id !== nid && !isHidden(x)).sort((a, b) => likeCount(b) - likeCount(a) || (b.at || 0) - (a.at || 0)).slice(0, 4);
+  const more = notesWhere(x => x.cid === n.cid && x.id !== nid && !isHidden(x)).sort(byHot).slice(0, 4);
   const h = more.length ? `<h2 class="sub-h">${esc(codeOf(n.cid))} için diğer notlar</h2><ul class="ncards">${more.map(noteCard).join('')}</ul>` : '';
   if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; lazyPhotos(el); }
 }
@@ -1735,7 +1906,7 @@ const BADGES = [
   { id: 'ilk-yorum', ad: 'Sohbet başladı', d: 'İlk yorumunu yazdın.', g: '💬', ok: k => k.comments >= 1 },
   { id: 'yorum-10', ad: 'Kantin muhabbeti', d: '10 yorum yazdın.', g: '🗣️', ok: k => k.comments >= 10 },
   { id: 'ilk-puan', ad: 'Hoca ölçer', d: 'İlk hocanı puanladın.', g: '⭐', ok: k => k.ratings >= 1 },
-  { id: 'begeni-10', ad: 'Sevilen', d: '10 beğeni topladın.', g: '❤️', ok: k => k.likes >= 10 },
+  { id: 'begeni-10', ad: 'Sevilen', d: '10 ▲ ya da beğeni topladın.', g: '❤️', ok: k => (k.likes || 0) + (k.ups || 0) >= 10 },
   { id: 'kubbe-500', ad: 'Kubbe avcısı', d: 'Toplam 500 kubbeye ulaştın.', g: '🏛️', ok: k => k.all >= 500 },
   { id: 'podyum', ad: 'Podyum', d: 'Bu dönem ilk 3’e girdin.', g: '🏆', ok: (k, uid) => { const r = ranking('term').find(x => x.uid === uid); return !!r && r.rank <= 3 && r.val > 0; } },
   { id: 'kurtarici', ad: 'Can kurtaran', d: 'Bir not isteğini karşıladın.', g: '🛟', ok: k => (k.fills || 0) >= 1 }
@@ -1842,19 +2013,18 @@ function noteCard(n) {
   if (isHidden(n) && !S.revealed.has(n.id)) return noteRow(n, { showCourse: true });
   const type = noteType(n).name;
   const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
-  const lk = likeCount(n);
   return `<li class="ncard"><a class="ncard-link" href="#/not/${esc(n.id)}">
     <span class="ncard-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `${(() => { const di = driveInfo(n.drive) || { k: 'drive', name: 'Drive' }; return `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`; })()}${driveThumbHtml(n.drive)}`}${photos.length > 1 ? `<span class="ncard-pages">${photos.length} sayfa</span>` : ''}</span>
     <span class="ncard-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span><span class="kind kind-${noteType(n).k}">${esc(type)}</span></span>
       <span class="ncard-title">${esc(n.title)}</span>
-      <span class="meta"><span>${esc(displayName(n.by, n.anon, n.nick))}</span><span>${esc(ago(n.at))}</span>${lk ? `<span>${lk} beğeni</span>` : ''}</span></span></a></li>`;
+      <span class="meta"><span>${esc(displayName(n.by, n.anon, n.nick))}</span><span>${esc(ago(n.at))}</span>${voteBadge(n)}</span></span></a></li>`;
 }
 function noteRow(n, { showCourse = false } = {}) {
   if (isHidden(n) && !S.revealed.has(n.id)) return `<li><div class="is-hidden"><span>Bu not bildirimler nedeniyle gizlendi.</span><button type="button" class="btn btn-sm btn-ghost" data-g="reveal" data-id="${esc(n.id)}">Yine de göster</button></div></li>`;
   const type = noteType(n).name;
   const h = n.h && S.hocas.get(n.h);
   const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
-  const lk = likeCount(n), cc = commentCount('note', n.id);
+  const cc = commentCount('note', n.id);
   const ico = photos.length ? `<span class="note-ico"><img data-photo="${esc(photos[0])}" alt=""></span>` : `<span class="note-ico">${icon('external')}${driveThumbHtml(n.drive)}</span>`;
   return `<li class="note-row">
     ${ico}
@@ -1865,7 +2035,7 @@ function noteRow(n, { showCourse = false } = {}) {
     </div>
     <div class="note-side">
       <span class="chips">${photos.length ? `<span class="pill">${icon('camera')}${photos.length} sayfa</span>` : ''}${n.drive ? `<span class="pill">${icon('external')}${esc((driveInfo(n.drive) || { name: 'Drive' }).name)}</span>` : ''}</span>
-      <span class="note-stats"><button type="button" class="iconbtn like" data-g="like-note" data-id="${esc(n.id)}" aria-pressed="${likedByMe(n)}" aria-label="Beğen, ${lk} beğeni">${icon('heart')}${lk}</button><a class="iconbtn" href="#/not/${esc(n.id)}" aria-label="${cc} yorum">${icon('comment')}${cc}</a></span>
+      <span class="note-stats">${voteHtml(n)}<a class="iconbtn" href="#/not/${esc(n.id)}" aria-label="${cc} yorum">${icon('comment')}${cc}</a></span>
     </div>
   </li>`;
 }
@@ -2521,7 +2691,6 @@ function renderChrome() {
       bell.setAttribute('aria-label', st.count ? `Bildirimler, ${st.count} yeni` : 'Bildirimler');
     }
   }
-  const wnb = $('[data-r=wn]'); if (wnb) wnb.classList.toggle('has-new', (+ls.get('wn', 0) || 0) < CHANGES_VER);
   { const uu = myAcc(); if (TOUR.on && !uu) tourEnd(); if (uu && S.loaded.users && !S.owner && !TOUR.on && !ls.get('welcomed:' + S.me, false) && !document.querySelector('.modal')) { ls.set('welcomed:' + S.me, true); setTimeout(() => { if (!document.querySelector('.modal') && !TOUR.on) openWelcome(); }, 900); } }
   checkBadges();
 }
@@ -2928,7 +3097,7 @@ function tourSteps(u) {
     { go: '#/', sel: '#main .hero .search', t: 'Her şey buradan başlar', say: 'Ders kodunu (CSE 211 gibi) ya da hocanın adını buraya yaz, listeden seç. Aradığın ders ya da hoca hemen önüne gelir.' },
     { go: '#/dersler', sel: '#main .toolbar', t: 'Bölümünün ders planı', say: 'Buradan bölümünü seç: dönem dönem bütün derslerin çıkar. Bitirdiğin dersleri ✓ ile işaretlersen ne kadar kaldığını da görürsün.' },
     cid ? { go: '#/ders/' + cid, sel: ['#main [data-r=myc]', '#main .head-actions'], t: 'Derslerini ekle', say: 'Her dersin kendi sayfası var: notlar, yorumlar ve hocalar. “Derslerime ekle”ye basarsan o derse yeni not düşünce ilk sen görürsün.' } : null,
-    { go: '#/paylas', sel: ['#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `Notunu Google Drive’a koy, linkini buraya yapıştır. Her not ${KUBBE.note} kubbe kazandırır; bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
+    { go: '#/paylas', sel: ['#main [data-r=gpick]', '#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `${gdCfg() ? '“Drive’dan seç”e bas, notunu Drive’ından seç; paylaşım ayarını ben hallederim.' : 'Notunu Google Drive’a koy, linkini buraya yapıştır.'} Her not ${KUBBE.note} kubbe, her ▲ oy +${KUBBE.up} kubbe kazandırır; bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
     { go: '#/hocaolcer', sel: '#main .toolbar', t: 'HocaÖlçer', say: 'Hocayı adıyla ya da ders koduyla bul. Anlatım, ödev yükü, not verme ve devamsızlıkta puanla; yorumunu anonim bırakabilirsin.' },
     { go: '#/kubbe', sel: ['#main [data-r=head]', '#main .shop-sec'], t: 'Kubbe ve market', say: 'Paylaştıkça kubbe toplarsın. Dönemin yıldızı sıralamasında yüksel, marketten profilini süsleyecek parçalar al.' },
     { go: '#/', sel: '#main [data-r=ayhan]', t: 'Hepsi bu kadar!', say: 'Ben burada, ana sayfada dolaşıyorum. Canın sıkılırsa gel beni sev. İlk notunu bekliyorum, hav!', next: 'Başlayalım' }
@@ -3119,78 +3288,6 @@ function petDog(el, say) {
   const n = (+ls.get('pets', 0) || 0) + 1; ls.set('pets', n);
   if (n === 10) toast('Ayhan Abi seni çok sevdi 🐾');
 }
-/* Yenilikler ve test listesi */
-const CHANGES_VER = 12;
-const CHANGES = [
-  { tur: 'Bu tur', items: [
-    { id: 'onizleme', t: 'Notlar sitenin içinde açılıyor', d: 'yediwiki.com’da not sayfası Drive dosyasını sayfadan çıkmadan gösteriyor: PDF, Docs, Slaytlar, Tablolar ve klasörler. “Tam ekran” ile büyüt; not listelerinde dosyanın küçük resmi görünüyor. Not paylaşırken linki yapıştırınca önizleme hemen altında çıkıyor.', go: '#/dersler' },
-    { id: 'turiki', t: 'Not türü iki: Ders notu ve Çıkmış sınav', d: 'Not paylaşırken yalnızca bu ikisinden birini seçiyorsun. Daha önce özet, ödev, lab ya da diğer diye paylaşılanlar ders notu olarak görünüyor.', go: '#/paylas' },
-    { id: 'tur2', t: 'Ayhan Abi seni sayfa sayfa gezdiriyor', d: 'Hoş geldin turu artık sayfadan sayfaya gidiyor ve her durakta anlattığı yeri ışıkla gösteriyor; yazılar daha büyük ve net. “Dene” ile turu şimdi izle.', go: '#/', g: 'welcome' }] },
-  { tur: '9. tur', items: [
-    { id: 'kadro', get t() { return `Akademik kadro: ${CAT.hocas.size} hoca`; }, d: 'Hocalar Yeditepe’nin sitesinden geldi: unvanı, fakültesi, bölümü ve verdiği dersler. Ders sayfasının Hocalar sekmesinde o dersi verenler, HocaÖlçer’de ders koduyla arama, not paylaşırken hoca listesi o dersi verenlerle başlıyor.', go: '#/hocaolcer' }] },
-  { tur: '8. tur', items: [
-    { id: 'mailkisa', t: 'E-postanın yalnızca ilk kısmı', d: 'Hesap açarken ve girişte yalnızca @ işaretinden önceki kısmı yazıyorsun; @std.yeditepe.edu.tr kutuda hazır. Tam adresi yapıştırırsan uzantı kendiliğinden düşer.', go: '#/' },
-    { id: 'avatar', t: 'Profil resmini sen seç', d: 'Bilgileri düzenle’de istediğin emoji, bir iki harf ya da marketten aldığın bir ürün. Arka plan rengini hazır renklerden ya da “Kendi rengin”den seç.', go: '#/profil' },
-    { id: 'urunav', t: 'Market ürünü profil resmi', d: 'Aldığın ürünün altındaki “Profil resmi yap” ile ürün, animasyonuyla profil resmin olur. Kanat, çerçeve ve parlayan isim gibi efektler yerinde kalır.', go: '#/kubbe' },
-    { id: 'denemenormal', t: 'Deneme hesabı normal hesap gibi', d: 'Deneme hesabının profili düzenlenebiliyor; Derslerim’i, işaretleri ve seçimleri kendine ait. İçinde 10.000 kubbe hediye var, sıralamaya sayılmaz.', go: '#/profil' }] },
-  { tur: '7. tur', items: [
-    { id: 'yonetici', own: true, t: 'Yönetici hesabından çık, geri gir', d: 'Profilim’de “Çıkış yap”a bas, deneme hesabıyla siteyi öğrenci gibi gez; deneme hesabındayken yönetici düğmeleri görünmez. Geri dönmek için yönetici e-postan ve şifrenle giriş yap.', go: '#/profil' },
-    { id: 'hocanot', t: 'Not hocanın sayfasına da düşer', d: 'Not paylaşırken hocayı seçersen not hem ders sayfasında hem hocanın Notlar sekmesinde görünür; hoca dersin Hocalar sekmesine, ders hocanın Verdiği dersler sekmesine eklenir.', go: '#/paylas' },
-    { id: 'sadeders', t: 'Ders sayfası sadeleşti', d: 'Ders sayfasındaki bölüm ve seçmeli listesi rozetleri kaldırıldı; sayfa notlara, yorumlara ve hocalara odaklanıyor. Bölüm planları Dersler sayfasında.', go: '#/ders/MATH131' },
-    { id: 'yalnizdrive', t: 'Notlar yalnızca Drive linkiyle', d: 'Fotoğraf yükleme kaldırıldı. Not Drive’da durur, YediWiki yalnızca linkini saklar. El yazısı notları tarayıp PDF olarak paylaş.', go: '#/paylas' }] },
-  { tur: '6. tur', items: [
-    { id: 'ayhan', t: 'Ayhan Abi', d: 'Kampüsün köpeği Ayhan Abi ana sayfada dolaşıyor, bazen köşesinde uyuyor; dokununca havlıyor, uyuyorsa uyanıyor.', go: '#/' },
-    { id: 'ayhantur', t: 'Hoş geldin turunu Ayhan Abi yapıyor', d: 'Yeni hesaplara adım adım tanıtım. “Dene” ile turu şimdi izle.', go: '#/', g: 'welcome' },
-    { id: 'elsatir', t: 'Seçmeliler planda ders satırı', d: 'Mavi “Seçmeli” satırına bas: alınabilecek dersler açılır. Birini seçince satırda o dersin adı görünür, ✓ ile işaretleyebilirsin.', go: '#/dersler?b=bilgisayar-muhendisligi' },
-    { id: 'cap', t: 'ÇAP ve yandal', d: 'Bölüm planında “ÇAP / Yandal ekle” ile ikinci programını seç: iki plan dönem dönem birlikte görünür. Almayacağın dersleri × ile çıkarırsın, mezuniyet yolunda ikisinin ilerlemesi ayrı görünür.', go: '#/dersler?b=bilgisayar-muhendisligi' },
-    { id: 'serbest', t: 'Serbest seçmelide ders arama', d: 'Listesi çok uzun olan seçmelilerde (serbest, tamamlayıcı) aldığın dersi tüm dersler arasında arayıp seçebilirsin.', go: '#/dersler?b=psikoloji' },
-    { id: 'dil', t: 'Daha doğal Türkçe', d: 'Arama kutularında “süz” yerine “ara”; düğme ve uyarı metinleri sadeleşti.', go: '#/hocaolcer' }] },
-  { tur: '5. tur', items: [
-    { id: 'havuz', t: 'Seçmeli ders listeleri', get d() { const st = poolStats(); return `${st.bol} bölümde (${st.facs.length > 3 ? st.facs.length + ' fakülte' : st.facs.join(', ')}) her seçmelinin alınabilecek dersleri kredisiyle, fakülte sitesinden.`; }, go: '#/dersler?b=bilgisayar-muhendisligi' },
-    { id: 'secders', get t() { return poolStats().ders + ' seçmeli ders katalogda'; }, d: 'Seçmeli derslerin de sayfası var: adı, kredisi, notlar ve yorumlar.', go: '#/ders/CSE462' },
-    { id: 'secara', t: 'Planda arama seçmelileri de bulur', d: 'Bölüm planında kod ya da ad yazınca seçmeli listelerindeki dersler de “Seçmeli dersler” başlığıyla çıkar.', go: '#/dersler?b=makine-muhendisligi' }] },
-  { tur: '4. tur', items: [
-    { id: 'katalog', t: 'Tüm bölümlerin ders planı', d: '72 bölümün dönem dönem planı ve 1.675 ders AKTS Bilgi Paketi’nden aktarıldı. Bölüm seç, planı gör.', go: '#/dersler?b=hukuk' },
-    { id: 'secmeli', t: 'Dönem kredisi', d: 'Planda her dönemin toplam kredisi başlığında.', go: '#/dersler?b=bilgisayar-muhendisligi' },
-    { id: 'tumders', t: 'Tüm dersler listesi', d: '“Tüm dersler” ilk 80 dersi gösterir; kod ya da ad yazınca daralır, “Daha fazla göster” ile uzar.', go: '#/dersler' },
-    { id: 'kredi', t: 'Her yerde kredi', d: 'Listelerde, planlarda ve mezuniyet yolunda AKTS yerine kredi; AKTS yalnızca ders sayfasında.', go: '#/ders/MATH131' },
-    { id: 'yillik', t: 'Yıllık programlar', d: 'Tıp gibi yıllık programlarda başlıklar “1. sınıf, 2. sınıf” diye gider.', go: '#/dersler?b=tip' }] },
-  { tur: '3. tur', items: [
-    { id: 'istek', t: 'Not istekleri', d: 'Ders sayfasından not iste, “Ben de” ile katıl; isteği karşılayan 10 kubbe kazanır, isteyen bildirim alır.', go: '#/istekler' },
-    { id: 'zorluk', t: 'DersÖlçer', d: 'Ders sayfasında zorluk ve iş yükü oyu; Dersler listesinde 🌶️ puanı.', go: '#/ders/CSE211' },
-    { id: 'mezun', t: 'Mezuniyet yolu', d: 'Bölüm ders planında aldığın dersleri ve seçmelileri ✓ ile işaretle, kredi ilerlemeni gör.', go: '#/dersler?b=bilgisayar-muhendisligi' },
-    { id: 'arama', t: 'Son aramalar', d: 'Ana sayfadaki arama kutusunun altında son aramaların.', go: '#/' },
-    { id: 'hosgeldin', t: 'Hoş geldin turu', d: 'Yeni hesaplara Ayhan Abi’nin 3 adımlık tanıtımı.', go: '#/' },
-    { id: 'kopek', t: 'Ayhan Abi’yi sev', d: 'Ana sayfada ve boş sayfalarda Ayhan Abi’ye dokun.', go: '#/not/yok' },
-    { id: 'yenilik', t: 'Yenilikler ve test listesi', d: 'Bu pencere; yöneticiye Moderasyon’da işaretlenebilir test listesi.', go: '#/moderasyon' }] },
-  { tur: '2. tur', items: [
-    { id: 'zil', t: 'Bildirim zili', d: 'Notuna yorum ya da beğeni, isteğine not gelince üst çubukta sayı çıkar.', go: '#/' },
-    { id: 'derslerim', t: 'Derslerim', d: 'Ders sayfasında “Derslerime ekle”; ana sayfada yeni not etiketi.', go: '#/ders/CSE211' },
-    { id: 'haftanin', t: 'Haftanın notu', d: 'En çok beğenilen not ana sayfada vitrinde.', go: '#/' },
-    { id: 'rozet', t: 'Rozetler', d: 'Profilde ve kullanıcı kartlarında rozetler; yenisini kazanınca kutlama.', go: '#/profil' },
-    { id: 'paylas', t: 'Paylaş düğmesi', d: 'Ders, hoca ve not sayfalarında.', go: '#/not/seed-n1' },
-    { id: 'diger', t: 'Aynı dersten diğer notlar', d: 'Not sayfasının altında.', go: '#/not/seed-n1' },
-    { id: 'tema', t: 'Tema seçici', d: 'Alt bilgide Sistem, Açık ve Koyu.', go: '#/' },
-    { id: 'sayac', t: 'Kubbe sayacı', d: 'Bakiye değişince sayarak artar.', go: '#/kubbe' },
-    { id: 'kisayol', t: '“/” kısayolu', d: 'Bilgisayarda “/” tuşu aramaya götürür.', go: '#/' },
-    { id: 'drive', t: 'Drive yapıştırma kutusu', d: 'Linki kopyala, sayfada Ctrl+V yeter; türü renkli kartla tanınır.', go: '#/paylas' },
-    { id: 'anim', t: 'Küçük animasyonlar', d: 'Beğenide kalpler, kubbe kazanınca yükselen rozet, satın almada konfeti.', go: '#/kubbe' },
-    { id: 'deneme', t: 'Ortak deneme hesabı', d: 'deneme123@std.yeditepe.edu.tr, şifre deneme123.', go: '#/' }] }
-];
-/* Seçmeli havuzu eklenmiş bölüm ve fakülteler, havuzlardaki farklı ders sayısı (yenilik metinleri bunu yazar) */
-function poolStats() {
-  const slugs = [...CAT.plans].filter(([, P]) => P.url).map(([s]) => s);
-  const facs = [...new Set(slugs.map(s => ((S.bolumler.get(s) || {}).fakulte || '').replace(/ Fakültesi$/, '')).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
-  return { bol: slugs.length, facs, ders: CAT.elOf.size };
-}
-function openWhatsNew() {
-  ls.set('wn', CHANGES_VER); renderChrome();
-  openModal({ title: 'Yenilikler', body: CHANGES.map(g => ({ tur: g.tur, items: g.items.filter(i => !i.own || S.ownerId) })).filter(g => g.items.length).map(g => `<h3 class="wn-h">${esc(g.tur)}</h3><ul class="wn">${g.items.map(i => `<li><div><b>${esc(i.t)}</b><span>${esc(i.d)}</span></div><a class="btn btn-sm" href="${esc(i.go)}" data-close${i.g ? ` data-g="${esc(i.g)}"` : ''}>Dene</a></li>`).join('')}</ul>`).join('') });
-}
-function testsHtml() {
-  const all = CHANGES.flatMap(g => g.items), done = all.filter(i => ls.get('test:' + i.id, false)).length;
-  return `<div class="sec-head"><h2>Test listesi</h2><span class="tst-prog">${done}/${all.length} denendi</span></div><p class="muted">Son test turunda her özelliği aç, dene ve işaretle. İşaretler bu cihazda saklanır.</p>${CHANGES.map(g => `<h3 class="wn-h">${esc(g.tur)}</h3><ul class="tsts">${g.items.map(i => `<li><label class="tst"><input type="checkbox" data-test="${esc(i.id)}"${ls.get('test:' + i.id, false) ? ' checked' : ''}><span><b>${esc(i.t)}</b><span>${esc(i.d)}</span></span></label><a class="btn btn-sm btn-ghost" href="${esc(i.go)}"${i.g ? ` data-g="${esc(i.g)}"` : ''}>Aç</a></li>`).join('')}</ul>`).join('')}<button type="button" class="btn btn-sm btn-ghost" data-g="tests-reset">İşaretleri sıfırla</button>`;
-}
 ROUTES[''] = function viewHome(root) {
   const lb = { kind: 'term', open: false, bolum: '', sig: '' };
   root.innerHTML = `
@@ -3212,7 +3309,7 @@ ROUTES[''] = function viewHome(root) {
     <div class="home-left">
       <section class="home-sec mycs" data-r="mycs" hidden></section>
       <section class="home-sec">
-        <div class="sec-head"><h2>Son paylaşılan notlar</h2><a class="sec-link" href="#/paylas">Not paylaş</a></div>
+        <div class="sec-head"><h2>Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn" data-ns="hot" aria-pressed="true">🔥 Revaçta</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
         <div data-r="notes"></div>
       </section>
       <section class="home-sec" data-r="reqsec" hidden><div class="sec-head"><h2>📣 Not istekleri</h2><a class="sec-link" href="#/istekler">Tümü</a></div><div data-r="reqs"></div></section>
@@ -3248,6 +3345,10 @@ ROUTES[''] = function viewHome(root) {
     location.hash = '#/ara?q=' + encodeURIComponent(q);
   });
   const R = k => $(`[data-r=${k}]`, root);
+  let ns = ls.get('homeNotes', 'hot') === 'new' ? 'new' : 'hot';
+  const paintNs = () => $$('[data-ns]', root).forEach(x => x.setAttribute('aria-pressed', String(x.dataset.ns === ns)));
+  paintNs();
+  $$('[data-ns]', root).forEach(b => b.addEventListener('click', () => { ns = b.dataset.ns; ls.set('homeNotes', ns); paintNs(); api.refresh(); }));
   $$('[data-lk]', root).forEach(b => b.addEventListener('click', () => {
     lb.kind = b.dataset.lk;
     $$('[data-lk]', root).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
@@ -3297,10 +3398,11 @@ ROUTES[''] = function viewHome(root) {
       { const mc = R('mycs'), h = myCoursesHtml(); mc.hidden = !h; if (mc.dataset.h !== h) { mc.dataset.h = h; mc.innerHTML = h; } }
       { const rc = R('recent'), h = recentHtml(); rc.hidden = !h; if (rc.dataset.h !== h) { rc.dataset.h = h; rc.innerHTML = h; } }
       { const list = openRequests().slice(0, 3), h = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>` : '', el2 = R('reqs'); R('reqsec').hidden = !h; if (el2.dataset.h !== h) { el2.dataset.h = h; el2.innerHTML = h; } }
-      const notes = notesWhere(n => !isHidden(n)).sort((a, b) => b.at - a.at).slice(0, 5);
-      R('notes').innerHTML = notes.length ? `<ul class="ncards${introCls()}">${notes.map(n => noteCard(n)).join('')}</ul>`
-        : emptyHtml('Henüz not paylaşılmadı', 'Notunu Google Drive’a yükle, linkiyle ilk notu sen paylaş.', '<a class="btn btn-primary" href="#/paylas">Not paylaş</a>');
-      { const wk = notes.length ? weekNoteHtml() : ''; if (wk) R('notes').insertAdjacentHTML('afterbegin', wk); }
+      // Revaçta: oy ve tazelik (▼ alan aşağı iner, eksiye düşen burada görünmez); Yeni: son paylaşılanlar. Haftanın notu üstte, listede tekrar etmez.
+      const shown = notesWhere(n => !isHidden(n)), wk = shown.length ? weekNote() : null;
+      const notes = (ns === 'new' ? shown.sort((a, b) => b.at - a.at) : shown.filter(n => voteScore(n) >= 0).sort(byHot)).filter(n => !wk || n.id !== wk.n.id).slice(0, 5);
+      R('notes').innerHTML = notes.length || wk ? `${wk ? weekNoteHtml() : ''}${notes.length ? `<ul class="ncards${introCls()}">${notes.map(n => noteCard(n)).join('')}</ul>` : ''}`
+        : emptyHtml(ns === 'new' || !shown.length ? 'Henüz not paylaşılmadı' : 'Revaçta not yok', 'Notunu Google Drive’dan seç, ilk notu sen paylaş.', '<a class="btn btn-primary" href="#/paylas">Not paylaş</a>');
       lazyPhotos(R('notes'));
       const cms = commentsWhere(c => !isHidden(c)).sort((a, b) => b.at - a.at).slice(0, 6);
       R('cms').innerHTML = cms.length ? `<ul class="list">${cms.map(c => {
@@ -3555,14 +3657,14 @@ ROUTES['ders'] = function viewCourse(root, r) {
   };
 };
 function courseNotesTab(panel, cid) {
-  let type = 'all', term = 'all', sort = 'new';
+  let type = 'all', term = 'all', sort = 'hot';
   panel.innerHTML = `
     <div data-r="reqs"></div>
     <div class="toolbar">
       <div class="chips" role="group" aria-label="Not türü">${[{ k: 'all', name: 'Tümü' }].concat(NOTE_TYPES).map(t => `<button type="button" class="chip" data-type="${t.k}" aria-pressed="${t.k === 'all'}">${esc(t.name)}</button>`).join('')}</div>
       <div class="toolbar-end">
         <select class="select sm" data-r="term" aria-label="Dönem"></select>
-        <select class="select sm" data-r="sort" aria-label="Sıralama"><option value="new">En yeni</option><option value="top">En beğenilen</option></select>
+        <select class="select sm" data-r="sort" aria-label="Sıralama"><option value="hot">Öne çıkan</option><option value="new">En yeni</option><option value="top">En çok oy alan</option></select>
       </div>
     </div>
     <div data-r="list"></div>`;
@@ -3585,7 +3687,7 @@ function courseNotesTab(panel, cid) {
       tSel.value = terms.some(tk => String(tk) === term) ? term : 'all';
       term = tSel.value;
       const list = all.filter(n => (type === 'all' || noteType(n).k === type) && (term === 'all' || String(n.tk) === term));
-      list.sort(sort === 'top' ? (a, b) => likeCount(b) - likeCount(a) || b.at - a.at : (a, b) => b.at - a.at);
+      list.sort(sort === 'top' ? byScore : sort === 'new' ? (a, b) => b.at - a.at : byHot);
       if (!all.length) { el.innerHTML = emptyHtml('Bu derse henüz not paylaşılmadı', 'Notunu Google Drive’a yükleyip linkini paylaşabilirsin.', `<a class="btn btn-primary" href="#/paylas?ders=${esc(cid)}">${icon('up')}İlk notu paylaş</a>`); return; }
       if (!list.length) { el.innerHTML = emptyHtml('Bu seçimde not yok', 'Türü ya da dönemi değiştir.'); return; }
       el.innerHTML = `<ul class="list">${list.map(n => noteRow(n)).join('')}</ul>`;
@@ -3764,7 +3866,7 @@ function hocaNotesTab(panel, hid) {
   return {
     refresh() {
       const el = $('[data-r=list]', panel);
-      const list = notesWhere(n => n.h === hid).sort((a, b) => b.at - a.at);
+      const list = notesWhere(n => n.h === hid).sort(byHot);
       el.innerHTML = list.length ? `<ul class="list">${list.map(n => noteRow(n, { showCourse: true })).join('')}</ul>` : emptyHtml('Bu hocanın dersleri için not yok', 'Not paylaşırken hocayı seçersen burada da görünür.', '<a class="btn btn-primary" href="#/paylas?hoca=' + esc(hid) + '">Not paylaş</a>');
       lazyPhotos(el);
     }
@@ -3820,8 +3922,8 @@ ROUTES['not'] = function viewNote(root, r) {
       const h = n.h && S.hocas.get(n.h);
       $('[data-r=crumb]', root).textContent = (codeOf(n.cid) + ' ' + courseName(n.cid)).trim();
       $('[data-r=meta]', root).innerHTML = `${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}<span class="by-line">Paylaşan: ${avatarHtml(n.by, { anon: !!n.anon, cls: 'sm' })}${esc(displayName(n.by, n.anon, n.nick))}${isMine(n) ? ' (sen)' : ''}</span><span>${esc(ago(n.at))}</span>`;
-      const lk = likeCount(n);
-      $('[data-r=acts]', root).innerHTML = `<button type="button" class="btn like-btn" data-g="like-note" data-id="${esc(nid)}" aria-pressed="${likedByMe(n)}">${icon('heart')}${likedByMe(n) ? 'Beğendin' : 'İşime yaradı'} (${lk})</button>
+      const mv = myVote(n);
+      $('[data-r=acts]', root).innerHTML = `<span class="vote-wrap">${voteHtml(n, { big: true })}<span class="vote-hint">${isMine(n) ? 'Notunun puanı' : mv > 0 ? 'İşine yaradı dedin' : mv < 0 ? 'İşe yaramadı dedin' : 'İşine yaradı mı?'}</span></span>
         ${isMine(n) ? '' : `<button type="button" class="btn btn-ghost" data-g="report-note" data-id="${esc(nid)}">${icon('flag')}${reportedByMe(n) ? 'Bildirildi' : 'Bildir'}</button>`}
         ${canManage(n) ? `<button type="button" class="btn btn-ghost" data-g="del-note" data-id="${esc(nid)}">${icon('trash')}Sil</button>` : ''}<button type="button" class="btn btn-ghost" data-g="share" data-title="${esc(n.title || 'Not')}" data-hash="#/not/${esc(nid)}">${icon('share')}Paylaş</button>`;
       fillMoreNotes(root, n, nid);
@@ -3838,7 +3940,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
   const terms = termList();
   let anon = false;
   root.innerHTML = `<div class="wrap">
-    <div class="page-intro"><h1>Not paylaş</h1><p>Notunu Google Drive’a yükle, linkini burada paylaş. Dosya YediWiki’ye yüklenmez, yalnızca Drive linki saklanır. Her not <b>${KUBBE.note} kubbe</b> kazandırır.</p></div>
+    <div class="page-intro"><h1>Not paylaş</h1><p>${gdCfg() ? 'Notunu Google Drive’dan seç, gerisini YediWiki halleder.' : 'Notunu Google Drive’a yükle, linkini burada paylaş.'} Dosya YediWiki’ye yüklenmez, yalnızca Drive linki saklanır. Her not <b>${KUBBE.note} kubbe</b> kazandırır.</p></div>
     <div class="empty mb2" data-r="locked" hidden><h3>Önce Yeditepe hesabın gerekiyor</h3><p>Not paylaşmak, yorum yazmak ve puan vermek için okul e-postanla bir hesap aç.</p><button type="button" class="btn btn-primary" data-g="auth">${icon('star')}Hesabımla gir</button></div>
     <div class="share-grid" data-r="grid">
       <form class="form-card" novalidate data-r="form">
@@ -3852,13 +3954,20 @@ ROUTES['paylas'] = function viewShare(root, r) {
         <div class="form-sec"><h2>Not</h2>
           <fieldset class="field"><legend class="label">Tür</legend><div class="typepick">${NOTE_TYPES.map((t, i) => `<label><input type="radio" name="type" value="${t.k}"${i === 0 ? ' checked' : ''}><span>${esc(t.name)}</span></label>`).join('')}</div></fieldset>
           <div class="field"><label for="sh-title">Başlık</label><input id="sh-title" class="input" maxlength="80" placeholder="Örn. Vize 1 konu özeti ve çözümlü örnekler"></div>
-          <div class="field"><label for="sh-desc">Açıklama <span class="opt">isteğe bağlı</span></label><textarea id="sh-desc" class="textarea" rows="3" maxlength="500" placeholder="Hangi haftaları kapsıyor, neye dikkat etmeli?"></textarea></div>
         </div>
-        <div class="form-sec"><h2>İçerik</h2>
-          <div class="field"><label for="sh-drive">Google Drive linki</label>
+        <div class="form-sec"><h2>Dosya</h2>
+          <div class="gpick" data-r="gpick"${gdCfg() ? '' : ' hidden'}>
+            <button type="button" class="btn btn-primary gpick-btn" data-r="gbtn">${DRIVE_LOGO}<span>Drive’dan seç</span></button>
+            <p class="help">Google hesabınla gir, notunu Drive’ından seç ya da “Yükle” sekmesinden telefonundan ekle. Paylaşım ayarını YediWiki yapar: dosyayı bağlantıya sahip olan herkes görüntüleyebilir.</p>
+            <p class="gpick-msg" data-r="gmsg" role="status" aria-live="polite"></p>
+          </div>
+          <div class="field"><label for="sh-drive">${gdCfg() ? 'Ya da Drive linkini yapıştır' : 'Google Drive linki'}</label>
             <div class="drive-box" data-r="dbox"><div class="drive-in">${icon('external')}<input id="sh-drive" class="input" type="url" inputmode="url" autocomplete="off" placeholder="Linki buraya yapıştır"><button type="button" class="btn btn-sm" data-r="paste">${icon('copy')}Yapıştır</button></div><div class="drive-prev" data-r="dprev" hidden></div></div><div data-r="dmini"></div>
             <p class="help">Drive’da linki kopyaladıktan sonra bu sayfada <b>Ctrl+V</b> yapman yeter, kutu kendiliğinden dolar.</p>
             <details class="drive-help"><summary>Linki nasıl alırım?</summary><ol class="dsteps"><li><span>1</span><div>Drive’da dosyaya ya da klasöre sağ tıkla, <b>Paylaş</b>’ı seç.</div></li><li><span>2</span><div>Genel erişimi <b>Bağlantıya sahip olan herkes</b> yap.</div></li><li><span>3</span><div><b>Bağlantıyı kopyala</b>, buraya dön ve yapıştır.</div></li></ol><a class="btn btn-sm" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer">${icon('external')}Drive’ı aç</a></details></div>
+        </div>
+        <div class="form-sec"><h2>Açıklama <span class="opt">isteğe bağlı</span></h2>
+          <div class="field"><label for="sh-desc" class="sr">Açıklama</label><textarea id="sh-desc" class="textarea" rows="3" maxlength="500" placeholder="Hangi haftaları kapsıyor, neye dikkat etmeli?"></textarea></div>
         </div>
         <div class="form-sec">
           <div class="field"><span class="label">Paylaşan adı</span><div class="chips"><button type="button" class="chip" data-anon="0" aria-pressed="true" data-r="asme"></button><button type="button" class="chip" data-anon="1" aria-pressed="false">Anonim</button></div><p class="help" data-r="who"></p></div>
@@ -3868,10 +3977,12 @@ ROUTES['paylas'] = function viewShare(root, r) {
         </div>
       </form>
       <aside class="aside">
-        <h3>Drive linki nasıl alınır?</h3>
-        <ol><li>Drive’da dosyaya ya da klasöre sağ tıkla, Paylaş’ı seç.</li><li>Genel erişimi “Bağlantıya sahip olan herkes” yap, rolü Görüntüleyen olarak bırak.</li><li>Bağlantıyı kopyala ve buraya yapıştır.</li></ol>
+        ${gdCfg() ? `<h3>Dosyanı nasıl seçersin?</h3>
+        <ol><li>“Drive’dan seç”e bas, Google hesabını seç.</li><li>Notunu listeden seç; Drive’ında yoksa “Yükle” sekmesinden telefonundan ya da bilgisayarından ekle.</li><li>YediWiki dosyayı “Bağlantıya sahip olan herkes görüntüleyebilir” yapar. Başlığı boş bıraktıysan dosyanın adı yazılır.</li></ol>
+        <p class="fine">YediWiki yalnızca senin seçtiğin dosyaya erişir; Drive’ının geri kalanını göremez. <a href="/gizlilik">Gizlilik</a></p>` : `<h3>Drive linki nasıl alınır?</h3>
+        <ol><li>Drive’da dosyaya ya da klasöre sağ tıkla, Paylaş’ı seç.</li><li>Genel erişimi “Bağlantıya sahip olan herkes” yap, rolü Görüntüleyen olarak bırak.</li><li>Bağlantıyı kopyala ve buraya yapıştır.</li></ol>`}
         <h3>El yazısı notlar için</h3>
-        <ol><li>Sayfaları telefonla tarayıp tek PDF yap: Android’de Drive uygulamasındaki Tara, iPhone’da Notlar uygulamasındaki Belgeleri Tara işini görür.</li><li>PDF’i Drive’a yükle, paylaşımı “Bağlantıya sahip olan herkes” yap.</li><li>Kişisel bilgilerin görünmediğinden emin ol.</li></ol>
+        <ol><li>Sayfaları telefonla tarayıp tek PDF yap: Android’de Drive uygulamasındaki Tara, iPhone’da Notlar uygulamasındaki Belgeleri Tara işini görür.</li><li>${gdCfg() ? 'PDF’i “Drive’dan seç” penceresindeki “Yükle” sekmesiyle ekle.' : 'PDF’i Drive’a yükle, paylaşımı “Bağlantıya sahip olan herkes” yap.'}</li><li>Kişisel bilgilerin görünmediğinden emin ol.</li></ol>
       </aside>
     </div></div>`;
   const R = k => $(`[data-r=${k}]`, root);
@@ -3903,6 +4014,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
   codeIn.addEventListener('input', checkCode);
   codeIn.addEventListener('change', checkCode);
   wireDriveBox(root);
+  if (gdCfg()) { gdLoad().catch(() => {}); R('gbtn').addEventListener('click', () => pickFromDrive(root)); }   // Google betikleri önceden yüklenir: tıklayınca pencere hemen açılsın
   S.shareReq = (r && r.q && r.q.get('istek')) || ''; renderReqBanner(root); setTimeout(() => renderReqBanner(root), 700);
   const form = R('form'), err = R('err');
   form.addEventListener('submit', async e => {
@@ -3923,7 +4035,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
     const btn = R('submit'); btn.disabled = true; btn.textContent = 'Not kaydediliyor…';
     const noteRef = S.db.collection('notes').doc();
     try {
-      await retrying(() => noteRef.set({ cid: pc.id, h: hid, tk, type, title: title.slice(0, 80), desc: $('#sh-desc', root).value.trim().slice(0, 500), drive: drive.slice(0, 600), photos: [], anon, by: S.me, at: Date.now(), likes: {}, reports: {} }));
+      await retrying(() => noteRef.set({ cid: pc.id, h: hid, tk, type, title: title.slice(0, 80), desc: $('#sh-desc', root).value.trim().slice(0, 500), drive: drive.slice(0, 600), photos: [], anon, by: S.me, at: Date.now(), likes: {}, downs: {}, reports: {} }));
       toast(`Not paylaşıldı, +${KUBBE.note} kubbe`);
       if (S.shareReq) await fulfillRequest(S.shareReq, noteRef.id, pc.id);
       location.hash = '#/not/' + noteRef.id;
@@ -3977,12 +4089,10 @@ ROUTES['katkilarim'] = function viewMine(root) {
 
 /* ================= Moderasyon ================= */
 ROUTES['moderasyon'] = function viewMod(root) {
-  root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Moderasyon</h1><p>Bildirilen içerikler. Üç bildirim alan içerik otomatik gizlenir; uygun bulursan bildirimleri temizle, değilse sil.</p></div><div data-r="body"></div><section class="home-sec tests" data-r="tests" hidden></section></div>`;
-  root.addEventListener('change', e => { const t = e.target; if (t && t.dataset && t.dataset.test) { ls.set('test:' + t.dataset.test, !!t.checked); changed(); } });
+  root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Moderasyon</h1><p>Bildirilen içerikler. Üç bildirim alan içerik otomatik gizlenir; uygun bulursan bildirimleri temizle, değilse sil.</p></div><div data-r="body"></div></div>`;
   return {
     refresh() {
       const el = $('[data-r=body]', root), st = waitState();
-      { const te = $('[data-r=tests]', root); te.hidden = !S.owner; if (S.owner) { const h = testsHtml(); if (te.dataset.h !== h) { te.dataset.h = h; te.innerHTML = h; } } }
       if (st === 'nodb') { el.innerHTML = noDbHtml(); return; }
       if (st === 'loading' || !allLoaded()) { el.innerHTML = loadingHtml(); return; }
       if (!S.owner) { el.innerHTML = emptyHtml('Bu sayfa yalnızca site sahibine açık', 'Uygunsuz bir içerik gördüysen içeriğin yanındaki Bildir düğmesini kullan.'); return; }
@@ -4006,13 +4116,15 @@ ROUTES['hakkinda'] = function viewAbout(root) {
     <h2>Nasıl kullanılır?</h2>
     <p><b>Ders kodunu ara.</b> Ders sayfasında paylaşılan notlar, yorumlar ve dersi veren hocalar yer alır. Dersler sayfasında bölümünü seçip dönem dönem ders planını görebilirsin.</p>
     <p><b>Hoca adını ara.</b> HocaÖlçer’de hocalar dört kriterde, 5 yıldız üzerinden buçuklu puanlanır. 5 yıldız her kriterde öğrenci açısından en iyi durumdur: ödev yükünde “çok hafif”, not vermede “çok cömert”, devamsızlıkta “esnek” anlamına gelir.</p>
-    <p><b>Not paylaş.</b> Notlar Google Drive linkiyle paylaşılır; dosyalar siteye yüklenmez, YediWiki yalnızca linki saklar. El yazısı notları tarayıp PDF olarak Drive’a koyabilirsin.</p>
+    <p><b>Not paylaş.</b> Notlar Google Drive’dan paylaşılır; dosyalar siteye yüklenmez, YediWiki yalnızca linki saklar. ${S.supa ? '“Drive’dan seç” ile dosyanı site içinden seçersin, paylaşım ayarını YediWiki yapar. ' : ''}El yazısı notları tarayıp PDF olarak Drive’a koyabilirsin.</p>
+    <p><b>Oy ver.</b> İşine yarayan nota yeşil ▲, yaramayana kırmızı ▼ ver. ▲ alan not öne çıkar ve paylaşana kubbe kazandırır; ▼ alan not sıralamada aşağı iner.</p>
+    <p><button type="button" class="btn btn-sm" data-g="welcome">🐾 Ayhan Abi’yle siteyi gez</button></p>
     <h2>Hesap ve anonimlik</h2>
     <p>YediWiki’ye yalnızca okul e-postasıyla katılınır: adres <b>@std.yeditepe.edu.tr</b> ile bitmeli ve doğrulanmalıdır. Not paylaşmak, yorum yazmak ve hoca puanlamak için hesap gerekir; gezinmek için gerekmez.</p>
     <p>Her yorum ve notta “Anonim” seçeneği var. Anonim paylaşımda kullanıcı adın görünmez, kazandığın kubbe yine hesabına yazılır. HocaÖlçer yorumlarında anonim seçeneği varsayılan olarak açıktır.</p>
-    ${S.supa ? '<p>HocaÖlçer puanların, beğenilerin ve anonim paylaşımların hesabına bağlanamaz: her kayıtta yalnızca o kayda özel bir takma ad tutulur, sitenin kendisi bile bunları herkese açık profilinle eşleştiremez. Bu yüzden puanların ve anonim paylaşımların kubbesi bakiyene eklenir ama sıralamaya sayılmaz.</p>' : ''}
+    ${S.supa ? '<p>HocaÖlçer puanların, oyların, beğenilerin ve anonim paylaşımların hesabına bağlanamaz: her kayıtta yalnızca o kayda özel bir takma ad tutulur, sitenin kendisi bile bunları herkese açık profilinle eşleştiremez. Bu yüzden puanların ve anonim paylaşımların kubbesi bakiyene eklenir ama sıralamaya sayılmaz.</p>' : ''}
     <h2>Kubbe</h2>
-    <p>Kubbe, paylaşımı teşvik eden puandır. Hesap açma ${KUBBE.signup}, not ${KUBBE.note}, yorum ${KUBBE.comment}, not isteği karşılamak ${KUBBE.fill}, HocaÖlçer puanı ${KUBBE.rating}, aldığın her beğeni ${KUBBE.like} kubbe kazandırır. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
+    <p>Kubbe, paylaşımı teşvik eden puandır. Hesap açma ${KUBBE.signup}, not ${KUBBE.note}, yorum ${KUBBE.comment}, not isteği karşılamak ${KUBBE.fill}, HocaÖlçer puanı ${KUBBE.rating}, notuna gelen her ▲ ${KUBBE.up}, yorumuna gelen her beğeni ${KUBBE.like} kubbe kazandırır; ▼ kubbe düşürmez, notu sıralamada aşağı iter. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
     <h2>Ders ve hoca listesi</h2>
     <p>Dersler ve akademik kadro okulun kataloğundan yüklenir; kullanıcılar yeni ders ya da hoca ekleyemez. Eksik bir kayıt görürsen site yönetimine bildir.</p>
     <h2>Topluluk kuralları</h2>
@@ -4159,7 +4271,8 @@ ROUTES['profil'] = function viewProfile(root) {
           <ul class="list"><li class="kd-row"><span>${k.notes} not</span><b>${k.notes * KUBBE.note} kubbe ve üzeri</b></li>
           <li class="kd-row"><span>${k.comments} yorum</span><b>${k.comments * KUBBE.comment} kubbe</b></li>
           <li class="kd-row"><span>${k.ratings} HocaÖlçer puanı</span><b>${k.ratings * KUBBE.rating} kubbe</b></li>
-          <li class="kd-row"><span>${k.likes} beğeni aldın</span><b>${k.likes * KUBBE.like} kubbe</b></li>
+          <li class="kd-row"><span>Notlarına ${k.ups || 0} ▲ geldi</span><b>${(k.ups || 0) * KUBBE.up} kubbe</b></li>
+          <li class="kd-row"><span>Yorumların ${k.likes} beğeni aldı</span><b>${k.likes * KUBBE.like} kubbe</b></li>
           <li class="kd-row"><span>${k.fills || 0} not isteği karşıladın</span><b>${(k.fills || 0) * KUBBE.fill} kubbe</b></li>
           <li class="kd-row"><span>Hesap açma</span><b>${Math.max(0, +u.bonus || 0)} kubbe</b></li>${giftOf(S.me) ? `<li class="kd-row"><span>Hediye <span class="opt">sıralamaya sayılmaz</span></span><b>${giftOf(S.me)} kubbe</b></li>` : ''}</ul>
         </section>
