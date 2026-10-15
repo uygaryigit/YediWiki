@@ -958,7 +958,6 @@ button.rank-row:hover{background:var(--surface-2)}
 .nf-head h2{font-size:1.05rem}
 .nf-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:4px 10px 10px}
 .nf-pop .empty{padding:14px;text-align:center}
-.nf-pop .dog-walk{width:96px}
 @keyframes nfIn{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.nf-pop{animation:none}}
 .nf-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -1007,22 +1006,15 @@ button.rank-row:hover{background:var(--surface-2)}
 .more-notes:empty{display:none}
 
 /* ===== Boş sayfalarda kampüs köpeği ===== */
-.dog-walk{display:block;width:140px;height:auto;margin:0 auto 10px;color:var(--ink-3);overflow:visible}
-.dog-walk .dw-ground{opacity:.35;animation:dwGround .5s linear infinite}
-.dog-walk .dw-body{transform-box:view-box;transform-origin:60px 40px;animation:dwBob .5s ease-in-out infinite}
-.dog-walk .dw-legs-a{transform-box:fill-box;transform-origin:50% 0;animation:dwLegA .5s ease-in-out infinite}
-.dog-walk .dw-legs-b{transform-box:fill-box;transform-origin:50% 0;animation:dwLegB .5s ease-in-out infinite}
-.dog-walk .dw-tail{transform-box:fill-box;transform-origin:100% 100%;animation:wag .45s ease-in-out infinite}
 @keyframes dwBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 @keyframes dwLegA{0%,100%{transform:skewX(18deg)}50%{transform:skewX(-18deg)}}
 @keyframes dwLegB{0%,100%{transform:skewX(-18deg)}50%{transform:skewX(18deg)}}
-@keyframes dwGround{to{stroke-dashoffset:-13}}
 
 /* ===== Tema düğmesi ve kubbe sayacı ===== */
 .theme-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:600}
 .theme-btn .ic{width:16px;height:16px}
 .kubbe-chip.pop{animation:boxPop .45s cubic-bezier(.3,1.6,.5,1)}
-@media (prefers-reduced-motion:reduce){.dog-walk *,.bdg.on .bdg-medal,.bell-dot,.bell-btn .ic{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.bdg.on .bdg-medal,.bell-dot,.bell-btn .ic{animation:none!important}}
 
 
 /* ===== Not istekleri ===== */
@@ -1135,14 +1127,10 @@ button.rank-row:hover{background:var(--surface-2)}
 .wel p{margin:4px 0 8px;font-size:.86rem;color:var(--ink-2)}
 
 /* ===== Köpeği sev ===== */
-.dog-btn{position:relative;display:block;margin:0 auto 10px;padding:0;border:0;border-radius:12px;background:none;cursor:pointer}
-.dog-btn .dog-walk{margin:0}
-.dog-btn.barking .dog-walk{animation:dogHop .45s ease}
-.dog-btn.barking::after{content:"Hav!";position:absolute;top:-8px;right:-26px;padding:2px 9px;border-radius:12px 12px 12px 3px;background:var(--surface);border:2px solid var(--ink);color:var(--ink);font-weight:800;font-size:.78rem;animation:barkPop .95s ease both}
 @keyframes dogHop{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px)}}
 @keyframes barkPop{0%{opacity:0;transform:scale(.6)}20%{opacity:1;transform:scale(1.06)}80%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
 
-@media (prefers-reduced-motion:reduce){.reqbox-ico,.ch-heat,.dol-art .bk,.dol-track i,.wel li,.dog-btn.barking .dog-walk{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.reqbox-ico,.ch-heat,.dol-art .bk,.dol-track i,.wel li{animation:none!important}}
 /* Ders planı: dönem AKTS toplamı, seçmeli hakları, uzun liste */
 .sem-ects{margin-left:auto;padding:2px 9px;border-radius:999px;background:var(--surface-2);font-size:.76rem;font-weight:700;color:var(--ink-3);white-space:nowrap}
 .sem-ects+.sem-prog{margin-left:0}
@@ -1237,7 +1225,7 @@ button.rank-row:hover{background:var(--surface-2)}
 /* ===== Ayhan Abi ===== */
 .hero.has-ayhan .hero-in{padding-bottom:8px}
 .ay-stage{position:relative;height:112px;margin-bottom:-1px;pointer-events:none}
-.ay-roam{position:absolute;left:0;bottom:0;width:190px;padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;transition-property:transform;transition-timing-function:linear;-webkit-tap-highlight-color:transparent}
+.ay-roam{position:absolute;z-index:1;left:0;bottom:0;width:190px;padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;transition-property:transform;transition-timing-function:linear;-webkit-tap-highlight-color:transparent}
 .ay-roam:focus-visible{outline:3px solid var(--pen);outline-offset:2px;border-radius:12px}
 .ay-svg{display:block;width:100%;height:auto;overflow:visible}
 .ay.left .ay-svg{transform:scaleX(-1)}
@@ -1250,7 +1238,6 @@ button.rank-row:hover{background:var(--surface-2)}
 .ay.walk .dw-legs-a{transform-box:fill-box;transform-origin:50% 0;animation:dwLegA .5s ease-in-out infinite}
 .ay.walk .dw-legs-b{transform-box:fill-box;transform-origin:50% 0;animation:dwLegB .5s ease-in-out infinite}
 .ay.idle .ay-head{transform-box:fill-box;transform-origin:30% 80%;animation:ayTilt 5s ease-in-out infinite}
-.ay-bed{fill:#C9D6FF;stroke:#8EA4F2;stroke-width:1.5}
 .ay .ay-breath{transform-box:fill-box;transform-origin:50% 100%;animation:ayBreath 3.4s ease-in-out infinite}
 .ay-zzz text{font:800 10px var(--f-display);fill:var(--ink-3);opacity:0;animation:ayZ 3.3s ease-in-out infinite}
 .ay-zzz text:nth-child(2){animation-delay:1.1s}
@@ -1271,22 +1258,58 @@ button.rank-row:hover{background:var(--surface-2)}
 @media (max-width:560px){
   .ay-stage{height:90px}
   .ay-roam{width:142px}
+  .ay-home{width:104px;right:4px}
 }
+.ay-home{position:absolute;right:12px;bottom:0;width:136px;pointer-events:none}
+.ay-home svg{display:block;width:100%;height:auto;overflow:visible}
+.ay-plate{font:800 7.4px var(--f-display);letter-spacing:.04em;fill:#1B1330}
+/* Ayhan Abi'nin siyah tüyü koyu temada kenarından seçilsin */
+.ay-svg .k,.af-svg .k{stroke:#15151B;stroke-width:1.2px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.ay-svg,.af-svg) .k{stroke:#5A6390}}
+:root[data-theme="dark"] :is(.ay-svg,.af-svg) .k{stroke:#5A6390}
+.ay .ay-jaw{transform-box:fill-box;transform-origin:0 50%}
+.ay.barking .ay-jaw{animation:ayJaw .2s ease-in-out 4 alternate}
+@keyframes ayJaw{to{transform:rotate(16deg)}}
+/* önden Ayhan Abi (turda): göz kırpar, başını eğer, konuşurken ağzı ve kulakları oynar */
+.af-svg{display:block;width:100%;height:auto;overflow:visible}
+.af-mouth{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(.3)}
+.af-chin{transform-box:fill-box}
+.af-eyes{transform-box:fill-box;transform-origin:50% 50%;animation:afBlink 5.2s infinite}
+.af-head{transform-box:view-box;transform-origin:60px 62px}
+.idle .af-head{animation:afTilt 6.5s ease-in-out infinite}
+.talk .af-mouth{animation:afTalk .26s ease-in-out infinite alternate}
+.talk .af-chin{animation:afChin .26s ease-in-out infinite alternate}
+.talk .af-ear{transform-box:fill-box;transform-origin:50% 8%;animation:afEar .52s ease-in-out infinite alternate}
+.barking .af-head{animation:afNod .45s ease}
+@keyframes afTalk{from{transform:scaleY(.2)}to{transform:scaleY(1.05)}}
+@keyframes afChin{to{transform:translateY(2.8px)}}
+@keyframes afEar{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+@keyframes afBlink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.12)}}
+@keyframes afTilt{0%,58%,100%{transform:rotate(0)}68%{transform:rotate(-6deg)}82%{transform:rotate(3deg)}}
+@keyframes afNod{40%{transform:translateY(-4px) rotate(-4deg)}}
+@keyframes afBob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(-2deg)}}
 /* hoş geldin turu: ışıktaki öğe, çevresinde tıklamayı tutan perde ve Ayhan Abi'nin kartı (pencerelerin altında, sayfanın üstünde) */
 .tour-veil{position:fixed;z-index:50;left:0;top:0;width:0;height:0}
 .tour:not(.has-hole) .tour-veil[data-t=v0]{background:rgba(8,12,36,.74)}
 .tour-hole{position:fixed;z-index:51;border-radius:14px;box-shadow:0 0 0 4px var(--marker),0 0 0 200vmax rgba(8,12,36,.74);pointer-events:none;transition:left .38s ease,top .38s ease,width .38s ease,height .38s ease}
 .tour-hole::after{content:"";position:absolute;inset:-4px;border-radius:inherit;border:3px solid var(--marker);animation:tourPulse 1.6s ease-out infinite}
 @keyframes tourPulse{0%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:scale(1.06)}}
-.tour-card{position:fixed;z-index:52;left:0;top:0;width:min(460px,calc(100vw - 32px));display:grid;grid-template-columns:118px minmax(0,1fr);gap:4px 16px;align-items:start;padding:18px 18px 16px;background:var(--surface);color:var(--ink);border:3px solid var(--ink);border-radius:22px;box-shadow:7px 7px 0 var(--marker),0 30px 70px -20px rgba(0,0,0,.55);transition:transform .4s cubic-bezier(.2,.8,.25,1)}
+.tour-card{position:fixed;z-index:52;left:0;top:0;width:min(500px,calc(100vw - 32px));display:grid;grid-template-columns:112px minmax(0,1fr);gap:4px 18px;align-items:start;padding:20px 20px 18px;background:var(--surface);color:var(--ink);border:3px solid var(--ink);border-radius:22px;box-shadow:7px 7px 0 var(--marker),0 30px 70px -20px rgba(0,0,0,.55);transition:transform .4s cubic-bezier(.2,.8,.25,1)}
 .tour.init .tour-card,.tour.init .tour-hole{transition:none}
-.tour-dog{position:relative;width:118px;margin-top:2px;display:grid;justify-items:center;gap:4px}
-.tour-dog .ay-svg{width:118px}
+.tour-dog{position:relative;width:112px;margin-top:2px;display:grid;justify-items:center;gap:4px}
+.tour-dog .af-svg{width:104px}
+.tour-dog.walk .af-svg{animation:afBob .5s ease-in-out infinite}
+.tour.at-gate .tour-dog{display:none}
+.tour.at-gate .tour-card,.tour.at-gate .tour-card.dock{grid-template-columns:minmax(0,1fr)}
 .tour-name{padding:2px 9px;border-radius:999px;background:var(--ink);color:var(--surface);font-size:.72rem;font-weight:800;white-space:nowrap}
 .tour-txt{min-width:0}
-.tour-step{font-size:.76rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--pen);margin-bottom:3px}
-.tour-t{font-family:var(--f-display);font-size:1.5rem;font-weight:800;line-height:1.12;margin-bottom:7px}
-.tour-say{font-size:1.06rem;line-height:1.5;font-weight:520;color:var(--ink)}
+.tour-step{display:inline-block;padding:4px 11px;border-radius:999px;background:var(--pen);color:var(--pen-ink);font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px}
+.tour-t{font-family:var(--f-display);font-size:clamp(1.6rem,1.15rem + 1.3vw,2.05rem);font-weight:800;line-height:1.08;color:var(--pen);margin-bottom:11px;text-decoration:underline;text-decoration-color:var(--marker);text-decoration-thickness:.2em;text-underline-offset:.16em;text-decoration-skip-ink:none}
+.tour-say{font-size:1.17rem;line-height:1.5;font-weight:620;color:var(--ink)}
+.tour-say .tw{display:inline-block;animation:twIn .32s ease both;animation-delay:calc(var(--d) * 40ms)}
+.tour-key{padding:0 .28em;border-radius:6px;background:var(--marker);color:var(--marker-ink);font-weight:800;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.tour-num{color:var(--pen);font-weight:800}
+@keyframes twIn{from{opacity:0;transform:translateY(.4em)}to{opacity:1;transform:none}}
 .tour-bar{grid-column:1/-1;height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:12px}
 .tour-bar i{display:block;height:100%;width:0;background:var(--marker);border-radius:inherit;transition:width .4s ease}
 .tour-foot{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:12px}
@@ -1300,13 +1323,32 @@ button.rank-row:hover{background:var(--surface-2)}
 .tour-card.nudge{animation:tourNudge .35s ease}
 @keyframes tourNudge{0%,100%{translate:0}25%{translate:-7px 0}75%{translate:7px 0}}
 .tour-card.dock{left:10px;right:10px;top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:auto;transform:none;grid-template-columns:84px minmax(0,1fr);gap:4px 12px;padding:14px 14px 12px}
-.tour-card.dock .tour-dog,.tour-card.dock .tour-dog .ay-svg{width:84px}
+.tour-card.dock .tour-dog{width:84px}
+.tour-card.dock .tour-dog .af-svg{width:80px}
 .tour-card.dock .tour-name{font-size:.66rem;padding:1px 7px}
-.tour-card.dock .tour-t{font-size:1.3rem}
-.tour-card.dock .tour-say{font-size:1rem}
-@media (prefers-reduced-motion:reduce){.tour-card,.tour-hole,.tour-bar i{transition:none!important}.tour-hole::after,.tour-card.nudge{animation:none!important}}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ay-bed{fill:#2E3A7A;stroke:#5B6CC0}}
-:root[data-theme="dark"] .ay-bed{fill:#2E3A7A;stroke:#5B6CC0}
+.tour-card.dock .tour-t{font-size:1.4rem}
+.tour-card.dock .tour-say{font-size:1.05rem}
+/* turun açılışı: Yeditepe kapısı. Kapanınca kanatlar kapalı, dokunma halkası nabız gibi atar; açılınca ışık ve Ayhan Abi */
+.tour-gate{position:fixed;z-index:52;display:none;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tour.at-gate .tour-gate{display:block}
+.tour-gate:focus-visible{outline:3px solid var(--marker);outline-offset:6px;border-radius:14px}
+.tg-svg{display:block;width:100%;height:100%;overflow:visible}
+.tg-kitabe{font:800 11px var(--f-display);letter-spacing:.12em;fill:#5E3F1C}
+.tg-door{transform-box:fill-box;transition:transform .9s cubic-bezier(.55,.05,.25,1)}
+.tg-door-l{transform-origin:0 50%}
+.tg-door-r{transform-origin:100% 50%}
+.tour-gate:not(.open):hover .tg-door-l{transform:scaleX(.93) skewY(-1deg)}
+.tour-gate:not(.open):hover .tg-door-r{transform:scaleX(.93) skewY(1deg)}
+.tour-gate.open .tg-door-l{transform:scaleX(.12) skewY(-10deg)}
+.tour-gate.open .tg-door-r{transform:scaleX(.12) skewY(10deg)}
+.tg-glow{opacity:0;transition:opacity .9s ease .15s}
+.tour-gate.open .tg-glow{opacity:1}
+.tg-ayhan{opacity:0;transform:translateY(10px);transform-box:fill-box;transform-origin:50% 100%;transition:opacity .45s ease .45s,transform .55s cubic-bezier(.3,1.6,.5,1) .45s}
+.tour-gate.open .tg-ayhan{opacity:1;transform:none}
+.tg-tap{transform-box:fill-box;transform-origin:50% 50%;animation:tgTap 1.6s ease-out infinite}
+.tour-gate.open .tg-tap{display:none}
+@keyframes tgTap{0%{opacity:.95;transform:scale(.7)}100%{opacity:0;transform:scale(1.6)}}
+@media (prefers-reduced-motion:reduce){.tour-card,.tour-hole,.tour-bar i,.tg-door,.tg-glow,.tg-ayhan{transition:none!important}.tour-hole::after,.tour-card.nudge,.tg-tap,.af-svg *,.tg-ayhan *,.tour-dog .af-svg,.tour-say .tw{animation:none!important}}
 @media (prefers-reduced-motion:reduce){.ay *,.ay-roam{animation:none!important;transition:none!important}.ay-say.on{opacity:1}}
 
 /* akademik kadro */

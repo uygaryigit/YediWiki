@@ -842,6 +842,8 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     const ay = t.$('[data-r=ayhan] .ay-roam');
     ok(ay && /Ayhan Abi/.test(ay.getAttribute('aria-label')), 'ana sayfada Ayhan Abi: ' + (ay && ay.getAttribute('aria-label')));
     ok(/(^| )(idle|walk|sleep)( |$)/.test(ay.className), 'Ayhan Abi bir halde: ' + ay.className);
+    ok(t.$('[data-r=ayhan] .ay-home .ay-mat') && /AYHAN/.test(t.text('[data-r=ayhan] .ay-home')), 'ana sayfada kırmızı kulübe, paspas ve kap');
+    ok(!/küpeli/.test(t.w.document.body.innerHTML) && ay.querySelector('.ay-sleep') && ay.querySelector('.ay-jaw'), 'Ayhan Abi yeni çizimle: uyku hali ve konuşan çene var');
     t.w.localStorage.removeItem('yw:ayhanHi');
     ay.click(); await t.wait(60);
     eq(t.text('[data-r=ayhan] .ay-say'), 'Ben Ayhan Abi. Hav!', 'ilk dokunuşta kendini tanıtır');
@@ -859,7 +861,14 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     tr.click(); await t.wait(150);
     ok(t.$('.tour .tour-card') && !t.$('.modal'), 'tur açıldı, yenilikler penceresi kapandı');
     eq(t.w.location.hash, '#/hakkinda', 'tanışma bulunduğun sayfada');
-    ok(/Ben Ayhan Abi, kampüsün köpeği/.test(t.text('.tour [data-t=say]')) && /yedi durak/.test(t.text('.tour [data-t=say]')), 'Ayhan Abi kendini tanıtıyor: ' + t.text('.tour [data-t=say]'));
+    ok(t.$('.tour').classList.contains('at-gate') && t.$('.tour [data-t=gate]') && !t.$('.tour [data-t=gate]').classList.contains('open'), 'tur Yeditepe kapısında başlar, kapı kapalı');
+    eq(t.text('.tour [data-t=next]'), 'Kapıyı aç', 'kapı düğmesi');
+    ok(/Kapıyı aç/.test(t.text('.tour [data-t=say] .tour-key') || ''), 'konuşmadaki düğme adı vurgulu');
+    t.$('.tour [data-t=gate]').click(); await t.wait(40);
+    ok(t.$('.tour [data-t=gate]').classList.contains('open') && t.$('.tour [data-t=next]').disabled, 'kapıya dokununca kanatlar açılıyor');
+    await t.wait(1000);
+    ok(/Ben Ayhan Abi, kampüsün köpeği/.test(t.text('.tour [data-t=say]')) && /yedi durak/.test(t.text('.tour [data-t=say]')), 'Ayhan Abi kapıda kendini tanıtıyor: ' + t.text('.tour [data-t=say]'));
+    ok(t.$('.tour .tg-ayhan.talk') && t.$$('.tour [data-t=say] .tw').length > 10, 'konuşurken ağzı oynuyor, yazı kelime kelime beliriyor');
     eq(t.text('.tour [data-t=next]'), 'Gezdir beni', 'ilk adım düğmesi');
     ok(!t.$('.tour').classList.contains('has-hole') && t.$('.tour [data-t=back]').hidden, 'tanışmada ışık ve geri yok');
     const tnext = async () => { t.$('.tour [data-t=next]').click(); await t.wait(320); };
@@ -867,6 +876,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     await tnext();
     ok(t.w.location.hash === '#/' && lit('#main .hero .search') && t.$('.tour').classList.contains('has-hole'), 'durak 1: ana sayfada arama kutusu ışıkta');
     eq(t.text('.tour [data-t=step]'), 'Durak 1 / 7', 'durak sayacı');
+    ok(!t.$('.tour').classList.contains('at-gate') && t.$('.tour .tour-dog .af-svg'), 'kapı geride kaldı, kartta Ayhan Abi’nin yüzü');
     ok(!t.$('.tour-hole').hidden && t.$('.tour-hole').style.width === '416px' && t.$('.tour-veil[data-t=v0]').style.height === '132px', 'ışık öğenin çevresinde, perde dışında: ' + t.$('.tour-hole').style.width + ' ' + t.$('.tour-veil[data-t=v0]').style.height);
     eq(t.$('.tour-card').dataset.tail, 'up', 'kart ışığın altında, ucu öğeyi gösteriyor');
     await tnext();
@@ -888,8 +898,9 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(!t.$('.tour') && !t.ev('TOUR.on'), 'tur bitti');
     // tur açıkken başka sayfaya geçmek turu kapatmaz; Esc ve "Turu geç" kapatır
     t.ev('openWelcome()'); await t.wait(60);
+    t.$('.tour [data-t=next]').click(); await t.wait(1000);
     await tnext();
-    ok(lit('#main .hero .search'), 'yeniden: durak 1');
+    ok(lit('#main .hero .search'), 'yeniden: kapıdan girip durak 1');
     await t.go('#/hakkinda'); await t.wait(1700);
     ok(t.$('.tour') && !t.$('.tour').classList.contains('has-hole') && /Durak 1/.test(t.text('.tour [data-t=step]')), 'başka sayfada tur açık, ışıksız bekliyor');
     await t.go('#/'); await t.wait(200);
@@ -901,7 +912,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(!t.$('.tour'), 'Turu geç ile kapandı');
     EP.getClientRects = gcr; EP.getBoundingClientRect = gbr;
     await t.go('#/not/yok');
-    ok(/Ayhan Abi/.test(t.$('.dog-btn').getAttribute('aria-label')), 'boş sayfadaki köpek de Ayhan Abi');
+    ok(t.$('#main .empty') && !t.$('#main .empty svg'), 'boş sayfada Ayhan Abi yok, yalnızca yazı');
     await t.go('#/dersler'); await t.go('#/');
     noErr(t, 'Ayhan Abi');
     noErr(t, 'Ayhan Abi turu');

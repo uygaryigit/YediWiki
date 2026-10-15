@@ -27,6 +27,10 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - Supabase Site URL `https://yediwiki.com`.
   - Gerçek bir okul adresiyle denendi (14 Ekim): kod geliyor, hesap açılıyor. Resend ücretsiz planı günde 100 e-posta.
 - **Ayhan Abi turu:** Pencere değil, sayfa değişince kapanmayan 7 duraklı tur (`openWelcome`, `TOUR`); her durakta ilgili öğe ışıkla gösterilir.
+  - Yeditepe'nin Selçuklu kapısında başlar (`GATE_SVG`, `gateOpen`): kapıya dokununca kanatlar açılır, Ayhan Abi kapıda kendini tanıtır. Kartta önden konuşan yüz (`AYHAN_FACE`, `tourTalk`); yazı kelime kelime belirir, tırnaktaki düğme adları sarı, kubbe miktarları mavi (`tourSay`).
+- **Ayhan Abi çizimi (15 Ekim):** Kullanıcının fotoğrafındaki gibi: kısa bacak; sırt, baş ve sarkık kulaklar siyah; kaşlar ve ağız kenarı açık kahve; göğüs ve patiler beyaz; küpe yok.
+  - Ana sayfada kırmızı kulübe, önünde paspas, yanında mama kabı (`KULUBE_SVG`); uyurken paspasta yatar (`homeX`).
+  - Boş sayfalarda (`emptyHtml`) Ayhan Abi yok, kullanıcı istemiyor. Yalnızca ana sayfada, turda ve marketteki Gece Eskortu'nda görünür.
 - **Drive önizlemesi (14 Ekim):** Yalnızca sitede (`S.supa`): not sayfasında gömülü önizleme ve tam ekran (`drivePreviewHtml`, `dviewMax`), not listelerinde küçük resim (`driveThumbHtml`), paylaşırken anlık önizleme. Artifact eski kartı gösterir.
 - **Not türleri:** Yalnızca "Ders notu" (`not`) ve "Çıkmış sınav" (`sinav`); eski türler ders notu sayılır (`noteType`).
 - **Not oyları (14 Ekim):** Notta `likes` ▲ (yeşil), `downs` ▼ (kırmızı); takma adla, aynı kişide ikisi birlikte olmaz. ▲ yazara 1 kubbe (`KUBBE.up`), ▼ kubbe almaz, yalnızca sıralamada aşağı iter. Yorum beğenisi 2 kubbe kalır. `kb.ups` not ▲ sayısı, `kb.likes` yorum beğenileri.
@@ -78,4 +82,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1479/1479, `npm run test:site` 116/116, `npm run test:db` 95/95.
+- **Beklenen sonuçlar:** `npm test` 1487/1487, `npm run test:site` 116/116, `npm run test:db` 95/95.

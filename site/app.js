@@ -44,7 +44,7 @@ const RARITY = {
   efsane: { ad: 'Efsane', c: '#FF9F0A' }
 };
 const MARKET = [
-  { id: 'gece-eskortu', name: 'Gece Eskortu', desc: 'Gece üst kapıdan yurda kadar sana eşlik eden küpeli Ayhan Abi. Profilinde adının yanında yürür.', price: 1200, rar: 'efsane', kind: 'Yoldaş', mini: '🐕' },
+  { id: 'gece-eskortu', name: 'Gece Eskortu', desc: 'Gece üst kapıdan yurda kadar sana eşlik eden Ayhan Abi. Profilinde adının yanında yürür.', price: 1200, rar: 'efsane', kind: 'Yoldaş', mini: '🐕' },
   { id: 'kartal-kanatlari', name: 'Kartal Kanatları', desc: 'Yeditepe Kartalları için: profil resminin arkasında altın kanatlar açılır.', price: 1500, rar: 'efsane', kind: 'Profil efekti', mini: '🦅' },
   { id: 'altin-ring', name: 'Altın Ring Bileti', desc: 'Tıklım tıklım ringde yer bulmanın efsanevi yolu. Adının yanında altın bilet.', price: 700, rar: 'epik', kind: 'Rozet', mini: '🎫' },
   { id: 'selcuklu-kapi', name: 'Selçuklu Kapısı', desc: '22 metrelik kampüs kapılarından ilham alan taş desenli profil çerçevesi.', price: 900, rar: 'epik', kind: 'Çerçeve', mini: '' },
@@ -960,7 +960,7 @@ function starInput(el, initial, onChange) {
   return { get value() { return v; } };
 }
 const loadingHtml = (t = 'Yükleniyor') => `<div class="loading"><span class="hills" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>${esc(t)}</div>`;
-function emptyHtml(title, text, action = '') { return `<div class="empty"><button type="button" class="dog-btn" data-g="bark" aria-label="Ayhan Abi’yi sev" title="Ayhan Abi">${DOG_SVG}</button><h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}${action}</div>`; }
+function emptyHtml(title, text, action = '') { return `<div class="empty"><h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}${action}</div>`; }
 function noDbHtml() { return emptyHtml('Veri bağlantısı yok', S.supa ? 'Sunucuya ulaşılamadı. İnternetini kontrol edip sayfayı yenile.' : 'YediWiki kayıtları yalnızca sayfa claude.ai içinde açıldığında görünür.'); }
 
 /* Fotoğraflar */
@@ -1221,7 +1221,6 @@ const G = {
   'cap-hide': (id, el) => capHide(id, el.dataset.k),
   'cap-unhide': (id, el) => capUnhide(id, +el.dataset.sem),
   'recent-clear': () => { ls.set('recent', []); changed(); },
-  'bark': (id, el) => petDog(el),
   'dview-max': (id, el) => dviewMax(el.closest('.dview')),
   'welcome': () => { if (hasAcc()) openWelcome(); else openAuth(); },
   'edit-hoca': id => openEditHoca(id),
@@ -1994,9 +1993,122 @@ function wireShortcuts() {
     location.hash = '#/ara'; setTimeout(() => { const i = document.getElementById('s-q'); if (i) i.focus(); }, 80);
   });
 }
-const DOG_SVG = `<svg class="dog-walk" viewBox="0 0 120 64" aria-hidden="true"><path class="dw-ground" d="M4 59h112" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="6 7" stroke-linecap="round"/><g class="dw-body"><path class="dw-tail" d="M33 30c-8-2-12-8-12-14" fill="none" stroke="#A5683A" stroke-width="4" stroke-linecap="round"/><g class="dw-legs-b"><path d="M48 42v13M80 42v13" stroke="#8A552C" stroke-width="5" stroke-linecap="round"/></g><g class="dw-legs-a"><path d="M40 42v13M72 42v13" stroke="#A5683A" stroke-width="5" stroke-linecap="round"/></g><ellipse cx="60" cy="34" rx="28" ry="12" fill="#E7B57A" stroke="#1B1330" stroke-width="2"/><ellipse cx="62" cy="38.5" rx="14" ry="4.5" fill="#FBEBD2"/><circle cx="90" cy="24" r="11" fill="#F0C48E" stroke="#1B1330" stroke-width="2"/><path d="M84 16c-4-6-10-4-9 3 2 3 5 4 8 3z" fill="#7E4A24" stroke="#1B1330" stroke-width="1.6" stroke-linejoin="round"/><rect x="80" y="20" width="5" height="6" rx="1.5" fill="#FFB020" stroke="#1B1330" stroke-width="1.2"/><ellipse cx="99" cy="27" rx="5" ry="4" fill="#FBEBD2"/><circle cx="102.5" cy="25.5" r="1.8" fill="#2A1A10"/><circle cx="92" cy="21" r="1.6" fill="#2A1A10"/><path d="M97 31q2 2 4 0" fill="none" stroke="#2A1A10" stroke-width="1.3" stroke-linecap="round"/></g></svg>`;
-/* Ayhan Abi: küpeli kampüs köpeği. .ay kabı walk / idle / sleep sınıfıyla duruşunu değiştirir */
-const AYHAN_SVG = `<svg class="ay-svg" viewBox="0 2 120 58" aria-hidden="true"><g class="ay-stand"><g class="dw-body"><path class="dw-tail" d="M33 30c-8-2-12-8-12-14" fill="none" stroke="#A5683A" stroke-width="4" stroke-linecap="round"/><g class="dw-legs-b"><path d="M48 42v13M80 42v13" stroke="#8A552C" stroke-width="5" stroke-linecap="round"/></g><g class="dw-legs-a"><path d="M40 42v13M72 42v13" stroke="#A5683A" stroke-width="5" stroke-linecap="round"/></g><ellipse cx="60" cy="34" rx="28" ry="12" fill="#E7B57A" stroke="#1B1330" stroke-width="2"/><ellipse cx="62" cy="38.5" rx="14" ry="4.5" fill="#FBEBD2"/><g class="ay-head"><circle cx="90" cy="24" r="11" fill="#F0C48E" stroke="#1B1330" stroke-width="2"/><path d="M84 16c-4-6-10-4-9 3 2 3 5 4 8 3z" fill="#7E4A24" stroke="#1B1330" stroke-width="1.6" stroke-linejoin="round"/><rect x="80" y="20" width="5" height="6" rx="1.5" fill="#FFB020" stroke="#1B1330" stroke-width="1.2"/><ellipse cx="99" cy="27" rx="5" ry="4" fill="#FBEBD2"/><circle cx="102.5" cy="25.5" r="1.8" fill="#2A1A10"/><circle cx="92" cy="21" r="1.6" fill="#2A1A10"/><path d="M97 31q2 2 4 0" fill="none" stroke="#2A1A10" stroke-width="1.3" stroke-linecap="round"/></g></g></g><g class="ay-sleep"><ellipse class="ay-bed" cx="62" cy="55.5" rx="47" ry="5.5"/><g class="ay-breath"><path d="M34 50c-10 1-13 7-7 9 6 2 14-1 18-3" fill="none" stroke="#A5683A" stroke-width="4" stroke-linecap="round"/><ellipse cx="60" cy="47" rx="29" ry="9.5" fill="#E7B57A" stroke="#1B1330" stroke-width="2"/><ellipse cx="60" cy="51" rx="15" ry="3.5" fill="#FBEBD2"/></g><ellipse cx="84" cy="54" rx="7" ry="3" fill="#E7B57A" stroke="#1B1330" stroke-width="1.6"/><circle cx="92" cy="47" r="10" fill="#F0C48E" stroke="#1B1330" stroke-width="2"/><path d="M87 39c-4-5-10-3-9 3 2 3 5 4 8 3z" fill="#7E4A24" stroke="#1B1330" stroke-width="1.6" stroke-linejoin="round"/><rect x="83" y="42" width="5" height="6" rx="1.5" fill="#FFB020" stroke="#1B1330" stroke-width="1.2"/><ellipse cx="100" cy="50" rx="5" ry="3.8" fill="#FBEBD2"/><circle cx="103.5" cy="49" r="1.7" fill="#2A1A10"/><path d="M90.5 45.5q2 1.6 4 0" fill="none" stroke="#2A1A10" stroke-width="1.4" stroke-linecap="round"/><g class="ay-zzz"><text x="98" y="34">z</text><text x="104" y="25">z</text><text x="110" y="15">Z</text></g></g></svg>`;
+/* Ayhan Abi: kampüsün köpeği (kullanıcının fotoğrafındaki gibi). Kısa bacaklı; sırtı, başı ve sarkık kulakları siyah,
+   kaşları ve ağız kenarı açık kahve, göğsü ve patileri beyaz. Siyah parçalar (.k) koyu temada açık bir kenar çizgisi alır.
+   AYHAN_SVG yandan: .ay kabı walk / idle / sleep sınıfıyla duruşunu değiştirir, uyurken kulübesinin paspasında yatar.
+   AYHAN_FACE önden oturur: turda konuşan yüz (.talk ağzı oynatır). */
+const AYHAN_SVG = '<svg class="ay-svg" viewBox="0 2 120 58" aria-hidden="true"><g class="ay-stand"><g class="dw-body">'
+  + '<path class="dw-tail" d="M35 31.6c-6.5-1.6-10-6.4-10.4-12.4" fill="none" stroke="#26262E" stroke-width="5" stroke-linecap="round"/>'
+  + '<g class="dw-legs-b"><rect x="45.6" y="42" width="5.6" height="11.4" rx="2.8" fill="#93552A" stroke="#1B1330" stroke-width=".8"/><rect x="83.6" y="42" width="5.6" height="11.4" rx="2.8" fill="#D8D1C3" stroke="#1B1330" stroke-width=".8"/>'
+  + '<ellipse cx="49" cy="54.8" rx="3.4" ry="2" fill="#D8D1C3" stroke="#1B1330" stroke-width=".8"/><ellipse cx="87" cy="54.8" rx="3.4" ry="2" fill="#D8D1C3" stroke="#1B1330" stroke-width=".8"/></g>'
+  + '<g class="dw-legs-a"><rect x="38.4" y="42" width="6" height="12" rx="3" fill="#C2763A" stroke="#1B1330" stroke-width="1"/><rect x="76" y="42" width="6" height="12" rx="3" fill="#F5F1E8" stroke="#1B1330" stroke-width="1"/>'
+  + '<circle cx="78.2" cy="48.8" r=".8" fill="#55565F"/><circle cx="80" cy="51.4" r=".7" fill="#55565F"/>'
+  + '<ellipse cx="42.2" cy="55.2" rx="3.9" ry="2.2" fill="#F5F1E8" stroke="#1B1330" stroke-width="1"/><ellipse cx="79.8" cy="55.2" rx="3.9" ry="2.2" fill="#F5F1E8" stroke="#1B1330" stroke-width="1"/></g>'
+  + '<path class="k" d="M33 36c0-7 6-11 14-11h28c10 0 17 4 17.5 11 .5 7-5 12-13 12H46c-8 0-13-5-13-12z" fill="#26262E"/>'
+  + '<path d="M39 29.4c7-3.2 18-4.2 31-3.6" fill="none" stroke="#40404C" stroke-width="1.6" stroke-linecap="round"/>'
+  + '<path d="M34.6 40c2 4.4 6 7 10.4 7.6" fill="none" stroke="#C2763A" stroke-width="2.2" stroke-linecap="round"/>'
+  + '<path class="k" d="M80 27c3-6 9-9.4 14-9.4l6.4 12.2c-4 4-10 6.2-16.4 6.4z" fill="#26262E"/>'
+  + '<path d="M92.4 35.5c.6 6.2-4.2 11.6-11.4 12.4l-5.4.1c4.6-3.6 8-9.6 9.2-16.6z" fill="#F5F1E8"/>'
+  + '<path d="M98.6 27.6c-2 3.4-5.4 6.2-9.6 8l2.6 2.4c3.6-1.8 6.6-4.8 8.6-8.4z" fill="#F5F1E8"/>'
+  + '<g class="ay-head"><ellipse class="k" cx="97" cy="20.3" rx="10.6" ry="9.8" fill="#26262E"/>'
+  + '<path class="k" d="M100.6 15.4c4.4.6 8.4 2.6 10.6 5.2 1.2 1.4.8 3.6-.8 4.4l-8 3.2c-3 .8-6-1-6.6-4.2-.6-3.6 1.4-8.8 4.8-8.6z" fill="#26262E"/>'
+  + '<path d="M99 24.4c3.4.6 7.4.2 10.8-1.4l.6 1.6c-.4 1.6-2 2.6-3.8 3.2l-4.2 1.4c-2.4.4-3.4-.6-3.4-2z" fill="#C2763A"/>'
+  + '<ellipse cx="96.2" cy="25.4" rx="3" ry="2" fill="#C2763A"/>'
+  + '<path d="M103.4 27.4c2.2-.2 4.4-.8 6.4-2.2l.4 1.2c-2 1.8-4.2 2.8-6.6 3z" fill="#5B1A24"/>'
+  + '<path class="ay-jaw" d="M103.2 27.2c2.4-.2 4.6-.8 6.6-2.2-.2 1.6-1.4 3-3.2 3.8l-2.2.8c-1 .2-1.2-.6-1.2-1.4z" fill="#C2763A"/>'
+  + '<path d="M110 24.4c-2 1.4-4.6 2.4-7 2.6" fill="none" stroke="#0F0F13" stroke-width="1" stroke-linecap="round"/>'
+  + '<ellipse cx="110.9" cy="21.4" rx="2.3" ry="2" fill="#0F0F13"/><circle cx="110.3" cy="20.7" r=".55" fill="#6A6A76"/>'
+  + '<ellipse cx="100.4" cy="14.8" rx="2.2" ry="1.3" fill="#C2763A"/>'
+  + '<ellipse cx="100.6" cy="18.3" rx="1.6" ry="1.7" fill="#2A160B"/><circle cx="101.1" cy="17.7" r=".55" fill="#fff"/>'
+  + '<path class="k" d="M93 12.4c-4.6-.6-8.2 3.6-8.6 9.6-.4 5.2 1.6 9.6 4.6 9.8 3 .2 5-4 5.4-9.2.2-4.2 0-7.6-1.4-10.2z" fill="#17171D"/>'
+  + '<path d="M92.4 15.4c.6 3 .6 7-.6 11" fill="none" stroke="#383844" stroke-width="1.1" stroke-linecap="round"/></g></g></g>'
+  + '<g class="ay-sleep" transform="translate(-4 0)"><path d="M31.4 51.6c-3 1.6-2.6 4.6.6 5.4 4.4 1 11.6.6 17-.6" fill="none" stroke="#26262E" stroke-width="4" stroke-linecap="round"/>'
+  + '<g class="ay-breath"><path class="k" d="M30 50c-.6-8.6 9.6-13.6 24.6-13.6 13.8 0 23.4 4.4 24.4 11.6.8 6-4.6 9.8-12.6 9.8H39.6c-6 0-9.4-3-9.6-7.8z" fill="#26262E"/>'
+  + '<path d="M38 42c6-3.4 16-4.6 26-3.6" fill="none" stroke="#40404C" stroke-width="1.6" stroke-linecap="round"/>'
+  + '<path d="M40 52c3 2.6 8 3.6 13 2.8" fill="none" stroke="#C2763A" stroke-width="2.4" stroke-linecap="round"/></g>'
+  + '<ellipse cx="54" cy="55.6" rx="4.6" ry="2.1" fill="#F5F1E8" stroke="#1B1330" stroke-width=".9"/>'
+  + '<path d="M74 45.4c3.6 1 6.4 4.6 6 8.6l-7.6 2c.8-3.6 1-7.4 1.6-10.6z" fill="#F5F1E8"/>'
+  + '<ellipse cx="93.4" cy="55.2" rx="5.6" ry="2.2" fill="#D8D1C3" stroke="#1B1330" stroke-width=".9"/><ellipse cx="86.6" cy="56" rx="6.4" ry="2.4" fill="#F5F1E8" stroke="#1B1330" stroke-width="1"/>'
+  + '<ellipse class="k" cx="83" cy="47.4" rx="9.4" ry="7.6" fill="#26262E"/>'
+  + '<path class="k" d="M87.6 45.6c4.6-.6 8.6 1.2 10 4 .8 2-.6 3.8-3 4l-7.2.6c-2.2.2-3.6-1.4-3.6-3.6 0-2.4 1.6-4.6 3.8-5z" fill="#26262E"/>'
+  + '<path d="M88.2 51.4c3 .6 6.2.6 9.2-.2-.4 1.4-1.6 2.4-3.4 2.6l-4.2.4c-1 0-1.6-.6-1.6-1.4z" fill="#C2763A"/>'
+  + '<ellipse cx="97.2" cy="49.3" rx="1.8" ry="1.5" fill="#0F0F13"/>'
+  + '<path class="k" d="M78.6 41.4c-4 .8-6.2 5-5.4 9.2.6 3.2 3.4 4.6 5.6 2.8 1.8-1.6 1.8-6.4.8-11.2z" fill="#17171D"/>'
+  + '<ellipse cx="87.4" cy="43.2" rx="2" ry="1.2" fill="#C2763A"/><path d="M85.6 46.2q1.7 1.4 3.4 0" fill="none" stroke="#D7A877" stroke-width="1.1" stroke-linecap="round"/>'
+  + '<g class="ay-zzz"><text x="94" y="37">z</text><text x="100" y="28">z</text><text x="106" y="18">Z</text></g></g></svg>';
+const AYHAN_FACE = '<ellipse cx="60" cy="128.6" rx="46" ry="3.2" fill="#0B1030" opacity=".14"/>'
+  + '<path class="af-tail" d="M86 121c11 1 18-5 18-14" fill="none" stroke="#26262E" stroke-width="6" stroke-linecap="round"/>'
+  + '<ellipse class="k" cx="32" cy="109" rx="16.5" ry="16" fill="#26262E"/><ellipse class="k" cx="88" cy="109" rx="16.5" ry="16" fill="#26262E"/>'
+  + '<path d="M19 117c2.6 5 8 8 15 8M101 117c-2.6 5-8 8-15 8" fill="none" stroke="#C2763A" stroke-width="3.4" stroke-linecap="round"/>'
+  + '<ellipse cx="23" cy="125.4" rx="8.4" ry="3.6" fill="#F5F1E8" stroke="#1B1330" stroke-width="1.2"/><ellipse cx="97" cy="125.4" rx="8.4" ry="3.6" fill="#F5F1E8" stroke="#1B1330" stroke-width="1.2"/>'
+  + '<path class="k" d="M40 66c-7 18-9 39-6.4 60h52.8c2.6-21 .6-42-6.4-60-6-6-34-6-40 0z" fill="#26262E"/>'
+  + '<path d="M47.6 59c-7.6 12.4-9.6 29-6.6 43 2.2 10 9.4 16.6 19 17.6 9.6-1 16.8-7.6 19-17.6 3-14 1-30.6-6.6-43-5 4.4-19.8 4.4-24.8 0z" fill="#F5F1E8"/>'
+  + '<path d="M43.4 84l-3.6 2.8 4 1.2M76.6 84l3.6 2.8-4 1.2M44 72l-3 2.2 3.4 1M76 72l3 2.2-3.4 1" fill="none" stroke="#F5F1E8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+  + '<path d="M45.4 97c-1 9.6-1 18.4 0 27.6h11.2c1-9.2 1-18 0-27.6zM63.4 97c-1 9.6-1 18.4 0 27.6h11.2c1-9.2 1-18 0-27.6z" fill="#F5F1E8" stroke="#1B1330" stroke-width="1.2"/>'
+  + '<g fill="#5A5B66"><circle cx="48.6" cy="104.6" r="1"/><circle cx="52.4" cy="109" r=".9"/><circle cx="49.2" cy="113.6" r=".8"/><circle cx="53.6" cy="117.2" r=".7"/><circle cx="67.4" cy="106.4" r=".9"/><circle cx="71.2" cy="111" r="1"/><circle cx="68" cy="115.6" r=".75"/></g>'
+  + '<ellipse cx="51" cy="125" rx="8.2" ry="4.3" fill="#F5F1E8" stroke="#1B1330" stroke-width="1.2"/><ellipse cx="69" cy="125" rx="8.2" ry="4.3" fill="#F5F1E8" stroke="#1B1330" stroke-width="1.2"/>'
+  + '<path d="M47.6 123.4v2.8M51 123.2v3M54.4 123.4v2.8M65.6 123.4v2.8M69 123.2v3M72.4 123.4v2.8" stroke="#1B1330" stroke-width="1" stroke-linecap="round" opacity=".5"/>'
+  + '<g class="af-head"><path class="k af-ear af-ear-l" d="M42.6 25.6c-11.2-.4-16.4 13-15.4 27.4.6 9.4 6 14.6 11.4 11.6 5.2-3 6.2-14.2 7.4-27.6z" fill="#17171D"/>'
+  + '<path class="k af-ear af-ear-r" d="M77.4 25.6c11.2-.4 16.4 13 15.4 27.4-.6 9.4-6 14.6-11.4 11.6-5.2-3-6.2-14.2-7.4-27.6z" fill="#17171D"/>'
+  + '<path class="k" d="M60 15.6c15.4 0 24.6 10.4 24.6 25.4 0 13.6-9.4 22.6-24.6 22.6S35.4 54.6 35.4 41C35.4 26 44.6 15.6 60 15.6z" fill="#26262E"/>'
+  + '<path d="M51.4 21.4c5.4-2.2 11.8-2.2 17.2 0" fill="none" stroke="#40404C" stroke-width="1.6" stroke-linecap="round"/>'
+  + '<ellipse cx="49.6" cy="31.6" rx="4.2" ry="2.6" fill="#C2763A"/><ellipse cx="70.4" cy="31.6" rx="4.2" ry="2.6" fill="#C2763A"/>'
+  + '<g class="af-eyes"><ellipse cx="50.6" cy="38.4" rx="3.7" ry="4" fill="#2A160B"/><ellipse cx="69.4" cy="38.4" rx="3.7" ry="4" fill="#2A160B"/><circle cx="51.8" cy="37" r="1.2" fill="#fff"/><circle cx="70.6" cy="37" r="1.2" fill="#fff"/></g>'
+  + '<path d="M46.6 46.4c0-4.4 6.2-6.6 13.4-6.6s13.4 2.2 13.4 6.6l1 6c-1 6.2-7.2 10.4-14.4 10.4S46.6 58.6 45.6 52.4z" fill="#C2763A"/>'
+  + '<path d="M55.6 27c1 6.4 1.2 12.6.2 18.4h8.4c-1-5.8-.8-12 .2-18.4-2.4-1.2-6.4-1.2-8.8 0z" fill="#26262E"/>'
+  + '<g class="af-mouth"><path d="M53.2 53.6c2 5.4 11.6 5.4 13.6 0z" fill="#5B1A24"/><path d="M56.6 55.8c1.2 2.8 5.6 2.8 6.8 0z" fill="#E46A7B"/></g>'
+  + '<ellipse class="af-chin" cx="60" cy="58.6" rx="6.2" ry="2.6" fill="#A8662F"/>'
+  + '<path d="M53.4 46.2c0-2.8 13.2-2.8 13.2 0 0 3.2-3.8 5.6-6.6 5.6s-6.6-2.4-6.6-5.6z" fill="#0F0F13"/><ellipse cx="57.6" cy="45.6" rx="2" ry=".9" fill="#5C5C68"/>'
+  + '<path d="M60 51.8v1.8M52.6 53.2c2.6 2.4 5 2.6 7.4.4 2.4 2.2 4.8 2 7.4-.4" fill="none" stroke="#0F0F13" stroke-width="1.3" stroke-linecap="round"/></g>';
+const ayFaceSvg = (cls = '') => `<svg class="af-svg${cls ? ' ' + cls : ''}" viewBox="0 0 120 132" aria-hidden="true">${AYHAN_FACE}</svg>`;
+/* Ana sayfada Ayhan Abi'nin köşesi: kırmızı kulübe, önünde paspas (uyurken üstünde yatar, .ay-mat), yanında mama kabı */
+const KULUBE_SVG = '<svg viewBox="0 0 132 100" aria-hidden="true"><ellipse cx="66" cy="96.6" rx="62" ry="3.2" fill="#0B1030" opacity=".12"/>'
+  + '<path d="M14 42 51 15l37 27v50H14z" fill="#D63A3A" stroke="#1B1330" stroke-width="2.2" stroke-linejoin="round"/>'
+  + '<path d="M15 56h72M15 70h72M15 84h72" stroke="#B32B2B" stroke-width="1.4"/>'
+  + '<path d="M3 46 51 9l48 37-6.4 4.6L51 18.4 9.4 50.6z" fill="#7E1D25" stroke="#1B1330" stroke-width="2.2" stroke-linejoin="round"/>'
+  + '<path d="M37 92V70c0-8.6 6.2-14 14-14s14 5.4 14 14v22z" fill="#2A1820" stroke="#1B1330" stroke-width="2"/>'
+  + '<rect x="34" y="36.6" width="34" height="11.4" rx="2.6" fill="#F6E2BE" stroke="#1B1330" stroke-width="1.6"/><text class="ay-plate" x="51" y="45" text-anchor="middle">AYHAN</text>'
+  + '<path class="ay-mat" d="M23.6 89.4h54.8l5 7.2H18.6z" fill="#C99B5C" stroke="#1B1330" stroke-width="1.6" stroke-linejoin="round"/>'
+  + '<path d="M26.6 91.4h48.8l2.4 3.4H24.2z" fill="none" stroke="#8E6431" stroke-width="1.2"/>'
+  + '<path d="M104 87.6h24l-3.2 8.6h-17.6z" fill="#2E5BD8" stroke="#1B1330" stroke-width="1.6" stroke-linejoin="round"/>'
+  + '<ellipse cx="116" cy="87.6" rx="12" ry="2.6" fill="#7A4823" stroke="#1B1330" stroke-width="1.4"/>'
+  + '<g fill="#B0703A"><circle cx="111" cy="86.7" r="1.4"/><circle cx="115.6" cy="85.9" r="1.5"/><circle cx="120.2" cy="86.7" r="1.3"/></g>'
+  + '<path d="M107.4 91.8h17" stroke="#9DB6FF" stroke-width="1.1" stroke-linecap="round" opacity=".8"/></svg>';
+/* Turun açılışı: Yeditepe'nin Selçuklu kapısı (marketteki Selçuklu Kapısı çerçevesinin büyüğü). Dokununca kanatlar açılır, içeride Ayhan Abi bekler. */
+const GATE_SVG = (() => {
+  const zig = Array.from({ length: 15 }, (_, i) => `l6-9 6 9`).join('');
+  const twist = x => Array.from({ length: 24 }, (_, i) => `M${x} ${100 + i * 8}l12-6`).join('');
+  const muq = (y, x0, n) => `M${x0} ${y}` + 'q6-8 12 0'.repeat(n);
+  const studs = xs => xs.map(x => [214, 236, 258, 278].map(y => `<circle cx="${x}" cy="${y}" r="1.7"/>`).join('')).join('');
+  return '<svg class="tg-svg" viewBox="0 0 240 300" aria-hidden="true"><defs>'
+    + '<linearGradient id="tg-st" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6E2BE"/><stop offset="1" stop-color="#C9955A"/></linearGradient>'
+    + '<pattern id="tg-pt" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M8 0l2.6 5.4L16 8l-5.4 2.6L8 16l-2.6-5.4L0 8l5.4-2.6z" fill="#B07B3E" opacity=".42"/></pattern>'
+    + '<radialGradient id="tg-li" cx="50%" cy="72%" r="70%"><stop offset="0" stop-color="#FFF8DC"/><stop offset=".55" stop-color="#FFD45E"/><stop offset="1" stop-color="#F09A22"/></radialGradient>'
+    + '<linearGradient id="tg-wd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8F5A2A"/><stop offset="1" stop-color="#5A3414"/></linearGradient>'
+    + '<radialGradient id="tg-gl"><stop offset="0" stop-color="#FFE08A" stop-opacity=".95"/><stop offset="1" stop-color="#FFE08A" stop-opacity="0"/></radialGradient></defs>'
+    + '<g fill="#FFF6D6"><circle cx="16" cy="24" r="1.4"/><circle cx="40" cy="8" r="1"/><circle cx="214" cy="14" r="1.5"/><circle cx="230" cy="44" r="1"/><circle cx="10" cy="70" r="1"/><circle cx="226" cy="96" r="1.2"/></g>'
+    + '<ellipse class="tg-glow" cx="120" cy="246" rx="118" ry="74" fill="url(#tg-gl)"/>'
+    + '<rect x="36" y="52" width="168" height="238" fill="url(#tg-st)" stroke="#5E3F1C" stroke-width="2.5"/><rect x="36" y="52" width="168" height="238" fill="url(#tg-pt)"/>'
+    + `<path d="M30 40${zig}v14H30z" fill="#E9CFA0" stroke="#5E3F1C" stroke-width="2.5" stroke-linejoin="round"/>`
+    + '<path d="M30 48h180" stroke="#B07B3E" stroke-width="2"/>'
+    + '<rect x="70" y="62" width="100" height="21" rx="2" fill="#EBD3A4" stroke="#5E3F1C" stroke-width="2"/><text class="tg-kitabe" x="120" y="77" text-anchor="middle">HOŞ GELDİN</text>'
+    + '<rect x="43" y="88" width="18" height="7" fill="#D9B27A" stroke="#5E3F1C" stroke-width="2"/><rect x="179" y="88" width="18" height="7" fill="#D9B27A" stroke="#5E3F1C" stroke-width="2"/>'
+    + '<rect x="46" y="95" width="12" height="195" fill="#E9CFA0" stroke="#5E3F1C" stroke-width="2"/><rect x="182" y="95" width="12" height="195" fill="#E9CFA0" stroke="#5E3F1C" stroke-width="2"/>'
+    + `<path d="${twist(46)}${twist(182)}" stroke="#B07B3E" stroke-width="1.6"/>`
+    + '<path d="M66 290V156Q66 100 120 84q54 16 54 72v134z" fill="#EBD3A4" stroke="#5E3F1C" stroke-width="2.5" stroke-linejoin="round"/>'
+    + '<path d="M78 290V158Q78 112 120 98q42 14 42 60v132z" fill="#D9B27A" stroke="#5E3F1C" stroke-width="2" stroke-linejoin="round"/>'
+    + `<path d="${muq(150, 84, 6)}${muq(138, 90, 5)}${muq(126, 96, 4)}${muq(114, 102, 3)}" fill="none" stroke="#8A5A2B" stroke-width="1.8" stroke-linejoin="round"/>`
+    + '<circle cx="120" cy="104" r="3" fill="#FFD23F" stroke="#8A5A2B" stroke-width="1"/>'
+    + '<path d="M90 290V200q0-28 30-38q30 10 30 38v90z" fill="url(#tg-li)" stroke="#5E3F1C" stroke-width="2"/>'
+    + '<g class="tg-door tg-door-l"><path d="M90 290V200q0-28 30-38V290z" fill="url(#tg-wd)" stroke="#3A210C" stroke-width="2"/><path d="M96 284V204q0-18 18-26v106z" fill="none" stroke="#3A210C" stroke-width="1.2"/>'
+    + `<g fill="#E2B064">${studs([100, 108])}</g><circle cx="114.5" cy="242" r="3.2" fill="none" stroke="#FFD23F" stroke-width="2"/></g>`
+    + '<g class="tg-door tg-door-r"><path d="M150 290V200q0-28-30-38V290z" fill="url(#tg-wd)" stroke="#3A210C" stroke-width="2"/><path d="M144 284V204q0-18-18-26v106z" fill="none" stroke="#3A210C" stroke-width="1.2"/>'
+    + `<g fill="#E2B064">${studs([132, 140])}</g><circle cx="125.5" cy="242" r="3.2" fill="none" stroke="#FFD23F" stroke-width="2"/></g>`
+    + `<g class="tg-ayhan"><svg x="80" y="200" width="80" height="88" viewBox="0 0 120 132">${AYHAN_FACE}</svg></g>`
+    + '<circle class="tg-tap" cx="120" cy="238" r="15" fill="none" stroke="#FFD23F" stroke-width="3"/>'
+    + '<path d="M86 290h68" stroke="#FFD23F" stroke-width="3" stroke-linecap="round"/>'
+    + '<path d="M26 290h188v5H26z" fill="#C9955A" stroke="#5E3F1C" stroke-width="2"/><path d="M14 295h212v5H14z" fill="#B7834A" stroke="#5E3F1C" stroke-width="2"/></svg>';
+})();
 const AYHAN_SAY = {
   hi: 'Ben Ayhan Abi. Hav!',
   pet: ['Hav!', 'Hav hav!', 'Kuyruğum durmuyor.', 'Bir sosisli olsa fena olmazdı.', 'Derslerine çalıştın mı bakalım?', 'Yokuşu bugün kaç kere çıktın?', 'Ringde yer var mı?', 'Notunu paylaştın mı?'],
@@ -2009,7 +2121,9 @@ function startAyhan(stage) {
   let x = 0, timer = 0, dead = false, state = '';
   const W = () => Math.max(0, stage.clientWidth - dog.offsetWidth);
   const rnd = (a, b) => a + Math.random() * (b - a);
-  const set = st => { state = st; dog.classList.remove('walk', 'idle', 'sleep'); dog.classList.add(st); dog.setAttribute('aria-label', st === 'sleep' ? 'Ayhan Abi köşesinde uyuyor. Uyandırmak için dokun.' : 'Ayhan Abi, kampüsün köpeği. Sevmek için dokun.'); };
+  const set = st => { state = st; dog.classList.remove('walk', 'idle', 'sleep'); dog.classList.add(st); if (st === 'sleep') dog.classList.remove('left'); dog.setAttribute('aria-label', st === 'sleep' ? 'Ayhan Abi kulübesinin önünde uyuyor. Uyandırmak için dokun.' : 'Ayhan Abi, kampüsün köpeği. Sevmek için dokun.'); };
+  // uyku yeri: kulübenin önündeki paspas (uyurken çizimi kutunun ortasında olduğu için paspasın ortasına hizalanır)
+  const homeX = () => { const m = stage.querySelector('.ay-mat'); if (!m) return W(); const r = m.getBoundingClientRect(), s = stage.getBoundingClientRect(); return Math.max(0, Math.min(W(), r.left + r.width / 2 - s.left - dog.offsetWidth / 2)); };
   const after = (ms, fn) => { clearTimeout(timer); timer = setTimeout(() => { if (!dead && !document.hidden) fn(); }, ms); };
   const place = (nx, ms) => { dog.style.transitionDuration = Math.round(ms) + 'ms'; dog.style.transform = `translateX(${Math.round(nx)}px)`; };
   const nowX = () => { try { const m = new DOMMatrixReadOnly(getComputedStyle(dog).transform); return isFinite(m.m41) ? m.m41 : x; } catch (e) { return x; } };
@@ -2027,7 +2141,7 @@ function startAyhan(stage) {
     const r = Math.random(), w = W();
     if (r < 0.5) walkTo(rnd(0, w), () => { set('idle'); after(rnd(1800, 4500), next); });
     else if (r < 0.72) { set('idle'); after(rnd(2500, 5000), next); }
-    else walkTo(Math.random() < 0.5 ? 0 : w, () => { set('sleep'); after(rnd(10000, 22000), () => { set('idle'); after(1500, next); }); });
+    else walkTo(homeX(), () => { set('sleep'); after(rnd(10000, 22000), () => { set('idle'); after(1500, next); }); });
   }
   dog.addEventListener('click', () => {
     const was = state;
@@ -2038,11 +2152,11 @@ function startAyhan(stage) {
     if (!reduceMotion()) after(rnd(3000, 5000), next);
   });
   const w0 = W();
-  if (reduceMotion()) { x = w0; place(x, 0); set('sleep'); }
-  else if (Math.random() < 0.35) { x = Math.random() < 0.5 ? 0 : w0; place(x, 0); set('sleep'); after(rnd(6000, 14000), () => { set('idle'); after(1200, next); }); }
+  if (reduceMotion()) { x = homeX(); place(x, 0); set('sleep'); }
+  else if (Math.random() < 0.35) { x = homeX(); place(x, 0); set('sleep'); after(rnd(6000, 14000), () => { set('idle'); after(1200, next); }); }
   else { x = rnd(0, w0); place(x, 0); set('idle'); after(rnd(700, 2000), next); }
   const onVis = () => { if (!document.hidden && !reduceMotion() && state !== 'walk') after(1500, next); };
-  const onResize = () => { const w = W(); if (x > w) { x = w; place(x, 0); } };
+  const onResize = () => { if (state === 'sleep') { x = homeX(); place(x, 0); return; } const w = W(); if (x > w) { x = w; place(x, 0); } };
   document.addEventListener('visibilitychange', onVis);
   window.addEventListener('resize', onResize);
   return () => { dead = true; clearTimeout(timer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('resize', onResize); };
@@ -2899,19 +3013,19 @@ function prodArt(id, pfx) {
   const K2 = 'stroke="#1B1330" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"';
   const A = {
     'gece-eskortu': `<defs><radialGradient id="${p}g" cx="50%" cy="42%" r="58%"><stop offset="0" stop-color="#FFE7A3" stop-opacity=".95"/><stop offset="1" stop-color="#FFE7A3" stop-opacity="0"/></radialGradient>
-      <linearGradient id="${p}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E7B57A"/><stop offset="1" stop-color="#A5683A"/></linearGradient>
-      <linearGradient id="${p}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6D3A3"/><stop offset="1" stop-color="#C98B55"/></linearGradient></defs>
+      <linearGradient id="${p}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34343F"/><stop offset="1" stop-color="#1C1C23"/></linearGradient>
+      <linearGradient id="${p}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A3A46"/><stop offset="1" stop-color="#1E1E25"/></linearGradient></defs>
       <circle cx="60" cy="60" r="50" fill="url(#${p}g)"/><circle cx="90" cy="22" r="9" fill="#FFF6D6"/><circle cx="94" cy="19" r="8" fill="#FFE7A3" opacity=".45"/>
-      <path class="wag" d="M80 96c12-1 18-10 15-21" fill="none" stroke="#A5683A" stroke-width="6" stroke-linecap="round"/>
+      <path class="wag" d="M80 96c12-1 18-10 15-21" fill="none" stroke="#26262E" stroke-width="6" stroke-linecap="round"/>
       <path d="M38 106c-4-20 3-37 15-43h14c12 6 19 23 15 43z" fill="url(#${p}f)" ${K}/>
-      <path d="M52 70c4 11 12 11 16 0v28c-6 4-10 4-16 0z" fill="#FBEBD2"/>
-      <ellipse cx="50" cy="106" rx="8" ry="4.5" fill="#FBEBD2" ${K2}/><ellipse cx="70" cy="106" rx="8" ry="4.5" fill="#FBEBD2" ${K2}/>
-      <path d="M44 40c-9-3-14 9-9 18 5-2 9-7 10-12z" fill="#7E4A24" ${K2}/><path d="M76 40c9-3 14 9 9 18-5-2-9-7-10-12z" fill="#7E4A24" ${K2}/>
+      <path d="M50 68c5 12 15 12 20 0 2 10 2 22 0 30-7 4-13 4-20 0-2-8-2-20 0-30z" fill="#F5F1E8"/>
+      <ellipse cx="50" cy="106" rx="8" ry="4.5" fill="#F5F1E8" ${K2}/><ellipse cx="70" cy="106" rx="8" ry="4.5" fill="#F5F1E8" ${K2}/>
+      <path d="M46 39c-9-1-13 8-11 18 1 4 5 5 7 2 2-4 3-12 4-20z" fill="#17171D" ${K2}/><path d="M74 39c9-1 13 8 11 18-1 4-5 5-7 2-2-4-3-12-4-20z" fill="#17171D" ${K2}/>
       <ellipse cx="60" cy="49" rx="17" ry="15" fill="url(#${p}h)" ${K}/>
-      <rect x="83" y="49" width="7" height="9" rx="2" fill="#FFB020" ${K2}/><text x="86.5" y="56" text-anchor="middle" font-size="5" font-weight="800" fill="#1B1330">12</text>
-      <ellipse cx="60" cy="56" rx="8.5" ry="6" fill="#FBEBD2"/><ellipse cx="60" cy="52.5" rx="3.4" ry="2.4" fill="#2A1A10"/>
+      <ellipse cx="53.5" cy="41" rx="2.6" ry="1.6" fill="#C2763A"/><ellipse cx="66.5" cy="41" rx="2.6" ry="1.6" fill="#C2763A"/>
+      <ellipse cx="60" cy="56" rx="8.5" ry="6" fill="#C2763A"/><ellipse cx="60" cy="52.5" rx="3.4" ry="2.4" fill="#0F0F13"/>
       <circle cx="53.5" cy="45.5" r="2.3" fill="#2A1A10"/><circle cx="66.5" cy="45.5" r="2.3" fill="#2A1A10"/><circle cx="54.3" cy="44.7" r=".8" fill="#fff"/><circle cx="67.3" cy="44.7" r=".8" fill="#fff"/>
-      <path d="M57 60q3 3 6 0" fill="none" stroke="#2A1A10" stroke-width="1.6" stroke-linecap="round"/><path d="M59.3 61.5q.7 3.5 1.4 0" fill="#FF7A8A"/>`,
+      <path d="M57 60q3 3 6 0" fill="none" stroke="#0F0F13" stroke-width="1.6" stroke-linecap="round"/><path d="M59.3 61.5q.7 3.5 1.4 0" fill="#FF7A8A"/>`,
     'kartal-kanatlari': `<defs><linearGradient id="${p}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF1B8"/><stop offset=".5" stop-color="#FFC43D"/><stop offset="1" stop-color="#D9820B"/></linearGradient>
       <linearGradient id="${p}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3551C9"/><stop offset="1" stop-color="#111C4E"/></linearGradient></defs>
       <g class="flap-l"><path d="M56 62C44 44 24 34 6 38c10 5 17 10 20 16-11-1-19 3-22 9 11 0 19 2 25 6-8 3-12 9-12 16 12-7 24-12 39-19z" fill="url(#${p}w)" ${K}/>
@@ -3252,7 +3366,10 @@ function recentHtml() {
 }
 /* Hoş geldin turu: Ayhan Abi sayfadan sayfaya gezdirir, her durakta anlattığı yeri ışıkla gösterir.
    Tur bir pencere değildir; sayfa değişince kapanmaz. Işığın dışındaki alan tıklamaya kapalıdır, ışıktaki öğe kullanılabilir. */
-const TOUR = { on: false, i: 0, steps: [], el: null, tgt: null, seq: 0, poll: 0, tick: 0, want: '', t0: 0, prevFocus: null };
+const TOUR = { on: false, i: 0, steps: [], el: null, tgt: null, seq: 0, poll: 0, tick: 0, want: '', t0: 0, prevFocus: null, gate: 0, talkT: 0 };
+/* Tur Yeditepe kapısında başlar: kapıya (ya da "Kapıyı aç"a) basınca kanatlar açılır, Ayhan Abi kapıda karşılar. gate: 0 kapalı, 1 açılıyor, 2 açık */
+const GATE_MS = 950;
+const GATE_SAY = 'Yeditepe’nin kapısındasın. Kapıya dokun ya da “Kapıyı aç”a bas, Ayhan Abi seni içeride bekliyor.';
 const TOUR_NUM = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz'];
 function tourCourse() {
   const ok = id => !!id && S.courses.has(id);
@@ -3264,14 +3381,14 @@ function tourCourse() {
 function tourSteps(u) {
   const cid = tourCourse();
   const list = [
-    { t: 'Hoş geldin!', next: 'Gezdir beni' },   // tanışma bulunduğun sayfada; gezinti ilk durakta başlar
+    { gate: true, t: 'Hoş geldin!', next: 'Gezdir beni' },   // kapı ve tanışma bulunduğun sayfada; gezinti ilk durakta başlar
     { go: '#/', sel: '#main .hero .search', t: 'Her şey buradan başlar', say: 'Ders kodunu (CSE 211 gibi) ya da hocanın adını buraya yaz, listeden seç. Aradığın ders ya da hoca hemen önüne gelir.' },
     { go: '#/dersler', sel: '#main .toolbar', t: 'Bölümünün ders planı', say: 'Buradan bölümünü seç: dönem dönem bütün derslerin çıkar. Bitirdiğin dersleri ✓ ile işaretlersen ne kadar kaldığını da görürsün.' },
     cid ? { go: '#/ders/' + cid, sel: ['#main [data-r=myc]', '#main .head-actions'], t: 'Derslerini ekle', say: 'Her dersin kendi sayfası var: notlar, yorumlar ve hocalar. “Derslerime ekle”ye basarsan o derse yeni not düşünce ilk sen görürsün.' } : null,
     { go: '#/paylas', sel: ['#main [data-r=gpick]', '#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `${gdCfg() ? '“Drive’dan seç”e bas, notunu Drive’ından seç; paylaşım ayarını ben hallederim.' : 'Notunu Google Drive’a koy, linkini buraya yapıştır.'} Her not ${KUBBE.note} kubbe, her ▲ oy +${KUBBE.up} kubbe kazandırır; bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
     { go: '#/hocaolcer', sel: '#main .toolbar', t: 'HocaÖlçer', say: 'Hocayı adıyla ya da ders koduyla bul. Anlatım, ödev yükü, not verme ve devamsızlıkta puanla; yorumunu anonim bırakabilirsin.' },
     { go: '#/kubbe', sel: ['#main [data-r=head]', '#main .shop-sec'], t: 'Kubbe ve market', say: 'Paylaştıkça kubbe toplarsın. Dönemin yıldızı sıralamasında yüksel, marketten profilini süsleyecek parçalar al.' },
-    { go: '#/', sel: '#main [data-r=ayhan]', t: 'Hepsi bu kadar!', say: 'Ben burada, ana sayfada dolaşıyorum. Canın sıkılırsa gel beni sev. İlk notunu bekliyorum, hav!', next: 'Başlayalım' }
+    { go: '#/', sel: '#main [data-r=ayhan]', t: 'Hepsi bu kadar!', say: 'Ben burada, ana sayfada dolaşıyorum; yorulunca kırmızı kulübemin önünde uyurum. Canın sıkılırsa gel beni sev. İlk notunu bekliyorum, hav!', next: 'Başlayalım' }
   ].filter(Boolean);
   const n = list.length - 1;
   list[0].say = `Hav! Ben Ayhan Abi, kampüsün köpeği. ${u.username ? '@' + u.username + ', seni' : 'Seni'} YediWiki’de kısa bir tura çıkarayım: ${(TOUR_NUM[n] || String(n)).toLocaleLowerCase('tr')} durak, bir dakika bile sürmez.`;
@@ -3281,12 +3398,13 @@ const tourPath = h => String(h || '').split('?')[0].replace(/^#?\/?$/, '#/') || 
 function openWelcome() {
   const u = myAcc(); if (!u) return;
   tourEnd();
-  TOUR.steps = tourSteps(u); TOUR.on = true; TOUR.prevFocus = document.activeElement;
+  TOUR.steps = tourSteps(u); TOUR.on = true; TOUR.gate = 0; TOUR.prevFocus = document.activeElement;
   const el = document.createElement('div');
   el.className = 'tour init';
   el.innerHTML = '<div class="tour-veil" data-t="v0"></div><div class="tour-veil" data-t="v1"></div><div class="tour-veil" data-t="v2"></div><div class="tour-veil" data-t="v3"></div><div class="tour-hole" data-t="hole" hidden></div>'
+    + `<button type="button" class="tour-gate" data-t="gate" aria-label="Kapıyı aç">${GATE_SVG}</button>`
     + `<section class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-t" aria-describedby="tour-say" data-t="card">
-      <div class="tour-dog ay idle" aria-hidden="true">${AYHAN_SVG}<span class="tour-name">Ayhan Abi</span></div>
+      <div class="tour-dog idle" aria-hidden="true">${ayFaceSvg()}<span class="tour-name">Ayhan Abi</span></div>
       <div class="tour-txt"><p class="tour-step" data-t="step"></p><h2 class="tour-t" id="tour-t" data-t="t"></h2><p class="tour-say" id="tour-say" data-t="say" aria-live="polite"></p></div>
       <div class="tour-bar" aria-hidden="true"><i data-t="bar"></i></div>
       <div class="tour-foot"><button type="button" class="tour-skip" data-t="skip">Turu geç</button><button type="button" class="btn btn-ghost" data-t="back">Geri</button><button type="button" class="btn btn-primary tour-next" data-t="next">İleri</button></div>
@@ -3294,7 +3412,8 @@ function openWelcome() {
   document.body.appendChild(el);
   TOUR.el = el;
   const T = k => el.querySelector(`[data-t=${k}]`);
-  T('next').addEventListener('click', () => tourGo(TOUR.i + 1));
+  T('next').addEventListener('click', tourNext);
+  T('gate').addEventListener('click', () => { if (!TOUR.gate) gateOpen(); else if (TOUR.gate === 2) tourTalk(900); });
   T('back').addEventListener('click', () => tourGo(TOUR.i - 1));
   T('skip').addEventListener('click', () => tourEnd());
   el.addEventListener('click', e => { if (e.target.classList && e.target.classList.contains('tour-veil')) tourNudge(); });
@@ -3313,18 +3432,48 @@ function tourGo(i) {
   i = Math.max(0, i);
   TOUR.i = i; TOUR.seq++; TOUR.tgt = null;
   const st = TOUR.steps[i], el = TOUR.el, T = k => el.querySelector(`[data-t=${k}]`), n = TOUR.steps.length - 1;
-  T('step').textContent = i ? `Durak ${i} / ${n}` : 'Tanışalım';
-  T('t').textContent = st.t;
-  T('say').textContent = st.say;
+  const shut = !!st.gate && TOUR.gate < 2;   // kapı daha açılmadı
+  el.classList.toggle('at-gate', !!st.gate);
+  T('gate').classList.toggle('open', !!st.gate && TOUR.gate > 0);
+  T('step').textContent = shut ? 'Yeditepe kapısı' : i ? `Durak ${i} / ${n}` : 'Tanışalım';
+  T('t').textContent = shut ? 'Kampüse hoş geldin!' : st.t;
+  tourSay(shut ? GATE_SAY : st.say);
   T('bar').style.width = Math.round(i / n * 100) + '%';
   T('back').hidden = i === 0;
-  T('next').textContent = st.next || 'İleri';
-  tourDog(i ? 'walk' : 'bark');
+  T('next').textContent = shut ? 'Kapıyı aç' : st.next || 'İleri';
+  if (!shut) tourDog(i ? 'walk' : 'bark');
   TOUR.want = tourPath(st.go || location.hash); TOUR.t0 = Date.now();
   if (st.go && tourPath(location.hash) !== TOUR.want) location.hash = st.go;
   tourPlace();
   tourSeek(TOUR.seq);
   tourFocus();
+}
+function tourNext() { const st = TOUR.steps[TOUR.i]; if (st && st.gate && TOUR.gate < 2) gateOpen(); else tourGo(TOUR.i + 1); }
+function gateOpen() {
+  if (!TOUR.on || !TOUR.el || TOUR.gate) return;
+  const el = TOUR.el, nx = el.querySelector('[data-t=next]');
+  TOUR.gate = 1;
+  el.querySelector('[data-t=gate]').classList.add('open');
+  el.querySelector('[data-t=gate]').setAttribute('aria-label', 'Ayhan Abi');
+  nx.disabled = true;
+  const done = () => { if (TOUR.el !== el || TOUR.gate !== 1) return; TOUR.gate = 2; nx.disabled = false; tourGo(0); };
+  if (reduceMotion()) done(); else setTimeout(done, GATE_MS);
+}
+/* Konuşma kelime kelime belirir; tırnaktaki düğme adları sarı, kubbe miktarları mavi. Ayhan Abi o sırada konuşur. */
+function tourSay(text) {
+  const el = TOUR.el && TOUR.el.querySelector('[data-t=say]'); if (!el) return;
+  let d = 0;
+  const words = s => s.split(/(\s+)/).map(w => !w || /^\s+$/.test(w) ? w : `<span class="tw" style="--d:${d++}">${esc(w)}</span>`).join('');
+  el.innerHTML = String(text || '').split(/(“[^”]*”|\+?\d+ kubbe)/).map(p => !p ? '' : p.startsWith('“') ? `<b class="tour-key">${words(p)}</b>` : /^\+?\d+ kubbe$/.test(p) ? `<b class="tour-num">${words(p)}</b>` : words(p)).join('');
+  tourTalk(Math.min(3400, 700 + d * 60));
+}
+function tourFace() { const el = TOUR.el; return el ? el.querySelector(el.classList.contains('at-gate') ? '.tg-ayhan' : '.tour-dog') : null; }
+function tourTalk(ms) {
+  const f = tourFace(); if (!f || reduceMotion() || (TOUR.el.classList.contains('at-gate') && TOUR.gate < 2)) return;
+  TOUR.el.querySelectorAll('.talk').forEach(x => x.classList.remove('talk'));
+  clearTimeout(TOUR.talkT);
+  f.classList.add('talk');
+  TOUR.talkT = setTimeout(() => f.classList.remove('talk'), ms);
 }
 function tourFind(sel) {
   for (const s of [].concat(sel || [])) {
@@ -3383,13 +3532,22 @@ function tourPlace() {
     box(hole, R.l, R.t, R.r - R.l, R.b - R.t);
     box(vs[0], 0, 0, vw, R.t); box(vs[1], 0, R.b, vw, vh - R.b); box(vs[2], 0, R.t, R.l, R.b - R.t); box(vs[3], R.r, R.t, vw - R.r, R.b - R.t);
   } else { box(vs[0], 0, 0, vw, vh); vs.slice(1).forEach(v => box(v, 0, 0, 0, 0)); }
-  const mob = tourMobile();
+  const mob = tourMobile(), atGate = el.classList.contains('at-gate');
   card.classList.toggle('dock', mob);
-  if (mob) { card.style.transform = ''; card.dataset.tail = 'none'; return; }
   const cw = card.offsetWidth || 440, ch = card.offsetHeight || 260, m = 16, minT = tourTopbar() + 8;
+  let gb = 0;
+  if (atGate) {   // kapı üstte, konuşma kartı altında (telefonda kart altta durur, kapı kalan yerin ortasında)
+    const g = el.querySelector('[data-t=gate]'), room = vh - minT - (mob ? ch + 34 : ch + 3 * m);
+    const gh = Math.round(Math.max(120, Math.min(320, room))), gw = Math.round(gh * 0.8);
+    const gt = mob ? minT + Math.max(0, (vh - ch - 34 - minT - gh) / 2) : Math.max(minT, (vh - gh - m - ch) / 2);
+    Object.assign(g.style, { width: gw + 'px', height: gh + 'px', left: Math.round((vw - gw) / 2) + 'px', top: Math.round(gt) + 'px' });
+    gb = gt + gh;
+  }
+  if (mob) { card.style.transform = ''; card.dataset.tail = 'none'; return; }
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   let left, top, tail = 'none';
-  if (!R) { left = (vw - cw) / 2; top = Math.max(minT, (vh - ch) / 2); }
+  if (atGate) { left = (vw - cw) / 2; top = gb + m; tail = 'up'; card.style.setProperty('--tx', Math.round(cw / 2) + 'px'); }
+  else if (!R) { left = (vw - cw) / 2; top = Math.max(minT, (vh - ch) / 2); }
   else if (vh - R.b - m >= ch + m) { top = R.b + m; tail = 'up'; }
   else if (R.t - m - ch >= minT) { top = R.t - m - ch; tail = 'down'; }
   else if (vw - R.r - m >= cw + m) { left = R.r + m; top = clamp(R.t, minT, vh - ch - m); tail = 'left'; }
@@ -3407,13 +3565,13 @@ function tourFocus() {
 }
 /* Kart yer değiştirirken Ayhan Abi yürür, yerine varınca havlar */
 function tourDog(mode, delay = 0) {
-  const dog = TOUR.el && TOUR.el.querySelector('.tour-dog'); if (!dog) return;
+  const dog = tourFace(); if (!dog) return;
   clearTimeout(dog._t);
   const go = () => {
     dog.classList.remove('walk', 'idle', 'barking');
     if (mode === 'walk') { dog.classList.add('walk'); return; }
     dog.classList.add('idle');
-    if (mode === 'bark') { void dog.offsetWidth; dog.classList.add('barking'); }
+    if (mode === 'bark') { dog.getBoundingClientRect(); dog.classList.add('barking'); }
   };
   if (delay && !reduceMotion()) dog._t = setTimeout(go, delay); else go();
 }
@@ -3423,22 +3581,22 @@ function tourNudge() {
 }
 function tourKey(e) {
   if (!TOUR.on || !TOUR.el || modalStack.length || nfPop()) return;   // turun üstünde açılan pencere ve bildirim paneli kendi tuşlarını kullanır
-  const card = TOUR.el.querySelector('[data-t=card]'), inCard = card.contains(document.activeElement);
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); tourEnd(); return; }
-  if (e.key === 'Tab') {
-    const f = [...card.querySelectorAll('button')].filter(b => !b.hidden);
+  if (e.key === 'Tab') {   // odak kapıyla kartın düğmeleri arasında döner
+    const atGate = TOUR.el.classList.contains('at-gate');
+    const f = [...TOUR.el.querySelectorAll('[data-t=gate], [data-t=card] button')].filter(b => !b.hidden && !b.disabled && (atGate || b.dataset.t !== 'gate'));
     if (!f.length) return;
     const k = f.indexOf(document.activeElement);
-    if (!inCard || (e.shiftKey && k <= 0) || (!e.shiftKey && k === f.length - 1)) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+    if (k < 0 || (e.shiftKey && k === 0) || (!e.shiftKey && k === f.length - 1)) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
     return;
   }
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
   if (typing) return;
-  if (e.key === 'ArrowRight') { e.preventDefault(); tourGo(TOUR.i + 1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); tourNext(); }
   else if (e.key === 'ArrowLeft' && TOUR.i > 0) { e.preventDefault(); tourGo(TOUR.i - 1); }
 }
 function tourEnd() {
-  clearTimeout(TOUR.poll); clearInterval(TOUR.tick);
+  clearTimeout(TOUR.poll); clearInterval(TOUR.tick); clearTimeout(TOUR.talkT);
   const was = TOUR.on; TOUR.on = false; TOUR.seq++;
   window.removeEventListener('resize', tourPlace);
   window.removeEventListener('scroll', tourPlace);
@@ -3474,7 +3632,7 @@ ROUTES[''] = function viewHome(root) {
       <p class="hero-try" data-r="try" hidden></p>
       <p class="hero-stats" data-r="stats"></p>
     </div>
-    <div class="ay-stage" data-r="ayhan"><button type="button" class="ay ay-roam idle" aria-label="Ayhan Abi, kampüsün köpeği. Sevmek için dokun.">${AYHAN_SVG}<span class="ay-name" aria-hidden="true">Ayhan Abi</span><span class="ay-say" aria-live="polite"></span></button></div></div>
+    <div class="ay-stage" data-r="ayhan"><span class="ay-home" aria-hidden="true">${KULUBE_SVG}</span><button type="button" class="ay ay-roam idle" aria-label="Ayhan Abi, kampüsün köpeği. Sevmek için dokun.">${AYHAN_SVG}<span class="ay-name" aria-hidden="true">Ayhan Abi</span><span class="ay-say" aria-live="polite"></span></button></div></div>
   </section>
   <div class="wrap home-main" data-r="main">
     <div class="home-left">
