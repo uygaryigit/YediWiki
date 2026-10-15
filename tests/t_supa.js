@@ -355,9 +355,18 @@ async function signup(t, be, local, prof) {
     { const r = await doc(be, 'requests', rq.id); ok(r.done === true && r.doneBy === '' && !!r.nid, 'karşılandı, karşılayan boş: ' + JSON.stringify({ d: r.done, b: r.doneBy })); }
     { const p = await doc(be, 'private', bid), u = await doc(be, 'users', bid); eq(p.kb.fills, 1, 'karşılama kubbesi özel kayıtta'); eq(u.kb.fills, 0, 'açık profilde değil'); }
     await A.until(() => A.ev('notifItems().some(x => x.r && !x.r.doneBy)'), 'A\'ya karşılandı bildirimi');
-    A.ev('openNotifs()'); await sleep(60);
-    ok(/Anonim biri/.test(A.text('.modal')), 'bildirimde karşılayan anonim');
-    A.$('.modal [data-close]') && A.$('.modal [data-close]').click(); await sleep(40);
+    A.$('[data-g=bell]').click(); await sleep(60);
+    ok(/Anonim biri/.test(A.text('#nf-pop')), 'bildirimde karşılayan anonim');
+    ok(A.ev("document.querySelector('#nf-pop').previousElementSibling === document.querySelector('[data-r=bell]')") && !A.$('.modal-back'), 'bildirimler ortada değil, zilin altında açılır');
+    eq(A.$('[data-r=bell]').getAttribute('aria-expanded'), 'true', 'zil açık olduğunu söyler');
+    A.ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))"); await sleep(20);
+    ok(!A.$('#nf-pop') && A.ev("document.activeElement === document.querySelector('[data-r=bell]')"), 'Esc kapatır, odak zile döner');
+    A.$('[data-g=bell]').click(); await sleep(40);
+    A.$('[data-g=bell]').click(); await sleep(40);
+    ok(!A.$('#nf-pop'), 'zile yeniden basınca kapanır');
+    A.$('[data-g=bell]').click(); await sleep(40);
+    A.ev("document.querySelector('#main').dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))"); await sleep(20);
+    ok(!A.$('#nf-pop'), 'dışarı basınca kapanır');
     noErr(A, 'istek A'); noErr(B, 'istek B');
 
     console.log('7) yönetici: şifreyle giriş, düzeltme, moderasyon');

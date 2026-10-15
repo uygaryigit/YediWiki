@@ -878,7 +878,9 @@ document.addEventListener('keydown', e => {
     const lst = top.el.querySelector('.cb-list:not([hidden])');
     if (lst) return;
     top.close();
+    return;
   }
+  if (nfPop()) closeNotifs(true);
 });
 
 function combobox(input, { source, onPick }) {
@@ -1203,7 +1205,7 @@ const G = {
   'logout': () => siteLogout(),
   'share': (id, el) => shareLink(el.dataset.title || 'YediWiki', el.dataset.hash || location.hash),
   'myc': id => toggleMyCourse(id),
-  'bell': () => openNotifs(),
+  'bell': () => (nfPop() ? closeNotifs(true) : openNotifs()),
   'theme': () => cycleTheme(),
   'req-new': id => openRequestModal(id),
   'req-plus': id => togglePlus(id),
@@ -1880,10 +1882,42 @@ function openNotifs() {
     return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.c.tid)}" data-close>${avatarHtml(x.c.anon ? '' : x.c.by, { cls: 'sm' })}<span><span><b>${esc(who)}</b>, “${esc(n.title || 'notun')}” notuna yorum yazdı</span><span class="nf-text">${esc(String(x.c.text || '').slice(0, 90))}</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
   }).join('');
   const lk = st.newLk ? `<li class="nf-row new nf-like"><span class="nf-ico">${icon('heart')}</span><span>Notların ve yorumların <b>${st.newLk}</b> yeni ▲ ve beğeni aldı.</span></li>` : '';
-  openModal({ title: 'Bildirimler', body: (lk || rows) ? `<ul class="nf-list">${lk}${rows}</ul>` : emptyHtml('Henüz bildirim yok', 'Notuna yorum ya da ▲ gelince burada görünecek.') });
+  closeNotifs();
+  const bell = $('[data-r=bell]'), p = document.createElement('div');
+  p.id = 'nf-pop'; p.className = 'nf-pop'; p.tabIndex = -1;
+  p.setAttribute('role', 'dialog'); p.setAttribute('aria-labelledby', 'nf-pop-t');
+  p.innerHTML = `<div class="nf-head"><h2 id="nf-pop-t">Bildirimler</h2><button type="button" class="iconbtn" data-close aria-label="Kapat">${icon('x')}</button></div>`
+    + `<div class="nf-body">${(lk || rows) ? `<ul class="nf-list">${lk}${rows}</ul>` : emptyHtml('Henüz bildirim yok', 'Notuna yorum ya da ▲ gelince burada görünecek.')}</div>`;
+  p.addEventListener('click', e => { const a = e.target.closest('a[href]'); if (a || e.target.closest('[data-close]')) closeNotifs(!a); });
+  bell.after(p); bell.setAttribute('aria-expanded', 'true');
+  placeNotifs();
+  try { p.focus({ preventScroll: true }); } catch (e) { /* yok */ }
   ls.set('nseen:' + S.me, Date.now()); ls.set('lseen:' + S.me, st.lt);
   renderChrome();
 }
+/* Bildirimler ortadaki pencerede değil, zilin hemen altında açılan küçük panelde (üst çubukla birlikte durur).
+   Zile yeniden basınca, dışarı basınca, Esc'te ya da bir bildirime gidince kapanır. */
+function nfPop() { return document.getElementById('nf-pop'); }
+function closeNotifs(focusBell) {
+  const p = nfPop(); if (!p) return;
+  p.remove();
+  const b = $('[data-r=bell]');
+  if (b) { b.setAttribute('aria-expanded', 'false'); if (focusBell) { try { b.focus({ preventScroll: true }); } catch (e) { /* yok */ } } }
+}
+function placeNotifs() {
+  const p = nfPop(), b = $('[data-r=bell]');
+  if (!p) return;
+  if (!b || b.hidden) { closeNotifs(); return; }
+  const r = b.getBoundingClientRect(), op = p.offsetParent, o = op ? op.getBoundingClientRect() : { left: 0, top: 0 };
+  const vw = document.documentElement.clientWidth || innerWidth, w = Math.min(380, vw - 24);
+  const x = Math.min(Math.max(12, r.right - w), vw - 12 - w);   // sağ kenarı zilin sağıyla hizalı, ekrandan taşmaz
+  const nav = $('.bnav'), navH = nav ? nav.offsetHeight : 0;     // telefonda alt menünün üstünde biter
+  Object.assign(p.style, { width: w + 'px', left: (x - o.left) + 'px', top: (r.bottom - o.top + 12) + 'px', maxHeight: Math.max(220, innerHeight - r.bottom - navH - 28) + 'px' });
+  p.style.setProperty('--ax', Math.round(r.left + r.width / 2 - x) + 'px');   // üstteki ok zili gösterir
+}
+document.addEventListener('pointerdown', e => { const p = nfPop(), t = e.target; if (p && t && t.closest && !p.contains(t) && !t.closest('[data-r=bell]')) closeNotifs(); }, true);
+window.addEventListener('resize', placeNotifs);
+window.addEventListener('hashchange', () => closeNotifs());
 function weekNote() {
   const now = Date.now(), pool = notesWhere(n => !isHidden(n) && voteScore(n) > 0);
   const pick = arr => arr.sort(byScore)[0] || null;
@@ -2779,6 +2813,7 @@ function renderChrome() {
   if (bell) {
     const u2 = myAcc();
     bell.hidden = !u2;
+    if (!u2) closeNotifs();
     if (u2) {
       if (S.loaded.notes && S.loaded.comments && ls.get('lseen:' + S.me, null) == null) ls.set('lseen:' + S.me, likeTotal());
       const st = notifState();
@@ -3387,7 +3422,7 @@ function tourNudge() {
   card.classList.remove('nudge'); void card.offsetWidth; card.classList.add('nudge');
 }
 function tourKey(e) {
-  if (!TOUR.on || !TOUR.el || modalStack.length) return;   // turun üstünde açılan pencere kendi tuşlarını kullanır
+  if (!TOUR.on || !TOUR.el || modalStack.length || nfPop()) return;   // turun üstünde açılan pencere ve bildirim paneli kendi tuşlarını kullanır
   const card = TOUR.el.querySelector('[data-t=card]'), inCard = card.contains(document.activeElement);
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); tourEnd(); return; }
   if (e.key === 'Tab') {
