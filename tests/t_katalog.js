@@ -920,7 +920,8 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       ok(!/\p{Extended_Pictographic}/u.test(txt), 'emoji yok: ' + h + ' ' + (txt.match(/.{0,20}\p{Extended_Pictographic}/u) || [''])[0]);
     }
     await t.go('#/');
-    ok(t.$('.home-main > .hm-notes') && t.$('.home-main > .hm-lead') && t.$('.home-main > .hm-rest') && t.$('.home-main > .hm-reqs [data-r=reqs]') && !t.$('.hm-rest [data-r=reqs]'), 'ızgara: Notlar | sıralama, Son yorumlar | not istekleri');
+    ok(t.$('.home-main > .hm-notes') && t.$('.home-main > .hm-lead') && t.$('.home-main > .hm-cms > .hm-cmb[data-r=cms]') && t.$('.home-main > .hm-trend') && t.$('.home-main > .hm-reqs [data-r=reqs]'), 'ızgara: Notlar | sıralama, yorum kutusu | not istekleri');
+    ok(t.$('.ns-fire[data-ns=hot] svg.gl-flame') && !t.$('.seg [data-ns=hot]') && t.$('.seg [data-ns=new]'), 'Revaçta kutusuz alev, Yeni kutuda');
     ok(!t.$('.req-card-top p') && !t.text('[data-ns=hot]').trim() && t.$('[data-ns=hot]').getAttribute('aria-label') === 'Revaçta', 'istek kutusunda açıklama yok; Revaçta yalnızca alev');
     ok(!t.$('#main .h-gl') && !t.$('#main .sec-head h2 svg'), 'ana sayfa başlıklarında simge yok');
     // ana sayfada istek tek satır: + ile katılınır, sayı yanında, popülerse alev; ayrıntı (neden) istekler sayfasında

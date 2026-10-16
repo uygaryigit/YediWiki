@@ -3745,19 +3745,17 @@ ROUTES[''] = function viewHome(root) {
   </section>
   <div class="wrap home-main" data-r="main">
       <section class="home-sec hm-notes">
-        <div class="sec-head"><h2>Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn ns-hot" data-ns="hot" aria-pressed="true" aria-label="Revaçta" title="Revaçta">${gl('flame')}</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
+        <div class="sec-head"><h2>Notlar</h2><div class="ns-sort" role="group" aria-label="Notları sırala"><button type="button" class="ns-fire" data-ns="hot" aria-pressed="true" aria-label="Revaçta" title="Revaçta">${gl('flame')}</button><div class="seg ns-seg"><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
         <div data-r="notes"></div>
       </section>
-    <div class="home-left hm-rest">
-      <section class="home-sec">
+      <section class="home-sec hm-cms">
         <div class="sec-head"><h2>Son yorumlar</h2><a class="sec-link" href="#/hocaolcer">HocaÖlçer</a></div>
-        <div data-r="cms"></div>
+        <div class="hm-cmb" data-r="cms"></div>
       </section>
-      <section class="home-sec">
+      <section class="home-sec hm-trend">
         <div class="sec-head"><h2>Gündemdeki dersler</h2><a class="sec-link" href="#/dersler">Tüm dersler</a></div>
         <div data-r="hot"></div>
       </section>
-    </div>
     <aside class="lead hm-lead" data-r="lead" aria-label="Kubbe sıralaması">
       <div class="lead-top"><h2>Kubbe sıralaması</h2><a class="sec-link" href="#/kubbe">Kubbe ve market</a></div>
       <div class="lead-ctl">

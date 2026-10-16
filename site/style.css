@@ -1548,10 +1548,18 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 @keyframes fcore{50%{transform:scale(1.12,.88)}}
 @keyframes smk{0%{opacity:0;transform:translate(0,0) scale(.45)}25%{opacity:.85;transform:translate(1.5px,-4px) scale(.8)}60%{opacity:.55;transform:translate(-1.5px,-9px) scale(1.15)}100%{opacity:0;transform:translate(2px,-14px) scale(1.55)}}
 @keyframes smkB{0%{opacity:0;transform:translate(0,0) scale(.45)}25%{opacity:.75;transform:translate(-1.5px,-4px) scale(.8)}60%{opacity:.5;transform:translate(1.5px,-8.5px) scale(1.1)}100%{opacity:0;transform:translate(-2px,-13px) scale(1.45)}}
-.seg-btn.ns-hot{padding:2px 9px}
-.seg-btn .gl-flame{display:block;width:30px;height:30px;margin:0}
-.seg-btn[aria-pressed="false"] .gl-flame{filter:grayscale(.75);opacity:.6}
-.seg-btn[aria-pressed="false"] .gl-flame *{animation-play-state:paused}
+/* Revaçta: kutusuz, büyük alev düğmesi; yanında kutulu "Yeni" */
+.ns-sort{display:flex;align-items:center;gap:8px;margin:0 auto 0 10px}
+.sec-head .ns-sort .ns-seg{margin:0}
+.hm-notes>.sec-head{align-items:center}
+.ns-fire{display:grid;place-items:center;width:60px;height:60px;margin:-22px -6px -2px -4px;padding:0;border:0;border-radius:16px;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s ease}
+.ns-fire .gl-flame{display:block;width:60px;height:60px}
+.ns-fire:hover{transform:translateY(-2px) scale(1.05)}
+.ns-fire:active{transform:scale(.93)}
+.ns-fire:focus-visible{outline:3px solid var(--pen);outline-offset:2px}
+.ns-fire[aria-pressed="false"] .gl-flame{filter:grayscale(.85);opacity:.5}
+.ns-fire[aria-pressed="false"] .gl-flame *{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.ns-fire,.ns-fire:hover,.ns-fire:active{transition:none;transform:none}}
 @media (prefers-reduced-motion:reduce){.gl-flame *{animation:none!important}.gl-flame .smk1{opacity:.55;transform:translate(-2px,-5px)}.gl-flame .smk2{opacity:.4;transform:translate(2px,-10px) scale(1.2)}}
 .btn .gl,.chip .gl{width:1.25em;height:1.25em;margin-right:2px}
 .k-coin{width:1.2em;height:1.2em;vertical-align:-.26em}
@@ -1591,14 +1599,25 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 .btn[disabled],.btn[disabled]:hover,.btn[disabled]:active{transform:none;box-shadow:0 2px 0 var(--edge)}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}.btn:hover,.btn:active{transform:none}}
 
-/* ===== Ana sayfa: iki satırlı ızgara. Notlar | Kubbe sıralaması, Son yorumlar | Not istekleri: ikinci satır iki yanda aynı hizada başlar ===== */
-.home-main{grid-template-areas:"notes lead" "rest reqs";row-gap:40px}
-.hm-notes{grid-area:notes}.hm-lead{grid-area:lead}.hm-rest{grid-area:rest}.hm-reqs{grid-area:reqs}
+/* ===== Ana sayfa ızgarası: Notlar | Kubbe sıralaması; "Son yorumlar" başlığı; yorum kutusu | Not istekleri (kutular aynı hizada başlar) ===== */
+.home-main{grid-template-areas:"notes lead" "cmh ." "cmb reqs" "trend reqs";row-gap:0}
+.hm-notes{grid-area:notes;margin-bottom:40px;min-width:0}
+.hm-lead{grid-area:lead;margin-bottom:40px}
+.hm-cms{display:contents}
+.hm-cms>.sec-head{grid-area:cmh}
+.hm-cmb{grid-area:cmb;margin-bottom:40px;min-width:0}
+.hm-trend{grid-area:trend;min-width:0}
+.hm-reqs{grid-area:reqs;align-self:start}
 .home-main .home-sec{margin-top:0}
 .home-main .lead{position:static}
-.hm-rest{display:grid;gap:40px;align-content:start}
-.home-main.lead-open{grid-template-areas:"lead" "notes" "rest" "reqs"}
-@media (max-width:900px){.home-main{grid-template-areas:"notes" "rest" "lead" "reqs"}}
+.home-main.lead-open{grid-template-areas:"lead" "notes" "cmh" "cmb" "trend" "reqs"}
+.home-main.lead-open .hm-trend{margin-bottom:40px}
+@media (max-width:900px){.home-main{grid-template-areas:"notes" "cmh" "cmb" "trend" "lead" "reqs"}.hm-trend{margin-bottom:40px}}
+/* ana sayfadaki asılı not kartları çok hafif sarı */
+.hm-notes .ncard-link{background:color-mix(in srgb,#FFE680 15%,var(--surface))}
+.hm-notes .ncard-img{background:color-mix(in srgb,#FFE680 10%,var(--surface-2))}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hm-notes .ncard-link{background:color-mix(in srgb,#FFE680 7%,var(--surface))}}
+:root[data-theme="dark"] .hm-notes .ncard-link{background:color-mix(in srgb,#FFE680 7%,var(--surface))}
 .req-card{--rq-bg:#BCD0F2;--rq-line:#93AEE0;--rq-ink:#10245E;--rq-sub:#2E4580;position:relative;border-radius:22px;padding:16px 14px 14px;background:var(--rq-bg);border:1px solid var(--rq-line)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .req-card{--rq-bg:#25365E;--rq-line:#3B5189;--rq-ink:#E3EBFF;--rq-sub:#AFC0EA}}
 :root[data-theme="dark"] .req-card{--rq-bg:#25365E;--rq-line:#3B5189;--rq-ink:#E3EBFF;--rq-sub:#AFC0EA}
