@@ -1529,26 +1529,30 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 :root[data-theme="dark"] .gl{filter:drop-shadow(0 0 .7px rgba(233,237,251,.8))}
 .avatar .gl,.bdg-medal .gl,.toast .gl,.done-btn .gl{filter:none!important}
 .seg-btn .gl{width:1.15em;height:1.15em;margin-right:5px;vertical-align:-.22em}
-/* alev: her renk katmanı kendi hızında titrer, tepeden duman püfler */
-:root{--smoke:#B8C0D4}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--smoke:#6F7AA3}}
-:root[data-theme="dark"]{--smoke:#6F7AA3}
-.seg-btn .gl-flame{width:1.4em;height:1.4em;margin-right:4px;vertical-align:-.32em}
-.gl-flame .fl{transform-box:fill-box;transform-origin:50% 100%}
-.gl-flame .fl1{animation:fl1 1.9s ease-in-out infinite}
-.gl-flame .fl2{animation:fl2 1.45s ease-in-out infinite}
-.gl-flame .fl3{animation:fl3 1.15s ease-in-out infinite}
-.gl-flame .fl4{animation:fl4 .9s ease-in-out infinite}
-.gl-flame .smk circle{fill:var(--smoke);opacity:0;transform-box:fill-box;transform-origin:50% 50%;animation:smk 2.7s ease-out infinite}
-.gl-flame .smk2{animation-name:smkB;animation-delay:.9s}
-.gl-flame .smk3{animation-delay:1.8s}
-@keyframes fl1{0%,100%{transform:scale(1,1) skewX(0)}50%{transform:scale(.97,1.05) skewX(-2deg)}}
-@keyframes fl2{0%,100%{transform:scale(1,1) skewX(0)}50%{transform:scale(1.04,.94) skewX(3deg)}}
-@keyframes fl3{0%,100%{transform:scale(1,1) skewX(0)}50%{transform:scale(.93,1.09) skewX(-3deg)}}
-@keyframes fl4{0%,100%{transform:scale(1,1)}50%{transform:scale(1.1,.88)}}
-@keyframes smk{0%{opacity:0;transform:translate(0,0) scale(.4)}22%{opacity:.8}100%{opacity:0;transform:translate(3px,-17px) scale(1.5)}}
-@keyframes smkB{0%{opacity:0;transform:translate(0,0) scale(.4)}22%{opacity:.7}100%{opacity:0;transform:translate(-3px,-15px) scale(1.4)}}
-@media (prefers-reduced-motion:reduce){.gl-flame .fl,.gl-flame .smk circle{animation:none!important}.gl-flame .smk1{opacity:.55;transform:translate(-2px,-6px)}.gl-flame .smk2{opacity:.4;transform:translate(2px,-11px) scale(1.2)}}
+/* alev: alttan yukarı renk katmanları dalgalanır (fb1..fb3 ayrı yönlere akar), gövde hafifçe esner, tepeden duman tüter */
+:root{--smoke:#AEB7CC}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--smoke:#7884AC}}
+:root[data-theme="dark"]{--smoke:#7884AC}
+.gl-flame .flm{transform-box:view-box;transform-origin:24px 45px;animation:flm 1.8s ease-in-out infinite}
+.gl-flame .fb1{animation:fbR 1.3s linear infinite}
+.gl-flame .fb2{animation:fbL 1.05s linear infinite}
+.gl-flame .fb3{animation:fbR 1.6s linear infinite}
+.gl-flame .fcore{transform-box:fill-box;transform-origin:50% 100%;animation:fcore 1.2s ease-in-out infinite}
+.gl-flame .smk{fill:var(--smoke)}
+.gl-flame .smk>g{opacity:0;transform-box:fill-box;transform-origin:50% 50%;animation:smk 2.7s ease-out infinite}
+.gl-flame .smk2{animation-name:smkB;animation-delay:.87s}
+.gl-flame .smk3{animation-delay:1.73s}
+@keyframes flm{0%,100%{transform:scale(1,1)}50%{transform:scale(.96,1.05)}}
+@keyframes fbR{from{transform:translateX(0)}to{transform:translateX(12px)}}
+@keyframes fbL{from{transform:translateX(12px)}to{transform:translateX(0)}}
+@keyframes fcore{50%{transform:scale(1.12,.88)}}
+@keyframes smk{0%{opacity:0;transform:translate(0,0) scale(.45)}25%{opacity:.85;transform:translate(1.5px,-4px) scale(.8)}60%{opacity:.55;transform:translate(-1.5px,-9px) scale(1.15)}100%{opacity:0;transform:translate(2px,-14px) scale(1.55)}}
+@keyframes smkB{0%{opacity:0;transform:translate(0,0) scale(.45)}25%{opacity:.75;transform:translate(-1.5px,-4px) scale(.8)}60%{opacity:.5;transform:translate(1.5px,-8.5px) scale(1.1)}100%{opacity:0;transform:translate(-2px,-13px) scale(1.45)}}
+.seg-btn.ns-hot{padding:2px 9px}
+.seg-btn .gl-flame{display:block;width:30px;height:30px;margin:0}
+.seg-btn[aria-pressed="false"] .gl-flame{filter:grayscale(.75);opacity:.6}
+.seg-btn[aria-pressed="false"] .gl-flame *{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.gl-flame *{animation:none!important}.gl-flame .smk1{opacity:.55;transform:translate(-2px,-5px)}.gl-flame .smk2{opacity:.4;transform:translate(2px,-10px) scale(1.2)}}
 .btn .gl,.chip .gl{width:1.25em;height:1.25em;margin-right:2px}
 .k-coin{width:1.2em;height:1.2em;vertical-align:-.26em}
 .kubbe-chip .k-coin{width:19px;height:19px}
@@ -1587,18 +1591,21 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 .btn[disabled],.btn[disabled]:hover,.btn[disabled]:active{transform:none;box-shadow:0 2px 0 var(--edge)}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}.btn:hover,.btn:active{transform:none}}
 
-/* ===== Ana sayfa: sağ sütun (sıralama ve altında not istekleri) ===== */
-.home-right{display:grid;gap:18px;align-content:start;position:static}
-.home-right .lead{position:static}
-.home-main.lead-open .home-right{order:-1}
-.req-card{--rq-bg:linear-gradient(170deg,#EEF9F4 0%,#DDF2E8 100%);--rq-line:#BCE3D0;--rq-ink:#0E4A39;--rq-sub:#3D6B5C;position:relative;border-radius:22px;padding:16px 14px 14px;background:var(--rq-bg);border:1px solid var(--rq-line);box-shadow:0 18px 36px -30px rgba(20,90,60,.6)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .req-card{--rq-bg:linear-gradient(170deg,#133129 0%,#0F2621 100%);--rq-line:#24564A;--rq-ink:#E1F6EE;--rq-sub:#9CCFBC}}
-:root[data-theme="dark"] .req-card{--rq-bg:linear-gradient(170deg,#133129 0%,#0F2621 100%);--rq-line:#24564A;--rq-ink:#E1F6EE;--rq-sub:#9CCFBC}
+/* ===== Ana sayfa: iki satırlı ızgara. Notlar | Kubbe sıralaması, Son yorumlar | Not istekleri: ikinci satır iki yanda aynı hizada başlar ===== */
+.home-main{grid-template-areas:"notes lead" "rest reqs";row-gap:40px}
+.hm-notes{grid-area:notes}.hm-lead{grid-area:lead}.hm-rest{grid-area:rest}.hm-reqs{grid-area:reqs}
+.home-main .home-sec{margin-top:0}
+.home-main .lead{position:static}
+.hm-rest{display:grid;gap:40px;align-content:start}
+.home-main.lead-open{grid-template-areas:"lead" "notes" "rest" "reqs"}
+@media (max-width:900px){.home-main{grid-template-areas:"notes" "rest" "lead" "reqs"}}
+.req-card{--rq-bg:#BCD0F2;--rq-line:#93AEE0;--rq-ink:#10245E;--rq-sub:#2E4580;position:relative;border-radius:22px;padding:16px 14px 14px;background:var(--rq-bg);border:1px solid var(--rq-line)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .req-card{--rq-bg:#25365E;--rq-line:#3B5189;--rq-ink:#E3EBFF;--rq-sub:#AFC0EA}}
+:root[data-theme="dark"] .req-card{--rq-bg:#25365E;--rq-line:#3B5189;--rq-ink:#E3EBFF;--rq-sub:#AFC0EA}
 .req-card-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.req-card-ico{flex:none;display:grid;place-items:center;width:50px;height:50px;border-radius:15px;background:var(--surface);border:1px solid var(--rq-line);box-shadow:0 2px 0 var(--rq-line)}
-.req-card-ico .gl{width:34px;height:34px;transform-origin:30% 70%;animation:megaphone 3s ease-in-out infinite}
-.req-card h2{font-size:1.18rem;color:var(--rq-ink)}
-.req-card-top p{font-size:.82rem;color:var(--rq-sub);margin-top:2px;line-height:1.35}
+.req-card-ico{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--surface);border:1px solid var(--rq-line);box-shadow:0 2px 0 var(--rq-line)}
+.req-card-ico .gl{width:32px;height:32px;transform-origin:30% 70%;animation:megaphone 3s ease-in-out infinite}
+.req-card h2{font-size:1.2rem;color:var(--rq-ink)}
 .req-card-all{width:100%;margin-top:12px}
 .req-empty{font-size:.88rem;line-height:1.45;color:var(--rq-sub);border:1.5px dashed var(--rq-line);border-radius:14px;padding:12px}
 .rq-lines{list-style:none;margin:0;padding:0;display:grid;gap:6px}

@@ -920,14 +920,16 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       ok(!/\p{Extended_Pictographic}/u.test(txt), 'emoji yok: ' + h + ' ' + (txt.match(/.{0,20}\p{Extended_Pictographic}/u) || [''])[0]);
     }
     await t.go('#/');
-    ok(t.$('.home-right .lead + .req-card [data-r=reqs]') && !t.$('.home-left [data-r=reqs]'), 'not istekleri sağda, sıralamanın altında ayrı kutuda');
+    ok(t.$('.home-main > .hm-notes') && t.$('.home-main > .hm-lead') && t.$('.home-main > .hm-rest') && t.$('.home-main > .hm-reqs [data-r=reqs]') && !t.$('.hm-rest [data-r=reqs]'), 'ızgara: Notlar | sıralama, Son yorumlar | not istekleri');
+    ok(!t.$('.req-card-top p') && !t.text('[data-ns=hot]').trim() && t.$('[data-ns=hot]').getAttribute('aria-label') === 'Revaçta', 'istek kutusunda açıklama yok; Revaçta yalnızca alev');
     ok(!t.$('#main .h-gl') && !t.$('#main .sec-head h2 svg'), 'ana sayfa başlıklarında simge yok');
     // ana sayfada istek tek satır: + ile katılınır, sayı yanında, popülerse alev; ayrıntı (neden) istekler sayfasında
     t.store.put('requests/hot-1', { cid: 'CSE211', kind: 'genel', text: 'Final özeti', why: 'Finale çalışıyorum, son üç hafta eksik', by: 'zz-b', at: Date.now(), plus: { a: true, b: true }, done: false, nid: '', doneBy: '', doneAt: 0 });
     await t.wait(80); await t.go('#/'); await t.wait(80);
     { const li = t.$('.rq-line[data-id="hot-1"]');
       ok(li && li.querySelector('.rq-up') && t.text('.rq-line[data-id="hot-1"] .rq-n') === '3' && li.querySelector('svg.gl-flame') && !li.querySelector('.req-why'), 'istek tek satırda: +, sayı ve popüler alevi; neden yazmıyor');
-      ok(li.querySelector('.gl-flame .fl1') && li.querySelector('.gl-flame .fl4') && li.querySelector('.gl-flame .smk3'), 'alev katmanlı ve dumanlı');
+      ok(li.querySelector('.gl-flame .fb1') && li.querySelector('.gl-flame .fb3') && li.querySelector('.gl-flame .smk3'), 'alev katmanlı ve dumanlı');
+      { const ids = t.$$('.gl-flame clipPath').map(c => c.id); ok(ids.length >= 2 && new Set(ids).size === ids.length, 'her alevin kırpma kimliği ayrı: ' + ids.join()); }
       li.querySelector('.rq-up').click(); await t.wait(120); }
     eq(t.text('.rq-line[data-id="hot-1"] .rq-n'), '4', '+ basınca sayı arttı');
     ok(t.$('.rq-line[data-id="hot-1"] .rq-up').getAttribute('aria-pressed') === 'true' && Object.keys(t.store.get('requests/hot-1').plus).length === 3, 'katılım kaydedildi');
@@ -1216,7 +1218,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     await t.go('#/');
     ok(t.$$('[data-r=notes] .ncard').length <= 6, 'ana sayfada en çok 6 not kartı');
     ok(t.$$('[data-r=cms] li').length <= 3 && t.$$('[data-r=cms] li').length > 0, 'son yorumlardan en çok 3');
-    { const secs = t.$$('.home-left > section .sec-head h2').map(h => h.textContent); const i = secs.indexOf('Son yorumlar');
+    { const secs = t.$$('.home-main .home-sec .sec-head h2').map(h => h.textContent); const i = secs.indexOf('Son yorumlar');
       ok(i >= 0 && secs[i + 1] === 'Gündemdeki dersler', 'Gündemdeki dersler son yorumların hemen altında: ' + secs.join(' | ')); }
     noErr(t, 'profil ve düzen');
   }
@@ -1242,8 +1244,8 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     // ana sayfada ayrı Derslerim bölümü yok; Dersler > Derslerim'de yeni not rozeti
     t.ev("toggleMyCourse('MATH131')"); await t.wait(120);
     await t.go('#/');
-    ok(!t.$('[data-r=mycs]') && !t.$$('.home-left .sec-head h2').some(h => /Derslerim/.test(h.textContent)), 'ana sayfada Derslerim bölümü yok');
-    eq(t.$$('.home-left > section .sec-head h2')[0].textContent, 'Notlar', 'ana sayfa notlarla başlıyor');
+    ok(!t.$('[data-r=mycs]') && !t.$$('.home-main .sec-head h2').some(h => /Derslerim/.test(h.textContent)), 'ana sayfada Derslerim bölümü yok');
+    eq(t.$$('.home-main .home-sec .sec-head h2')[0].textContent, 'Notlar', 'ana sayfa notlarla başlıyor');
     t.w.localStorage.setItem('yw:cseen:' + t.me + ':MATH131', '1');
     await t.go('#/dersler?b=__mine');
     ok(/MATH 131/.test(t.text('[data-r=list]')) && /\d+ yeni not/.test(t.text('[data-r=list] .fresh-n')), 'Derslerim listesinde yeni not rozeti: ' + t.text('[data-r=list]').slice(0, 120));

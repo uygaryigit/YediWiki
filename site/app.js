@@ -107,8 +107,15 @@ const GL = (() => {
   const toe = (x, y, a) => `<ellipse cx="${x}" cy="${y}" rx="3.9" ry="4.9" transform="rotate(${a} ${x} ${y})" fill="#3B3B48" ${O}/>`;
   const ARROW = 'M24 5 41 23h-9v13a3 3 0 0 1-3 3H19a3 3 0 0 1-3-3V23H7z';
   return {
-    // alev: her renk ayrı katman (fl1..fl4, ayrı ayrı titrer), tepeden duman püfler (smk1..smk3); hareketi CSS'te
-    flame: `<g class="smk"><circle class="smk1" cx="24" cy="8" r="2.6" fill="#B8C0D4"/><circle class="smk2" cx="24" cy="8" r="2.2" fill="#B8C0D4"/><circle class="smk3" cx="24" cy="8" r="3" fill="#B8C0D4"/></g><g class="fl fl1"><path d="M24 7c3 6.5 12.5 11 12.5 23.5a12.5 12.5 0 0 1-25 0c0-6.2 2.6-10.2 5.8-13 .5 3.6 2.2 5.8 4.6 6.4-.8-6.2.4-12 2.1-16.9z" fill="#F2542D" ${O}/><path d="M31.5 19.5c2 2.4 3.2 5.2 3.4 8.4" ${L}/></g><path class="fl fl2" d="M24 14.5c2.4 5 9.8 8.6 9.8 18.3a9.8 9.8 0 0 1-19.6 0c0-4.8 2-7.9 4.5-10.1.4 2.8 1.7 4.5 3.6 5-.6-4.8.3-9.3 1.7-13.2z" fill="#FF8A2A"/><path class="fl fl3" d="M24 22c1.8 3.6 7 6.2 7 13a7 7 0 0 1-14 0c0-3.4 1.4-5.6 3.2-7.2.3 2 1.2 3.2 2.6 3.6-.4-3.4.2-6.6 1.2-9.4z" fill="#FFC93C"/><path class="fl fl4" d="M24 29.5c1.2 2.2 4.2 3.8 4.2 7.8a4.2 4.2 0 0 1-8.4 0c0-3.4 2.6-5.2 4.2-7.8z" fill="#FFF1B8"/>`,
+    // alev: alttan yukarı sarı > kehribar > turuncu > kırmızı dalgalı katmanlar (fb1..fb3 ayrı yönlere akar), tepeden duman tüter (smk1..smk3)
+    flame: (() => {
+      const F = 'M27 9.5C30 15.5 36 20.5 36 33A12 12 0 0 1 12 33C12 27.2 13.2 22.6 15.2 18.6C16.4 21.6 18 23.6 20.2 24.6C19.6 18.6 22.4 13.2 27 9.5z';
+      const puff = k => `<g class="smk${k}"><circle cx="27" cy="9" r="2.2"/><circle cx="29.2" cy="8.4" r="1.7"/><circle cx="25" cy="8.7" r="1.5"/></g>`;
+      const band = (y, c, k) => `<path class="fb fb${k}" d="M-12 ${y}q3-2.6 6 0${'t6 0'.repeat(11)}V50H-12z" fill="${c}"/>`;
+      return `<defs><clipPath id="fc{id}"><path d="${F}"/></clipPath></defs><g class="smk" fill="#B8C0D4">${puff(1)}${puff(2)}${puff(3)}</g>`
+        + `<g class="flm"><g clip-path="url(#fc{id})"><rect x="0" y="8" width="48" height="42" fill="#EF4A2F"/>${band(21.5, '#FF7F27', 1)}${band(28.5, '#FFAE2E', 2)}${band(35.5, '#FFDD55', 3)}<ellipse class="fcore" cx="24" cy="41.5" rx="6.5" ry="4" fill="#FFF3B0"/></g>`
+        + `<path d="${F}" fill="none" ${O}/><path d="M31 19.5c2.6 2.6 4 6 4.2 9.6" ${L}/></g>`;
+    })(),
     megaphone: `<path d="M12 29.5 14 38h5l-1.2-8.5" fill="#2447D5" ${O}/><rect x="6" y="19" width="11" height="11" rx="3" fill="#FFB020" ${O}/><path d="M16 19.5 33 10v29l-17-9.5z" fill="#3D7BFF" ${O}/><ellipse cx="33" cy="24.5" rx="3.4" ry="14.5" fill="#FFE14D" ${O}/><path d="M19.5 20.5 29 15" ${L}/><path d="M39.5 18c1.8 1.8 2.8 4 2.8 6.5s-1 4.7-2.8 6.5M43.5 13.5c2.9 3 4.3 6.8 4.3 11s-1.4 8-4.3 11" fill="none" stroke="#FF4D6D" stroke-width="2.4" stroke-linecap="round"/>`,
     gradcap: `<path d="M12 21v9c0 3.5 5.4 6.5 12 6.5S36 33.5 36 30v-9l-12 5z" fill="#2B3C94" ${O}/><path d="M24 8 45 17 24 26 3 17z" fill="#3551C9" ${O}/><path d="M13.5 15.6 23 11.6" ${L}/><path d="M24 17l12.5 4.5V32" fill="none" stroke="#FFB020" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M34 31h5l1.2 7.5h-7.4z" fill="#FFB020" ${O}/><circle cx="24" cy="17" r="2.2" fill="#FFB020"/>`,
     paw: `<path d="M24 22.5c6 0 11.5 6.5 11.5 11.6 0 4-3 6.4-6.4 5.8-2.1-.4-3.4-1.6-5.1-1.6s-3 1.2-5.1 1.6c-3.4.6-6.4-1.8-6.4-5.8 0-5.1 5.5-11.6 11.5-11.6z" fill="#3B3B48" ${O}/>${toe(11.5, 20.5, -22)}${toe(19, 11.5, -8)}${toe(29, 11.5, 8)}${toe(36.5, 20.5, 22)}<path d="M19 29.4c1.4-1.6 3-2.4 5-2.4" fill="none" stroke="#7A7A88" stroke-width="2" stroke-linecap="round"/>`,
@@ -133,12 +140,13 @@ const GL = (() => {
     cup: `<ellipse cx="22" cy="42.5" rx="16" ry="3.4" fill="#E3E7F2" ${O}/><path d="M33 22.5h3.2a5.2 5.2 0 0 1 0 10.4H33" fill="none" stroke="#1B1330" stroke-width="5.4" stroke-linecap="round"/><path d="M33 22.5h3.2a5.2 5.2 0 0 1 0 10.4H33" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M9.5 18h24.5v14c0 6.8-5.4 11.5-12.2 11.5S9.5 38.8 9.5 32z" fill="#FFFFFF" ${O}/><path d="M10.6 27.5h22.3" stroke="#3D7BFF" stroke-width="3.2"/><ellipse cx="21.75" cy="18" rx="12.25" ry="3.2" fill="#7E4A24" ${O}/><path d="M16 12c-2-2 2-4 0-6M22 12c-2-2 2-4 0-6M28 12c-2-2 2-4 0-6" fill="none" stroke="#9AA4B8" stroke-width="2" stroke-linecap="round"/>`
   };
 })();
-const gl = (k, cls = '') => (GL[k] ? `<svg class="gl gl-${k}${cls ? ' ' + cls : ''}" viewBox="0 0 48 48" aria-hidden="true">${GL[k]}</svg>` : '');
+let glSeq = 0;   // kırpma yolu olan çizimlerde (alev) her kopyaya ayrı kimlik
+const gl = (k, cls = '') => { const b = GL[k]; if (!b) return ''; return `<svg class="gl gl-${k}${cls ? ' ' + cls : ''}" viewBox="0 0 48 48" aria-hidden="true">${b.indexOf('{id}') < 0 ? b : b.split('{id}').join(String(++glSeq))}</svg>`; };
 const spyName = (t = 'Anonim') => `<span class="spy-name">${gl('spy')}${esc(t)}</span>`;
 // Yazar adı: anonimse yanında casus
 function whoHtml(uid, anon, fb) { const t = displayName(uid, anon, fb); return t === 'Anonim' ? spyName() : esc(t); }
 /* Profil resmi karakterleri (kayıtta eski emoji anahtarıyla durur, ekranda çizim görünür) */
-const AV_NAMES = { '🦉': 'Baykuş', '🦊': 'Tilki', '🐼': 'Panda', '🐧': 'Penguen', '🦁': 'Aslan', '🐢': 'Kaplumbağa', '🐝': 'Arı', '🦄': 'Tek boynuzlu at', '🐳': 'Balina', '🦖': 'T-Rex', '🐙': 'Ahtapot', '🦕': 'Uzun boyunlu dinozor', '🌵': 'Kaktüs', '🍀': 'Yonca', '⚡': 'Şimşek', '🎧': 'Kulaklık', '📚': 'Kitaplar', '☕': 'Kahve', '🧩': 'Yapboz', '🚀': 'Roket', '🎸': 'Gitar', '🧠': 'Beyin', '🛰️': 'Uydu', '🥐': 'Kruvasan' };
+const AV_NAMES = { '🦉': 'Baykuş', '🦊': 'Tilki', '🐼': 'Panda', '🐧': 'Penguen', '🦁': 'Aslan', '🐢': 'Kaplumbağa', '🐝': 'Arı', '🦄': 'Tek boynuzlu at', '🐳': 'Balina', '🦖': 'T-Rex', '🐙': 'Ahtapot', '🦕': 'Uzun boyunlu dinozor', '🌵': 'Kaktüs', '🍀': 'Yonca', '⚡': 'Şimşek', '🎧': 'Kulaklık', '📚': 'Kitaplar', '☕': 'Kahve', '🧩': 'Yapboz', '🚀': 'Roket', '🎸': 'Rock gitar', '🧠': 'Beyin', '🛰️': 'Uydu', '🥐': 'Kruvasan' };
 const AV_ART = (() => {
   const A = 'stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"';
   const L = 'fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".6"';
@@ -174,7 +182,7 @@ const AV_ART = (() => {
     '☕': g48('cup'),
     '🧩': `<path d="M13 20h10a5 5 0 1 1 10 0h12v10a5 5 0 1 1 0 10v12H33a5 5 0 1 0-10 0H13V40a5 5 0 1 0 0-10z" fill="#A155FF" ${A}/><path d="M17 26c0-1.8 1.2-3.2 3-3.4" ${L}/>${eyes(25, 35, 33, 2.2)}${smile(30, 38, 2.6)}`,
     '🚀': turn(38, `<path d="M26 47c0 6 6 10 6 10s6-4 6-10z" fill="#FFB020" ${A}/><path d="M28.6 47c0 3.6 3.4 6 3.4 6s3.4-2.4 3.4-6z" fill="#FFE14D"/><path d="M21 36l-7.4 8.4v6.6l7.4-4.4zM43 36l7.4 8.4v6.6L43 46.6z" fill="#FF4D6D" ${A}/><path d="M32 6c8 6.2 11.6 16 11.6 27.6V47H20.4V33.6C20.4 22 24 12.2 32 6z" fill="#FFFFFF" ${A}/><path d="M26.8 15.2c3.4-.6 7-.6 10.4 0" fill="none" stroke="#FF4D6D" stroke-width="2.6"/><circle cx="32" cy="27.5" r="5.4" fill="#5BB8FF" ${A}/><path d="M29.8 25.6a3 3 0 0 1 2.6-1.4" ${L}/><path d="M24 36v8" stroke="#C9D3EA" stroke-width="2.4" stroke-linecap="round"/>`),
-    '🎸': turn(40, U(['<circle cx="32" cy="45" r="11"/>', '<circle cx="32" cy="31.6" r="8.4"/>'], '#E8A65A') + `<rect x="29.6" y="4" width="4.8" height="30" rx="1.2" fill="#7E4A24" ${A}/><rect x="28" y="2.4" width="8" height="8" rx="2" fill="#3A2416" ${A}/><circle cx="32" cy="40" r="3.8" fill="#3A2416" ${A}/><rect x="27.6" y="48" width="8.8" height="2.8" rx="1" fill="#3A2416"/><path d="M31 9v40.4M33 9v40.4" stroke="#F6E2BE" stroke-width=".8"/><path d="M24.4 41.6c-.4-3 .6-6 2.6-8" ${L}/>`),
+    '🎸': `<path d="M14.6 6.4l-4.6 7.8h4l-2.2 7 7-9.6h-4.2l2.4-5.2z" fill="#FFE14D" ${A}/>` + turn(35, `<path d="M24 28h16l12 26c1 2.6-1.2 4.6-3.6 3.4L32 47.6 15.6 57.4c-2.4 1.2-4.6-.8-3.6-3.4z" fill="#E63946" ${A}/><path d="M26.6 30.6h10.8l3.2 8L32 43.6l-8.6-5z" fill="#FFFFFF" ${A}/><rect x="27.6" y="33" width="8.8" height="2.6" rx="1" fill="#26262E"/><rect x="27.6" y="37.6" width="8.8" height="2.6" rx="1" fill="#26262E"/><rect x="29.6" y="8.6" width="4.8" height="22" rx="1" fill="#7E4A24" ${A}/><path d="M30.4 13h3.2M30.4 17.4h3.2M30.4 21.8h3.2M30.4 26.2h3.2" stroke="#E9CFA0" stroke-width="1"/><path d="M28 9.4 32 1.6l4 7.8-1.4 1.8h-5.2z" fill="#26262E" ${A}/><circle cx="28.4" cy="6.4" r="1.1" fill="#C9D3EA"/><circle cx="35.6" cy="6.4" r="1.1" fill="#C9D3EA"/><path d="M31 10v32M33 10v32" stroke="#F6E2BE" stroke-width=".7"/><circle cx="43.6" cy="50" r="1.7" fill="#FFE14D" ${A}/><circle cx="47.2" cy="54" r="1.4" fill="#FFE14D" ${A}/><path d="M16.4 52.4 23.6 47" ${L}/>`),
     '🧠': U(['<circle cx="22" cy="27" r="9.4"/>', '<circle cx="32" cy="21" r="10.2"/>', '<circle cx="42" cy="27" r="9.4"/>', '<circle cx="23.6" cy="38.6" r="9"/>', '<circle cx="40.4" cy="38.6" r="9"/>', '<circle cx="32" cy="42.4" r="8.4"/>'], '#FFB4C8') + `<path d="M32 13v37.4" stroke="#D94F8A" stroke-width="2.2" stroke-linecap="round"/><path d="M23.4 23.6c3 .2 4.4 3 2.4 5.4M40.6 23.6c-3 .2-4.4 3-2.4 5.4M21.6 37c3-1 6 .8 5.4 4.2M42.4 37c-3-1-6 .8-5.4 4.2M27 16.6c1.4 1.6 1.6 3.6.6 5.4M37 16.6c-1.4 1.6-1.6 3.6-.6 5.4" fill="none" stroke="#D94F8A" stroke-width="2" stroke-linecap="round"/><path d="M17.4 23c1.4-2.6 3.6-4.2 6.2-4.6" ${L}/>`,
     '🛰️': turn(-28, `<path d="M22 32h-3.4M42 32h3.4" stroke="#1B1330" stroke-width="2.6"/><rect x="4.6" y="25.6" width="14.4" height="12.8" rx="1.4" fill="#3D7BFF" ${A}/><rect x="45" y="25.6" width="14.4" height="12.8" rx="1.4" fill="#3D7BFF" ${A}/><path d="M9.4 25.6v12.8M14.2 25.6v12.8M4.6 32h14.4M49.8 25.6v12.8M54.6 25.6v12.8M45 32h14.4" stroke="#9DB0FF" stroke-width="1.4"/><rect x="22" y="23" width="20" height="18" rx="3" fill="#FFC53D" ${A}/><path d="M25 28h14M25 33h14M25 38h9" stroke="#E0A008" stroke-width="1.6" stroke-linecap="round"/><path d="M27 23a5 5 0 0 1 10 0z" fill="#FFFFFF" ${A}/><path d="M32 18v-5.4" stroke="#1B1330" stroke-width="2.2" stroke-linecap="round"/><circle cx="32" cy="11.4" r="2.4" fill="#FF4D6D" ${A}/>`) + '<circle cx="10" cy="12" r="1.4" fill="#FFE14D"/><circle cx="54" cy="52" r="1.6" fill="#FFE14D"/><circle cx="52" cy="10" r="1" fill="#FFE14D"/>',
     '🥐': `<g transform="translate(32 36) scale(1.2) translate(-32 -36)"><ellipse cx="13" cy="42" rx="4.6" ry="7" transform="rotate(-62 13 42)" fill="#D98C3F" ${A}/><ellipse cx="51" cy="42" rx="4.6" ry="7" transform="rotate(62 51 42)" fill="#D98C3F" ${A}/><ellipse cx="20.6" cy="36" rx="7" ry="9.4" transform="rotate(-40 20.6 36)" fill="#E8A65A" ${A}/><ellipse cx="43.4" cy="36" rx="7" ry="9.4" transform="rotate(40 43.4 36)" fill="#E8A65A" ${A}/><ellipse cx="32" cy="32" rx="9.4" ry="11.6" fill="#F2B86E" ${A}/><path d="M27 26c1.4-3 3.4-4.4 6-4.6M17.6 31.4c1-2 2.6-3.2 4.4-3.6M42 28c2 .4 3.6 1.6 4.6 3.6" ${L}/></g>`,
@@ -3736,11 +3744,11 @@ ROUTES[''] = function viewHome(root) {
     <div class="ay-stage" data-r="ayhan"><span class="ay-home" aria-hidden="true">${KULUBE_SVG}</span><button type="button" class="ay ay-roam idle" aria-label="Ayhan Abi, kampüsün köpeği. Sevmek için dokun.">${AYHAN_SVG}<span class="ay-name" aria-hidden="true">Ayhan Abi</span><span class="ay-say" aria-live="polite"></span></button></div></div>
   </section>
   <div class="wrap home-main" data-r="main">
-    <div class="home-left">
-      <section class="home-sec">
-        <div class="sec-head"><h2>Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn" data-ns="hot" aria-pressed="true">${gl('flame')}Revaçta</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
+      <section class="home-sec hm-notes">
+        <div class="sec-head"><h2>Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn ns-hot" data-ns="hot" aria-pressed="true" aria-label="Revaçta" title="Revaçta">${gl('flame')}</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
         <div data-r="notes"></div>
       </section>
+    <div class="home-left hm-rest">
       <section class="home-sec">
         <div class="sec-head"><h2>Son yorumlar</h2><a class="sec-link" href="#/hocaolcer">HocaÖlçer</a></div>
         <div data-r="cms"></div>
@@ -3750,8 +3758,7 @@ ROUTES[''] = function viewHome(root) {
         <div data-r="hot"></div>
       </section>
     </div>
-    <div class="home-right">
-    <aside class="lead" data-r="lead" aria-label="Kubbe sıralaması">
+    <aside class="lead hm-lead" data-r="lead" aria-label="Kubbe sıralaması">
       <div class="lead-top"><h2>Kubbe sıralaması</h2><a class="sec-link" href="#/kubbe">Kubbe ve market</a></div>
       <div class="lead-ctl">
         <div class="seg" role="group" aria-label="Sıralama türü"><button type="button" class="seg-btn" data-lk="term" aria-pressed="true">Dönemin yıldızı</button><button type="button" class="seg-btn" data-lk="all" aria-pressed="false">Tüm zamanlar</button></div>
@@ -3761,12 +3768,11 @@ ROUTES[''] = function viewHome(root) {
       <div data-r="board"></div>
       <button type="button" class="btn btn-sm lead-more" data-r="more" hidden>${icon('chart')}Tümünü gör</button>
     </aside>
-    <section class="req-card" data-r="reqsec" aria-labelledby="rq-h">
-      <div class="req-card-top"><span class="req-card-ico" aria-hidden="true">${gl('megaphone')}</span><div><h2 id="rq-h">Not istekleri</h2><p>Arkadaşların bu notları bekliyor. Paylaşıp karşılarsan +${KUBBE.fill} kubbe.</p></div></div>
+    <section class="req-card hm-reqs" data-r="reqsec" aria-labelledby="rq-h">
+      <div class="req-card-top"><span class="req-card-ico" aria-hidden="true">${gl('megaphone')}</span><h2 id="rq-h">Not istekleri</h2></div>
       <div data-r="reqs"></div>
       <a class="btn btn-sm req-card-all" href="#/istekler">Tüm istekler</a>
     </section>
-    </div>
   </div>`;
   const input = $('#home-q', root), form = $('[data-r=form]', root);
   combobox(input, { source: globalResults, onPick: goItem });
