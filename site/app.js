@@ -303,7 +303,7 @@ async function pbkdf2(pw, salt, it) {
 }
 function applyWidths(root) {
   $$('[data-w]', root).forEach(el => { el.style.width = clamp(+el.dataset.w || 0, 0, 100) + '%'; });
-  $$('[data-bg]', root).forEach(el => { if (/^#[0-9a-f]{3,8}$/i.test(el.dataset.bg)) el.style.background = el.dataset.bg; });
+  $$('[data-bg]', root).forEach(el => { if (/^#[0-9a-f]{3,8}$/i.test(el.dataset.bg)) { el.style.background = el.dataset.bg; el.style.setProperty('--avbg', el.dataset.bg); } });
 }
 
 /* ================= Durum ================= */
@@ -3046,7 +3046,6 @@ function tabsHtml(tabs, cur) {
 }
 
 /* ================= Sıralama ve market parçaları ================= */
-const CROWN = '<svg class="crown" viewBox="0 0 40 26" aria-hidden="true"><path d="M3 23 6 6l8 8 6-11 6 11 8-8 3 17z" fill="#FFD23F" stroke="#111C4E" stroke-width="2.5" stroke-linejoin="round"/><circle cx="20" cy="3.5" r="2.6" fill="#FFD23F" stroke="#111C4E" stroke-width="2"/></svg>';
 const reduceMotion = () => { try { return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } };
 function countUp(root) {
   if (reduceMotion() || typeof requestAnimationFrame !== 'function') return;
@@ -3062,16 +3061,247 @@ function countUp(root) {
 function boardList(kind, bolum) {
   return ranking(kind).filter(x => !bolum || x.u.bolum === bolum).map((x, i) => Object.assign({}, x, { rank: i + 1 }));
 }
-function podItem(x) {
-  return `<button type="button" class="pod p${x.rank}${x.uid === S.me ? ' is-me' : ''}" data-g="user" data-id="${esc(x.uid)}">
-    ${x.rank === 1 ? CROWN : ''}${avatarHtml(x.uid, { cls: 'pod-av' })}
-    <span class="pod-name">${nameHtml(x.u, x.u.username || 'öğrenci')}</span>
-    <span class="pod-val"><b data-count="${x.val}">${x.val}</b> kubbe</span>
-    <span class="pod-step"><span>${x.rank}</span></span></button>`;
+/* ================= Kayışdağı zirvesi: sıralamanın ilk üçü =================
+   Podyumun yerine Yokuş Canavarı'ndaki Kayışdağı. 1. zirvede bayrağını tutar, 2. sol sırttan zirveye uzanır, 3. sağ sırttan tırmanır.
+   Karakterler sitenin çizim dilinde (koyu kontur, düz renk, ışık çizgisi), gölgeli ve hacimli (2.5B). Gömlek profil rengi.
+   Üstündekiler marketten aldıklarıyla eşlenir (mtGear): Kartal Kanatları sırtında kanat, Gece Eskortu yanında Ayhan Abi,
+   Altın Ring Bileti beresinde / kaskında bilet, Güneş Paneli Aurası arkasında güneş, Selçuklu Kapısı boynunda desenli atkı,
+   Yokuş Canavarı sırt çantası; Son Sosisli, İkinci Ev Kupası ya da Karşıdaki Dürüm (biri, fiyat sırasıyla) elinde.
+   Altın, gümüş, bronz madalya hem karakterin boynunda hem altındaki künyede (mtTag). */
+const MT_K = '#1B1330';
+const MT_J = 'fill="none" stroke-linecap="round" stroke-linejoin="round"';
+const MT_MED = { 1: ['#FFF7CC', '#FFD23F', '#C98A00', '#6B4200'], 2: ['#FFFFFF', '#D3D9E6', '#8892A8', '#39425C'], 3: ['#FFE0C0', '#E3965A', '#9A5424', '#552B0C'] };
+const MT_HAND = ['son-sosisli', 'ikinci-ev', 'karsi-durum'];
+const MT_SKIN = '#F4C29A', MT_SKIN_HI = '#FFE3CB', MT_PANTS = '#3550A8', MT_PANTS2 = '#2A4190', MT_PANTS_HI = '#6E8AE0';
+const mtN = v => String(Math.round(v * 10) / 10);
+const mtPl = pts => 'M' + pts.map(q => mtN(q[0]) + ' ' + mtN(q[1])).join('L');
+function mtMix(a, b, t) {
+  const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
+  const c = s => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t);
+  return '#' + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
 }
-function podiumHtml(top) {
+function mtGear(u) {
+  const o = id => ownsItem(u, id);
+  return { wings: o('kartal-kanatlari'), dog: o('gece-eskortu'), ticket: o('altin-ring'), aura: o('gunes-aurasi'), scarf: o('selcuklu-kapi'), pack: o('yokus-canavari'), hand: MT_HAND.find(o) || '' };
+}
+function mtCapsule(a, b, r) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * r, ny = dx / l * r;
+  return `M${mtN(a[0] + nx)} ${mtN(a[1] + ny)}L${mtN(b[0] + nx)} ${mtN(b[1] + ny)}A${r} ${r} 0 0 0 ${mtN(b[0] - nx)} ${mtN(b[1] - ny)}L${mtN(a[0] - nx)} ${mtN(a[1] - ny)}A${r} ${r} 0 0 0 ${mtN(a[0] + nx)} ${mtN(a[1] + ny)}Z`;
+}
+// kol: kısa kollu tişört (kol üst kolun yarısına kadar), sonra ten ve yumruk
+function mtArm(s, e, h, shirt) {
+  const fa = [e[0] + (h[0] - e[0]) * .3, e[1] + (h[1] - e[1]) * .3], sl = [s[0] + (e[0] - s[0]) * .58, s[1] + (e[1] - s[1]) * .58];
+  return `<path d="${mtPl([s, e, h])}" stroke="${MT_K}" stroke-width="9.8" ${MT_J}/>`
+    + `<path d="${mtPl([s, e, h])}" stroke="${MT_SKIN}" stroke-width="6.4" ${MT_J}/>`
+    + `<path d="${mtPl([[fa[0] - 1.2, fa[1] - 1], [h[0] - 1.2, h[1] - 1]])}" stroke="${MT_SKIN_HI}" stroke-width="1.6" opacity=".8" ${MT_J}/>`
+    + `<path d="${mtPl([s, sl])}" stroke="${MT_K}" stroke-width="10.4" ${MT_J}/><path d="${mtPl([s, sl])}" stroke="${shirt}" stroke-width="7.6" ${MT_J}/>`
+    + `<path d="${mtPl([[s[0] - 1.2, s[1] - 1.2], [sl[0] - 1.2, sl[1] - 1.2]])}" stroke="#fff" stroke-width="1.5" opacity=".4" ${MT_J}/>`
+    + `<circle cx="${mtN(h[0])}" cy="${mtN(h[1])}" r="4.5" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.7"/>`
+    + `<path d="M${mtN(h[0] - 2.7)} ${mtN(h[1] - .8)}a2.9 2.9 0 0 1 2.4-2.3" stroke="#fff" stroke-width="1.1" opacity=".75" ${MT_J}/>`;
+}
+const mtShoe = (x, y, rot) => `<g transform="translate(${mtN(x)} ${mtN(y)}) rotate(${rot})"><ellipse rx="6.8" ry="3.9" fill="#2E2A44" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.2 1.6Q0 4.4 6.2 1.6" stroke="#E9ECF5" stroke-width="1.6" ${MT_J}/><path d="M-3.6 -2Q-.4 -3.4 2.8 -2.8" stroke="#77739C" stroke-width="1.2" ${MT_J}/></g>`;
+const MT_WING = '<path d="M0 0C-14 -16 -32 -30 -56 -34C-52 -28 -51 -24 -52 -19C-46 -20 -42 -18 -40 -15C-44 -10 -45 -6 -46 -1C-40 -3 -35 -1 -33 2C-36 7 -36 11 -37 15C-31 12 -26 13 -23 16C-24 20 -24 24 -25 28C-18 24 -10 18 2 12Z" fill="url(#@wg)" stroke="#7A4A00" stroke-width="3.2" stroke-linejoin="round"/>'
+  + '<path d="M-40 -15C-30 -10 -18 -4 -6 2M-33 2C-26 5 -18 8 -6 9M-23 16C-18 14 -12 12 -4 11" stroke="#B86E06" stroke-width="2" stroke-linecap="round" fill="none" opacity=".75"/>'
+  + '<path d="M-48 -30C-36 -28 -24 -22 -14 -14" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none" opacity=".6"/>';
+const mtWing = (p, x, y, rot, sx, sy) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${sx} ${sy})"><g class="mt-wl">${MT_WING.split('@').join(p)}</g></g>`;
+function mtAura(p, x, y, r) {
+  let rays = '';
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, c = Math.cos(a), s = Math.sin(a); rays += `<path d="M${mtN(c * r)} ${mtN(s * r)}L${mtN(c * r * 1.38)} ${mtN(s * r * 1.38)}"/>`; }
+  return `<g transform="translate(${mtN(x)} ${mtN(y)})"><circle r="${mtN(r * 1.9)}" fill="url(#${p}au)"/><g class="mt-spin" stroke="#FFB020" stroke-width="3.2" stroke-linecap="round" opacity=".9">${rays}</g></g>`;
+}
+const MT_DOG = AYHAN_SVG.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+const mtDog = (tf, mode) => `<g transform="${tf}"><g class="ay ${mode} mt-dog">${MT_DOG}</g></g>`;
+const mtDogSit = tf => `<g transform="${tf}"><g class="mt-dogsit">${AYHAN_FACE}</g></g>`;
+const mtTicket = (x, y, rot) => `<g transform="translate(${x} ${y}) rotate(${rot})"><rect x="-3.6" y="-11.6" width="7.2" height="11.6" rx="1.3" fill="#FFCB45" stroke="#6B4200" stroke-width="1.3"/><path d="M-3.6 -8.2H3.6" stroke="#6B4200" stroke-width=".9" stroke-dasharray="1.3 1"/><path d="M-1.8 -10.4V-1.6" stroke="#fff" stroke-width="1.2" opacity=".6"/></g>`;
+const mtMe = (x, y) => `<g transform="translate(${mtN(x)} ${mtN(y)})"><g class="mt-me"><path d="M-6.6 -6L0 1.8L6.6 -6Q0 -3.6 -6.6 -6Z" fill="#FFE14D" stroke="${MT_K}" stroke-width="1.8" stroke-linejoin="round"/></g></g>`;
+const MT_ITEM = {
+  'son-sosisli': `<g transform="rotate(-28)"><path d="M-9.4 -.6C-9.4 -4.4 -6.8 -5.8 -4 -5.8H4.6C7.4 -5.8 9.8 -4.4 9.8 -.6Z" fill="#F0B467" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><rect x="-11.4" y="-3.4" width="23" height="5.4" rx="2.7" fill="#D9442E" stroke="${MT_K}" stroke-width="1.3"/><path d="M-8.4 -.6l2.1 1.4 2.1-1.4 2.1 1.4 2.1-1.4 2.1 1.4 2.1-1.4 2.1 1.4" stroke="#FFD23F" stroke-width="1.3" ${MT_J}/><path d="M-9.8 1C-9.6 4.6 -7 6 -4.2 6H4.6C7.4 6 10 4.6 10.2 1Z" fill="#E39F52" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/></g>`,
+  'ikinci-ev': `<path class="mt-steam" d="M-2 -9c-1.8-2.2 1.8-3.6 0-6M2.4 -9c-1.8-2.2 1.8-3.6 0-6" stroke="#DDE3F5" stroke-width="1.3" ${MT_J}/><path d="M5 -3.6H6.8A2.6 2.6 0 0 1 6.8 1.6H5" stroke="${MT_K}" stroke-width="3" ${MT_J}/><path d="M5 -3.6H6.8A2.6 2.6 0 0 1 6.8 1.6H5" stroke="#3D5BD9" stroke-width="1.3" ${MT_J}/><path d="M-5 -6.4H5V3.4A3.4 3.4 0 0 1 1.6 6.8H-1.6A3.4 3.4 0 0 1 -5 3.4Z" fill="#3D5BD9" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><ellipse cx="0" cy="-6.4" rx="5" ry="1.4" fill="#6B3E1F" stroke="${MT_K}" stroke-width="1"/><path d="M-3 -3.6V3" stroke="#fff" stroke-width="1.2" opacity=".45" ${MT_J}/>`,
+  'karsi-durum': `<g transform="rotate(16)"><path d="M-5.6 -9.4C-2.2 -11.6 3 -11.6 6.2 -9.4L3.2 8.8C1.6 9.8 -1.2 9.8 -2.8 8.8Z" fill="#F0C98A" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><path d="M-5.2 -9.4C-2.6 -6.8 3.4 -6.8 5.8 -9.4C3.2 -12 -2.6 -12 -5.2 -9.4Z" fill="#5FBF6A" stroke="#2F7A3A" stroke-width="1"/><circle cx="-1.4" cy="-9.6" r="1.5" fill="#FF5A4E"/><circle cx="2.4" cy="-9.2" r="1.3" fill="#FF5A4E"/><path d="M-4.2 -.8H4.8L3.2 8.8C1.6 9.8 -1.2 9.8 -2.8 8.8Z" fill="#fff" stroke="#8B97BD" stroke-width="1" stroke-linejoin="round"/><path d="M-3.6 2.6H4.2M-3.2 5.6H3.8" stroke="#FF4D5E" stroke-width="1.3"/></g>`
+};
+// madalya: kurdele boyundan iner, disk göğüste sallanır (aynalanmış karakterde sayı geri çevrilir)
+function mtMedal(p, r, a, b, ctr, R, flip) {
+  const m = MT_MED[r], [cx, cy] = ctr, ty = cy - R * .82;
+  const strap = (s, e) => `<path d="${mtPl([s, e])}" stroke="${MT_K}" stroke-width="4.6"/><path d="${mtPl([s, e])}" stroke="#E5383B" stroke-width="3"/><path d="${mtPl([s, e])}" stroke="#fff" stroke-width=".9" opacity=".9"/>`;
+  return `<g class="mt-swing">${strap(a, [cx - R * .32, ty])}${strap(b, [cx + R * .32, ty])}`
+    + `<circle cx="${mtN(cx)}" cy="${mtN(cy)}" r="${mtN(R)}" fill="url(#${p}m${r})" stroke="${m[3]}" stroke-width="${mtN(R * .2)}"/>`
+    + `<circle cx="${mtN(cx)}" cy="${mtN(cy)}" r="${mtN(R * .68)}" fill="none" stroke="${m[2]}" stroke-width="${mtN(R * .1)}" opacity=".85"/>`
+    + `<text x="${mtN(cx)}" y="${mtN(cy + R * .4)}" text-anchor="middle" font-size="${mtN(R * 1.15)}" fill="${m[3]}"${flip ? ` transform="matrix(-1 0 0 1 ${mtN(2 * cx)} 0)"` : ''}>${r}</text>`
+    + `<path d="M${mtN(cx - R * .62)} ${mtN(cy - R * .16)}A${mtN(R * .64)} ${mtN(R * .64)} 0 0 1 ${mtN(cx - R * .12)} ${mtN(cy - R * .62)}" stroke="#fff" stroke-width="${mtN(R * .17)}" opacity=".8" ${MT_J}/></g>`;
+}
+// 1.: zirvede, önden; güneş gözlüklü, bereli, sol eliyle bayrak direğini tutar, sağ eli belinde (ya da elindeki yiyecek / kupa)
+function mtTop(p, o) {
+  const g = o.g, dk = mtMix(o.c, '#000000', .38);
+  const L = [[-6, -21], [-8.8, -11.5], [-11, -4.6]], R = [[6, -21], [8.8, -11.5], [11, -4.6]];
+  const T = 'M-13 -40C-14 -33 -12.5 -26 -11.5 -21L11.5 -21C12.5 -26 14 -33 13 -40C8.5 -45.5 -8.5 -45.5 -13 -40Z';
+  const SC = 'M-12.6 -45.6Q0 -38.8 12.6 -45.6L13 -40.8Q0 -34 -13 -40.8Z', TL = 'M-9.4 -42.6C-17 -44 -24 -40 -32 -42.6L-33.4 -38.2L-31 -37.2L-32.6 -34.2C-24.4 -33 -17 -36.4 -9.8 -37.6Z';
+  const qy = (x, y0, yc) => { const t = (x / 19.4 + 1) / 2, k = 2 * t * (1 - t); return y0 * (1 - k) + yc * k; };
+  const ticks = [-15, -10, -5, 0, 5, 10, 15].map(x => `M${x} ${mtN(qy(x, -72.6, -77.4) + 1.4)}V${mtN(qy(x, -65.2, -70) - 1.4)}`).join('');
+  let s = '<ellipse cx="0" cy=".6" rx="24" ry="3.6" fill="#0B1030" opacity=".25"/>';
+  if (g.aura) s += mtAura(p, 0, -60, 25);
+  if (g.wings) s += mtWing(p, -5, -40, 0, .62, .62) + mtWing(p, 5, -40, 0, -.62, .62);
+  if (g.scarf) s += `<path d="${TL}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.6" stroke-linejoin="round"/><path d="${TL}" fill="url(#${p}pt)"/>`;
+  // gövde: önce tek parça koyu kontur, sonra dolgular (parçaların arasında çizgi kalmaz)
+  s += `<path d="${mtPl(L)}" stroke="${MT_K}" stroke-width="12.6" ${MT_J}/><path d="${mtPl(R)}" stroke="${MT_K}" stroke-width="12.6" ${MT_J}/>`
+    + `<path d="${T}" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>`
+    + `<circle cx="-16.6" cy="-59.6" r="4.2" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/><circle cx="16.6" cy="-59.6" r="4.2" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
+    + `<circle cx="0" cy="-62" r="17" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
+    + `<path d="${mtPl(L)}" stroke="${MT_PANTS2}" stroke-width="9" ${MT_J}/><path d="${mtPl(R)}" stroke="${MT_PANTS}" stroke-width="9" ${MT_J}/>`
+    + `<path d="${mtPl(L.map(q => [q[0] - 1.8, q[1] - .6]))}" stroke="${MT_PANTS_HI}" stroke-width="2.2" opacity=".6" ${MT_J}/><path d="${mtPl(R.map(q => [q[0] - 1.8, q[1] - .6]))}" stroke="${MT_PANTS_HI}" stroke-width="2.2" opacity=".7" ${MT_J}/>`
+    + mtShoe(-12.6, -3, -6) + mtShoe(12.6, -3, 6)
+    + `<path d="${T}" fill="url(#${p}s${o.r})"/>`
+    + `<path d="M-11.6 -25.8H11.6L12.4 -18.6H-12.4Z" fill="${MT_PANTS}"/><path d="M-11.6 -25H11.6" stroke="#22357A" stroke-width="1.5"/>`
+    + `<path d="M-6.2 -44.2Q0 -39.6 6.2 -44.2" stroke="${dk}" stroke-width="1.6" ${MT_J}/><path d="M-11.2 -38.2C-12 -33 -11.2 -28.4 -10.4 -26.4" stroke="#fff" stroke-width="1.6" opacity=".45" ${MT_J}/>`
+    + `<ellipse cx="0" cy="-44.4" rx="9.6" ry="3" fill="#000" opacity=".16"/>`
+    + `<circle cx="-16.6" cy="-59.6" r="4.2" fill="${MT_SKIN}"/><circle cx="16.6" cy="-59.6" r="4.2" fill="${MT_SKIN}"/><path d="M-17.6 -61.4Q-15.6 -59.6 -17.2 -57.6M17.6 -61.4Q15.6 -59.6 17.2 -57.6" stroke="#CF8A5C" stroke-width="1.2" ${MT_J}/>`
+    + `<circle cx="0" cy="-62" r="17" fill="url(#${p}sk)"/>`;
+  if (g.pack) s += `<path d="M-8.8 -43.6Q-9.8 -33 -8.6 -24.8M8.8 -43.6Q9.8 -33 8.6 -24.8" stroke="${MT_K}" stroke-width="4.6" ${MT_J}/><path d="M-8.8 -43.6Q-9.8 -33 -8.6 -24.8M8.8 -43.6Q9.8 -33 8.6 -24.8" stroke="#2FA36B" stroke-width="2.8" ${MT_J}/><path d="M-8.6 -34H8.6" stroke="${MT_K}" stroke-width="3.2"/><path d="M-8.6 -34H8.6" stroke="#5CD49A" stroke-width="1.6"/>`;
+  if (g.scarf) s += `<path d="${SC}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.6" stroke-linejoin="round"/><path d="${SC}" fill="url(#${p}pt)"/>`;
+  s += mtMedal(p, o.r, [-6.6, -43.8], [6.6, -43.8], [0, -29.4], 7.8, false)
+    // yüz: yanak, burun, sırıtış, güneş gözlüğü ve gözlükte bir pırıltı
+    + `<ellipse cx="-11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/><ellipse cx="11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/>`
+    + `<path d="M-1 -55.4Q.4 -54 1.8 -55.2" stroke="#C97E54" stroke-width="1.2" ${MT_J}/>`
+    + `<path d="M-6.6 -51.4Q-.2 -48.8 6.8 -52Q5.8 -45.2 .2 -45.2Q-5.4 -45.4 -6.6 -51.4Z" fill="#fff" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/>`
+    + `<path d="M-15.6 -62L-17.8 -60.6M15.6 -62L17.8 -60.6M-3.2 -63.4Q0 -64.8 3.2 -63.4" stroke="#15131F" stroke-width="1.7" ${MT_J}/>`
+    + `<path d="M-15.6 -64.8H-3.4Q-2.6 -64.8 -2.8 -63.8L-3.6 -59.6Q-4.2 -57 -7 -57H-11.6Q-14.4 -57 -15 -59.6L-16 -63.6Q-16.2 -64.8 -15.6 -64.8ZM15.6 -64.8H3.4Q2.6 -64.8 2.8 -63.8L3.6 -59.6Q4.2 -57 7 -57H11.6Q14.4 -57 15 -59.6L16 -63.6Q16.2 -64.8 15.6 -64.8Z" fill="url(#${p}gl)" stroke="#15131F" stroke-width="1.6" stroke-linejoin="round"/>`
+    + `<path d="M-12.6 -63.4L-10.2 -58.6M-9.4 -63.6L-8.4 -61.8M5.8 -63.4L8.2 -58.6M9 -63.6L10 -61.8" stroke="#fff" stroke-width="1.2" opacity=".75" ${MT_J}/>`
+    + `<path class="mt-glint" d="M17.4 -68.4l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z" fill="#fff"/>`
+    // ponponlu bere (bilet varsa kıvrımın arkasına sıkışmış)
+    + `<path d="M-17.8 -65.6C-18.8 -79.6 -10 -87 0 -87C10 -87 18.8 -79.6 17.8 -65.6Z" fill="url(#${p}be)" stroke="${MT_K}" stroke-width="2.2" stroke-linejoin="round"/>`
+    + `<path d="M-10 -84.4C-12 -78 -12.6 -72 -12.4 -68M-4.8 -86.4C-5.8 -80 -6 -74 -6 -69M4.8 -86.4C5.8 -80 6 -74 6 -69M10 -84.4C12 -78 12.6 -72 12.4 -68" stroke="#A11D27" stroke-width="1" opacity=".55" ${MT_J}/>`
+    + `<path d="M-12.6 -76.4C-11.2 -81.2 -7.4 -84.4 -2.6 -85.2" stroke="#fff" stroke-width="1.8" opacity=".5" ${MT_J}/>`
+    + (g.ticket ? mtTicket(14, -69.6, 24) : '')
+    + `<path d="M-19.4 -72.6Q0 -77.4 19.4 -72.6L19.6 -65.2Q0 -70 -19.6 -65.2Z" fill="#C62532" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/>`
+    + `<path d="${ticks}" stroke="#8E1520" stroke-width="1" opacity=".55"/><path d="M-15 -72.4Q0 -76 15 -72.4" stroke="#fff" stroke-width="1.2" opacity=".35" ${MT_J}/>`
+    + `<circle cx="0" cy="-88.6" r="5.6" fill="#F4F6FB" stroke="${MT_K}" stroke-width="2"/><path d="M-3.4 -88.4A3.6 3.6 0 0 0 2.4 -85.6" stroke="#C9D0E2" stroke-width="1.8" ${MT_J}/><circle cx="-1.8" cy="-90.6" r="1.3" fill="#fff"/>`
+    // bayrak (kubbe amblemli) ve direk
+    + `<g class="mt-flag"><path d="M-22.4 -110C-30 -113.4 -38.4 -106.6 -46.4 -109.6S-58.4 -113 -63.4 -110V-86.4C-58.4 -89.4 -53.2 -83.2 -46.2 -86.2S-30 -89.2 -22.4 -86.2Z" fill="url(#${p}fl)" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/>`
+    + `<path d="M-31 -108.6C-34 -101 -34 -94 -31.2 -87.6" stroke="#000" stroke-width="3" opacity=".12" ${MT_J}/><path d="M-25.6 -107.8C-30 -110 -34.4 -108.6 -38.6 -107.4" stroke="#fff" stroke-width="1.5" opacity=".5" ${MT_J}/>`
+    + `<path d="M-51.6 -94.2A8.2 7.6 0 0 1 -35.2 -94.2Z" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/><rect x="-53.4" y="-94.6" width="20" height="3" rx="1" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.3"/><path d="M-43.4 -101.6V-104.8" stroke="${MT_K}" stroke-width="1.4"/><circle cx="-43.4" cy="-105.8" r="1.5" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.1"/><path d="M-48.4 -96.6A5 4.6 0 0 1 -44 -100.4" stroke="#fff" stroke-width="1.1" opacity=".7" ${MT_J}/></g>`
+    + `<path d="M-22.4 5V-111" stroke="${MT_K}" stroke-width="5.6" stroke-linecap="round"/><path d="M-22.4 5V-111" stroke="#B9773A" stroke-width="3" stroke-linecap="round"/><path d="M-23.2 2V-109" stroke="#E7B07A" stroke-width="1" opacity=".8"/>`
+    + `<circle cx="-22.4" cy="-112.6" r="2.8" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.6"/>`
+    + mtArm([-11.4, -38.6], [-19.6, -47.4], [-22.4, -61], o.c);
+  s += g.hand ? `<g transform="translate(26 -45)">${MT_ITEM[g.hand]}</g>` + mtArm([11.4, -38.6], [20.6, -31.4], [24.6, -41.6], o.c) : mtArm([11.4, -38.6], [20.4, -30.8], [12.8, -23.6], o.c);
+  if (g.dog) s += mtDogSit('translate(17.4 -33.6) scale(.27)');
+  if (o.me) s += mtMe(0, -101);
+  return s;
+}
+// 2. ve 3.: yandan, sırta tutunarak tırmanır (sağa bakar; 3. aynalanır). reach: uzak kol zirveye uzanır, yoksa iki eli de yamaçta, ter döker
+function mtClimb(p, o) {
+  const g = o.g, reach = !!(o.reach || g.hand);
+  const H = reach ? [21.4, -53] : [20.6, -51.4], tilt = reach ? -14 : -3;
+  const BL = [[3, -21], [1.4, -11], [.4, -3.2]], FL = [[3, -21], [15.4, -27.2], [20.6, -19.4]];
+  const TA = [6.2, -27.4], TB = [12.6, -38.2], T = mtCapsule(TA, TB, 9.4), PA = mtCapsule([2.8, -20.6], [6.4, -27.2], 7.4);
+  const near = [[13.6, -36], [24.6, -38], [32.6, -27.6]];
+  const far = reach ? [[11.2, -37.8], [27, -43.4], [40, -57.8]] : [[11.2, -37.8], [25, -37.6], [36.8, -31]];
+  const SC = 'M7.6 -43.4Q13.6 -38.8 19.4 -39.8L19.8 -35.4Q13.2 -33.8 7.2 -38.8Z', TL = 'M8.6 -41.8C2 -44 -4.6 -40.2 -11.6 -42.8L-13.2 -38.6L-10.8 -37.8L-12.4 -34.8C-4.4 -33.8 2 -36.8 8.2 -37.4Z';
+  const drop = (x, y, d) => `<path class="mt-sweat${d ? ' d1' : ''}" d="M${mtN(x)} ${mtN(y - 3.4)}C${mtN(x + 1.8)} ${mtN(y - 1)} ${mtN(x + 2.4)} ${mtN(y + .4)} ${mtN(x + 2.4)} ${mtN(y + 1.4)}A2.4 2.4 0 0 1 ${mtN(x - 2.4)} ${mtN(y + 1.4)}C${mtN(x - 2.4)} ${mtN(y + .4)} ${mtN(x - 1.8)} ${mtN(y - 1)} ${mtN(x)} ${mtN(y - 3.4)}Z" fill="#8FD3FF" stroke="${MT_K}" stroke-width="1"/>`;
+  let s = '';
+  if (g.dog) s += mtDog('translate(-24 20) rotate(-34) scale(.27) translate(-60 -57)', 'walk');
+  if (g.aura) s += mtAura(p, H[0], H[1], 21);
+  if (g.wings) s += mtWing(p, 8.4, -39, 14, .5, .5) + mtWing(p, 5.4, -37, -10, .56, .56);
+  s += `<g${reach ? ' class="mt-reach"' : ''}>${reach && g.hand ? `<g transform="translate(${mtN(far[2][0] + 2)} ${mtN(far[2][1] - 4)})">${MT_ITEM[g.hand]}</g>` : ''}${mtArm(far[0], far[1], far[2], mtMix(o.c, '#000000', .14))}</g>`;
+  if (g.pack) s += `<g transform="translate(-1.4 -35.2) rotate(30)"><rect x="-7" y="-9.6" width="13.4" height="18.6" rx="4" fill="url(#${p}pk)" stroke="${MT_K}" stroke-width="2"/><path d="M-7 -4.4Q-.3 -.8 6.4 -4.4V-6.2Q6.4 -9.6 3 -9.6H-3.6Q-7 -9.6 -7 -6.2Z" fill="#1A7A50" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="M-3.2 5L-.3 .8L2.6 5Z" fill="#fff" opacity=".85"/><path d="M-5 -2V6" stroke="#fff" stroke-width="1.2" opacity=".4" stroke-linecap="round"/></g>`;
+  s += `<path d="${mtPl(BL)}" stroke="${MT_K}" stroke-width="12.4" ${MT_J}/><path d="${mtPl(FL)}" stroke="${MT_K}" stroke-width="12.4" ${MT_J}/>`
+    + `<path d="${T}" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>`
+    + `<circle cx="${H[0]}" cy="${H[1]}" r="15.4" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
+    + `<path d="${mtPl(BL)}" stroke="${MT_PANTS2}" stroke-width="8.8" ${MT_J}/>` + mtShoe(2.6, -1.8, -38)
+    + `<path d="${T}" fill="url(#${p}s${o.r})"/><path d="${PA}" fill="${MT_PANTS}"/>`
+    + `<path d="${mtPl(FL)}" stroke="${MT_PANTS}" stroke-width="8.8" ${MT_J}/><path d="${mtPl(FL.map(q => [q[0] - 1, q[1] - 1.8]))}" stroke="${MT_PANTS_HI}" stroke-width="2.2" opacity=".7" ${MT_J}/>` + mtShoe(22.6, -18.8, -38)
+    + `<path d="${mtPl([[TA[0] - 6.4, TA[1] - 2.4], [TB[0] - 7.4, TB[1] - 2.6]])}" stroke="#fff" stroke-width="1.8" opacity=".4" ${MT_J}/>`
+    + `<ellipse cx="${mtN(H[0] - 5)}" cy="${mtN(H[1] + 13.6)}" rx="7.4" ry="2.6" transform="rotate(-30 ${mtN(H[0] - 5)} ${mtN(H[1] + 13.6)})" fill="#000" opacity=".16"/>`
+    + `<circle cx="${H[0]}" cy="${H[1]}" r="15.4" fill="url(#${p}sk)"/>`;
+  if (g.pack) s += `<path d="M9.4 -41Q6.4 -34.4 3.8 -27.6" stroke="${MT_K}" stroke-width="4.4" ${MT_J}/><path d="M9.4 -41Q6.4 -34.4 3.8 -27.6" stroke="#2FA36B" stroke-width="2.6" ${MT_J}/>`;
+  if (g.scarf) s += `<path d="${TL}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="${TL}" fill="url(#${p}pt)"/><path d="${SC}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="${SC}" fill="url(#${p}pt)"/>`;
+  s += mtMedal(p, o.r, [10.6, -41.6], [16.6, -40.6], [17, -27], 6.6, o.flip)
+    // yüz (başla birlikte yukarı bakar): kulak, ense saçı, kararlı kaşlar, kask ve kafa lambası
+    + `<g transform="translate(${H[0]} ${H[1]}) rotate(${tilt})">`
+    + `<ellipse cx="-6.4" cy="2.6" rx="3" ry="3.8" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.4"/><path d="M-7 1Q-5.4 2.6 -6.6 4.4" stroke="#CF8A5C" stroke-width="1.1" ${MT_J}/>`
+    + `<path d="M-15.6 4.4C-15.8 8.2 -14 11 -11 12.4C-12 9.2 -11.2 6.6 -9.2 5Z" fill="#4A2E1D" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/>`
+    + `<ellipse cx="1.4" cy="4.8" rx="3" ry="1.8" fill="#FF8FA8" opacity=".55"/>`
+    + `<ellipse cx="3.4" cy="-.6" rx="2.2" ry="2.8" fill="${MT_K}"/><circle cx="4.1" cy="-1.6" r=".9" fill="#fff"/><ellipse cx="10.2" cy="-1" rx="1.5" ry="2.5" fill="${MT_K}"/><circle cx="10.6" cy="-1.9" r=".6" fill="#fff"/>`
+    + `<path d="M.4 -5.4L6 -4M8.6 -4.4L12.2 -5.4" stroke="#3A2416" stroke-width="1.7" ${MT_J}/>`
+    + `<path d="M13.8 .2Q18.6 2.2 14.6 5.4" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/>`
+    + (reach ? `<ellipse cx="9.2" cy="8.4" rx="2.2" ry="1.8" fill="#5B1A24" stroke="${MT_K}" stroke-width="1.1"/>` : `<path d="M5.6 7.2H12.4Q12.8 9.8 10.6 10.4H7.2Q5.2 9.8 5.6 7.2Z" fill="#fff" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 8.8H12.2" stroke="${MT_K}" stroke-width=".8"/>`)
+    + `<path d="M-4.2 -3.4Q-3.6 6 3.2 12.6" stroke="#2E2A44" stroke-width="1.3" ${MT_J}/>`
+    + (g.ticket ? mtTicket(-9.6, -11.2, -32) : '')
+    + `<path d="M-15.6 4.4C-17.4 -7.6 -9.8 -17.6 .6 -17.8C10 -18 16.4 -12.4 16.6 -6.4L18.6 -5.4C19 -3.8 18.2 -2.8 16.6 -3L3.8 -4.8C-3.4 -4 -10 -1 -15.6 4.4Z" fill="url(#${p}he)" stroke="${MT_K}" stroke-width="2.2" stroke-linejoin="round"/>`
+    + `<path d="M-12.6 -5.8C-8.6 -13.4 .4 -16.6 9.6 -14.4" stroke="#C76A00" stroke-width="1.2" opacity=".7" ${MT_J}/><path d="M-9.4 -11.6C-6 -15.2 -.6 -16.4 4.4 -15.6" stroke="#fff" stroke-width="1.8" opacity=".6" ${MT_J}/>`
+    + `<path class="mt-beam" d="M14 -13.6L50 -28L52 -2L14 -9.4Z" fill="url(#${p}bm)"/>`
+    + `<rect x="8.4" y="-14.4" width="6.4" height="5.6" rx="1.8" fill="#2E2A44" stroke="${MT_K}" stroke-width="1.1"/><circle cx="13.2" cy="-11.6" r="2" fill="#FFF6C8"/></g>`
+    + mtArm(near[0], near[1], near[2], o.c);
+  if (!reach) s += drop(H[0] - 18, H[1] - 6, 0) + drop(H[0] - 20.4, H[1] + 4, 1);
+  if (o.me) s += mtMe(H[0], H[1] - 27);
+  return s;
+}
+function mtMedalIcon(r) {
+  const p = 'mi' + (++artSeq) + '-', m = MT_MED[r];
+  return `<svg class="mt-medal" viewBox="0 0 40 52" aria-hidden="true"><defs><radialGradient id="${p}d" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="${m[0]}"/><stop offset=".5" stop-color="${m[1]}"/><stop offset="1" stop-color="${m[2]}"/></radialGradient><clipPath id="${p}c"><circle cx="20" cy="34" r="13"/></clipPath></defs>`
+    + `<path d="M6.4 1.6H15.6L23.4 24H14.2Z" fill="#C62532" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/><path d="M11 1.6L18.8 24" stroke="#fff" stroke-width="2" opacity=".85"/>`
+    + `<path d="M33.6 1.6H24.4L16.6 24H25.8Z" fill="#E5383B" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/><path d="M29 1.6L21.2 24" stroke="#fff" stroke-width="2" opacity=".85"/>`
+    + `<circle cx="20" cy="34" r="14" fill="url(#${p}d)" stroke="${m[3]}" stroke-width="2.4"/><circle cx="20" cy="34" r="10" fill="none" stroke="${m[2]}" stroke-width="1.3" opacity=".85"/>`
+    + `<text x="20" y="39.4" text-anchor="middle" font-size="15.5" fill="${m[3]}">${r}</text>`
+    + `<g clip-path="url(#${p}c)"><path class="mt-sh" d="M2 54L16 14H23L9 54Z" fill="#fff" opacity=".5"/></g>`
+    + `<path d="M10.8 30.6A9.6 9.6 0 0 1 16.6 24.8" stroke="#fff" stroke-width="2" opacity=".8" ${MT_J}/></svg>`;
+}
+function mtTag(x, r) {
+  if (!x) return `<span class="mt-tag t${r} empty" aria-hidden="true"></span>`;
+  const u = x.u, fr = (ownsItem(u, 'cerceve-kubbe') ? ' framed' : '') + (ownsItem(u, 'selcuklu-kapi') ? ' fr-selcuklu' : '');
+  return `<button type="button" class="mt-tag t${r}${x.uid === S.me ? ' is-me' : ''}" data-g="user" data-id="${esc(x.uid)}">${mtMedalIcon(r)}<span class="sr">${r}. sıra: </span>`
+    + `<span class="mt-name">${avFace(u, 'mt-av' + fr)}<span>${nameHtml(u, u.username || 'öğrenci')}</span></span>`
+    + `<span class="mt-val"><b data-count="${x.val}">${x.val}</b> kubbe</span></button>`;
+}
+function summitHtml(top) {
   if (!top.length) return '';
-  return `<div class="podium">${[top[1], top[0], top[2]].map(x => (x ? podItem(x) : '<span class="pod empty" aria-hidden="true"></span>')).join('')}</div>`;
+  const p = 'mt' + (++artSeq) + '-', [A, B, C] = top;
+  const spec = (x, more) => Object.assign({ r: x.rank, c: avColor(x.u), g: mtGear(x.u), me: x.uid === S.me }, more);
+  const who = (x, tf, cls, inner) => `<g class="mt-who" data-g="user" data-id="${esc(x.uid)}"><g transform="${tf}"><g class="${cls}">${inner}</g></g></g>`;
+  const grad = (id, st, more = 'x1="0" y1="0" x2="0" y2="1"') => `<linearGradient id="${p}${id}" ${more}>${st.map((c, i) => `<stop offset="${mtN(i / (st.length - 1))}" stop-color="${c}"/>`).join('')}</linearGradient>`;
+  const defs = '<defs>'
+    + [1, 2, 3].map(r => { const m = MT_MED[r]; return `<radialGradient id="${p}m${r}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="${m[0]}"/><stop offset=".5" stop-color="${m[1]}"/><stop offset="1" stop-color="${m[2]}"/></radialGradient>`; }).join('')
+    + top.map(x => { const c = avColor(x.u); return grad('s' + x.rank, [mtMix(c, '#ffffff', .5), c, mtMix(c, '#000000', .3)], 'x1="0" y1="0" x2="1" y2=".35"'); }).join('')
+    + grad('mL', ['#8BE8BA', '#3FB67E', '#1D8452']) + grad('mR', ['#46AE7B', '#1A7A50', '#0F5638']) + grad('sn', ['#FFFFFF', '#DFE8F7']) + grad('sR', ['#CBD7F1', '#A7B7DF'])
+    + grad('bk', ['#3B54B2', '#1C2860']) + grad('be', ['#FF7C7E', '#E5383B', '#B01F2B']) + grad('wg', ['#FFF1B8', '#FFC43D', '#D9820B']) + grad('fl', ['#FF7C7E', '#E5383B', '#A61E2A'])
+    + grad('gl', ['#4A62C9', '#0B1030'], 'x1="0" y1="0" x2=".4" y2="1"') + grad('pk', ['#6FD39C', '#2FA36B', '#1A7A50'], 'x1="0" y1="0" x2="1" y2="0"')
+    + `<linearGradient id="${p}bm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".55"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></linearGradient>`
+    + `<linearGradient id="${p}fd" gradientUnits="userSpaceOnUse" x1="0" y1="198" x2="0" y2="240"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>`
+    + `<mask id="${p}fade" maskUnits="userSpaceOnUse" x="-20" y="-10" width="400" height="280"><rect x="-20" y="-10" width="400" height="280" fill="url(#${p}fd)"/></mask>`
+    + `<radialGradient id="${p}gw"><stop offset="0" stop-color="#FFD23F" stop-opacity=".42"/><stop offset=".5" stop-color="#FFB020" stop-opacity=".13"/><stop offset="1" stop-color="#FFB020" stop-opacity="0"/></radialGradient>`
+    + `<radialGradient id="${p}sk" cx="38%" cy="32%" r="72%"><stop offset="0" stop-color="#FFE8D2"/><stop offset=".55" stop-color="${MT_SKIN}"/><stop offset="1" stop-color="#DA9364"/></radialGradient>`
+    + `<radialGradient id="${p}he" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="#FFDA8C"/><stop offset=".55" stop-color="#FF9F1C"/><stop offset="1" stop-color="#C76A00"/></radialGradient>`
+    + `<radialGradient id="${p}au"><stop offset="0" stop-color="#FFE27A" stop-opacity=".75"/><stop offset=".55" stop-color="#FFB020" stop-opacity=".25"/><stop offset="1" stop-color="#FFB020" stop-opacity="0"/></radialGradient>`
+    + `<pattern id="${p}pt" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M3 .6l.9 1.5 1.5.9-1.5.9-.9 1.5-.9-1.5-1.5-.9 1.5-.9z" fill="#9C6A32" opacity=".7"/></pattern></defs>`;
+  // gökyüzü: zirvenin arkasında altın ışık ve parıldayan yıldızlar
+  const ST = [[22, 24, 2.4, 0], [58, 60, 1.6, 1], [96, 14, 2, 2], [140, 58, 1.3, 0], [250, 16, 2.2, 1], [282, 56, 1.6, 2], [328, 24, 2.6, 0], [348, 86, 1.6, 1], [14, 108, 1.8, 2], [306, 110, 1.4, 0], [236, 76, 1.2, 2], [116, 94, 1.2, 1]];
+  const sky = `<circle cx="184" cy="74" r="100" fill="url(#${p}gw)"/><g fill="#FFF6D6">`
+    + ST.map(([x, y, r, d]) => `<path class="mt-tw d${d}" d="M${x} ${mtN(y - r * 2)}Q${x} ${y} ${mtN(x + r * 2)} ${y}Q${x} ${y} ${x} ${mtN(y + r * 2)}Q${x} ${y} ${mtN(x - r * 2)} ${y}Q${x} ${y} ${x} ${mtN(y - r * 2)}Z"/>`).join('') + '</g>';
+  // Kayışdağı: arkada mavi sıradağlar; önde aydınlık sol, gölgeli sağ yüzlü yeşil dağ, karlı zirve, kıvrılan yokuş, çamlar ve %18 tabelası.
+  // Dağın eteği aşağıda panelin rengine kaybolur (maske)
+  const MO = 'M-12 270L6 254L44 222L74 196L100 174L124 154L146 136L162 124L172 119L186 117L204 118L224 119L238 124L254 138L276 158L300 178L324 198L350 220L378 244L378 270Z';
+  const SNOW = 'M136 144L146 136L162 124L172 119L186 117L204 118L224 119L238 124L254 138L264 147L253 149L245 141L235 152L226 142L216 152L208 142L199 150L190 139L182 151L174 141L165 150L157 141L148 149Z';
+  const road = [[[176, 250], [232, 222], 9], [[232, 222], [168, 198], 7.6], [[168, 198], [220, 174], 6.2], [[220, 174], [190, 154], 5], [[190, 154], [204, 140], 3.8]];
+  const trees = [[34, 238, 16], [58, 228, 13], [84, 238, 17], [122, 214, 12], [142, 240, 15], [266, 232, 14], [292, 242, 16], [318, 226, 12], [342, 240, 15]];
+  const land = `<g mask="url(#${p}fade)">`
+    + `<path d="M-12 240V214L22 186L46 162L60 154L72 160L96 182L122 206L152 240Z" fill="url(#${p}bk)"/><path d="M46 162L60 154L72 160L66 166L60 161L54 168Z" fill="#C9D4F2" opacity=".8"/>`
+    + `<path d="M206 240L240 208L270 180L298 154L314 146L328 154L350 176L372 196V240Z" fill="url(#${p}bk)"/><path d="M298 154L314 146L328 154L321 160L314 154L306 162Z" fill="#C9D4F2" opacity=".8"/>`
+    + `<path d="${MO}" fill="url(#${p}mL)"/>`
+    + `<path d="M198 117.6L204 118L224 119L238 124L254 138L276 158L300 178L324 198L350 220L378 244L378 270L240 270C232 230 222 190 210 162C206 150 203 134 198 117.6Z" fill="url(#${p}mR)"/>`
+    + '<path d="M74 196L100 174L112 196L92 222ZM124 154L146 136L152 168L134 176ZM150 198L176 178L188 206L160 222Z" fill="#fff" opacity=".07"/><path d="M276 158L300 178L286 204L268 184ZM324 198L350 220L332 238L314 222Z" fill="#000" opacity=".09"/>'
+    + `<path d="${MO}" stroke="#0E4A30" stroke-width="2.4" stroke-linejoin="round" fill="none"/>`
+    + `<path d="M6 254L44 222L74 196L100 174L124 154L146 136L162 124" transform="translate(1.5 1.8)" stroke="#D2FFE8" stroke-width="1.6" opacity=".45" ${MT_J}/>`
+    + road.map(q => `<path d="${mtPl([q[0], q[1]])}" stroke="#A88B4E" stroke-width="${mtN(q[2] + 2.6)}" ${MT_J}/>`).join('')
+    + road.map(q => `<path d="${mtPl([q[0], q[1]])}" stroke="#F7E7BF" stroke-width="${q[2]}" ${MT_J}/>`).join('')
+    + trees.map(([x, y, h]) => `<g transform="translate(${x} ${y}) scale(${mtN(h / 18)})"><path d="M-1.6 0V-4.6H1.6V0Z" fill="#5E3F1C"/><path d="M-7.4 -3.4L0 -11.6L7.4 -3.4ZM-6 -8.2L0 -15.4L6 -8.2ZM-4.6 -12.4L0 -18.4L4.6 -12.4Z" fill="#17703F" stroke="#0E4A30" stroke-width="1.3" stroke-linejoin="round"/><path d="M0 -11.6L-7.4 -3.4H0ZM0 -15.4L-6 -8.2H0ZM0 -18.4L-4.6 -12.4H0Z" fill="#5CC08C" opacity=".5"/></g>`).join('')
+    + `<path d="M136 144L146 136L162 124L172 119L186 117L198 117.6L204 145.6L199 150L190 139L182 151L174 141L165 150L157 141L148 149Z" fill="url(#${p}sn)"/>`
+    + `<path d="M198 117.6L204 118L224 119L238 124L254 138L264 147L253 149L245 141L235 152L226 142L216 152L208 142L204 145.6Z" fill="url(#${p}sR)"/>`
+    + `<path d="${SNOW}" stroke="#0E4A30" stroke-width="1.6" stroke-linejoin="round" fill="none"/><path d="M150 137L163 126.6L173 122" stroke="#fff" stroke-width="2" opacity=".9" ${MT_J}/>`
+    + '<g transform="translate(256 204)"><path d="M0 2V-12" stroke="#3A2414" stroke-width="2.2" stroke-linecap="round"/><g transform="rotate(-7 0 -16)"><rect x="-13.6" y="-23" width="27.2" height="12.6" rx="2.6" fill="#FFE14D" stroke="#3A2414" stroke-width="1.8"/><text x="0" y="-13.6" text-anchor="middle" font-size="8.8" fill="#3A2414">%18</text></g></g>'
+    + '</g>';
+  const figs = (C ? who(C, 'translate(318 193) scale(-.97 .97)', 'mt-climb d2', mtClimb(p, spec(C, { flip: true }))) : '')
+    + (B ? who(B, 'translate(92 181) scale(1.02)', 'mt-climb', mtClimb(p, spec(B, { reach: true }))) : '')
+    + (A ? who(A, 'translate(184 117.6)', 'mt-hero', mtTop(p, spec(A))) : '');
+  return `<div class="mt"><svg class="mt-art" viewBox="0 0 360 240" aria-hidden="true">${defs}${sky}${land}${figs}</svg>`
+    + `<div class="mt-tags">${mtTag(B, 2)}${mtTag(A, 1)}${mtTag(C, 3)}</div></div>`;
 }
 function boardRow(x, max, detail) {
   const k = detail ? kubbeOf(x.uid) : null;
@@ -3089,7 +3319,7 @@ function boardHtml(kind, { limit, bolum = '', detail = false }) {
   let rows = shown.slice(3).map(x => boardRow(x, max, detail)).join('');
   const meX = list.find(x => x.uid === S.me);
   if (meX && meX.rank > limit) rows += '<li class="brow-gap" aria-hidden="true">…</li>' + boardRow(meX, max, detail);
-  return podiumHtml(shown.slice(0, 3)) + (rows ? `<ol class="board${detail ? ' detail' : ''}">${rows}</ol>` : '');
+  return summitHtml(shown.slice(0, 3)) + (rows ? `<ol class="board${detail ? ' detail' : ''}">${rows}</ol>` : '');
 }
 const boardSig = (kind, bolum, limit, detail) => [kind, bolum, limit, detail, S.usersVer, S.me, boardList(kind, bolum).slice(0, limit).map(x => x.uid + ':' + x.val).join(',')].join('|');
 function fillBolumSelect(sel, cur) {

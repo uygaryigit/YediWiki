@@ -2,7 +2,7 @@
 
 Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma kurallarını tutar.
 
-## Durum (16 Ekim 2026)
+## Durum (17 Ekim 2026)
 
 - **Kod:** bu depo, `main` dalı.
 - **Supabase (canlı):** proje `efyrrbqdiilpqnqzsphk`.
@@ -61,6 +61,11 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - Profil resminde "Karakter" sekmesi: 24 çizim (`AV_ART`, `avArt`); kayıtta anahtar yine emoji (`AV_EMOJI`), serbest emoji yazma kutusu kalktı; listede olmayan eski emoji sabit bir karaktere düşer.
   - Anonim: profil resmi casus, profil resmi olmayan yerlerde adın yanında casus (`spyName`, `whoHtml`); Anonim seçeneklerinde de casus.
   - Pazar küçük rozetleri ve "Aldıkları" ürün çiziminden (`itemAvSrc`); parçacıklar (`burst`) çizim anahtarı alır; `toast(yazı, tür, simge)`.
+- **Kubbe sıralaması: Kayışdağı zirvesi (17 Ekim):** Ana sayfada ve Kubbe sayfasında podyumun yerine ilk üç dağda (`summitHtml`): Yokuş Canavarı'ndaki Kayışdağı (yeşil dağ, karlı zirve, yokuş, %18 tabelası), lacivert gökte yıldızlar; etek panele kaybolur.
+  - 1. zirvede önden (`mtTop`): bereli, güneş gözlüklü, kubbe amblemli bayrağın direğini tutar, eli belinde. 2. sol sırttan zirveye uzanır, 3. sağ sırttan tırmanır ve terler (`mtClimb`, kasklı, kafa lambalı; 3. aynalı). Gömlek profil rengi; çizim dili koyu kontur + gölgeli dolgu (2.5B).
+  - Ürün eşlemesi (`mtGear`, kullanıcı "sonra ayarlayacağız" dedi): kanat sırtta, Gece Eskortu yanında Ayhan Abi (1.'de önden oturur), Altın Ring beresinde / kaskında bilet, Güneş Aurası arkasında güneş, Selçuklu Kapısı desenli atkı, Yokuş Canavarı sırt çantası, sosisli / kupa / dürüm elinde (biri, fiyat sırasıyla).
+  - Altın, gümüş, bronz madalya karakterin boynunda ve altındaki künyede (`mtTag`, 2-1-3 sırasıyla; dar kutuda künyede profil resmi gizlenir).
+- **Kartal Kanatları (17 Ekim):** Kanat profil resminin ve çerçevesinin arkasından çıkar, her yanda çapın üçte biri kadar. `::before` kanat, `::after` resmin zemini ve çerçevesini (box-shadow) kanadın üstüne yeniden çizer; büyük resimde parlaklık `--avbg` ile.
 - **Düğmeler (16 Ekim):** Parlama yok (kullanıcı fazla buldu). `.btn` sade, altta koyu bir kenar (`--edge`): üzerine gelince hafif kalkar, basınca iner.
 - **Yenilikler bölümü kaldırıldı (14 Ekim):** Kullanıcı istemiyor; yenilik penceresi ve test listesi geri eklenmesin. Ayhan Abi turu Hakkında sayfasındaki düğmeyle de başlar.
 
@@ -93,4 +98,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1505/1505, `npm run test:site` 117/117, `npm run test:db` 95/95.
+- **Beklenen sonuçlar:** `npm test` 1511/1511, `npm run test:site` 117/117, `npm run test:db` 95/95.

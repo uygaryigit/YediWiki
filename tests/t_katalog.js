@@ -1109,6 +1109,17 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     await submit(t, 200);
     eq(t.store.get('users/deneme123').avk, 'emoji', 'emojiye geri dönüldü');
     ok(t.$('[data-r=acc] .avatar.fx-wings') && !t.$('[data-r=acc] .avatar.art'), 'kanat efekti emojide de sürüyor');
+    // sıralamanın ilk üçü Kayışdağı'nda: zirvede bayraklı birinci, tırmanan ikinci ve üçüncü, madalyalı künyeler (2, 1, 3 sırasıyla)
+    await t.go('#/kubbe');
+    { const mt = t.$('[data-r=b-all] .mt');
+      ok(mt && mt.querySelector('.mt-flag') && mt.querySelectorAll('.mt-who').length === 3, 'ilk üç dağda: zirvede bayrak, üç karakter');
+      eq(t.$$('[data-r=b-all] .mt-tag').map(b => b.className.match(/t(\d)/)[1]).join(), '2,1,3', 'künyeler 2, 1, 3 sırasıyla');
+      ok(t.$$('[data-r=b-all] .mt-tag .mt-medal').length === 3 && !/\p{Extended_Pictographic}/u.test(t.text('[data-r=b-all] .mt')), 'her künyede çizim madalya, emoji yok');
+      const ids = t.$$('.mt-art [id]').map(e => e.id); eq(new Set(ids).size, ids.length, 'iki sıralamadaki çizim kimlikleri çakışmaz'); }
+    { const top = t.ev(`mtTop('x-', { r: 1, c: '#9DB0FF', g: mtGear({ items: { 'kartal-kanatlari': 1, 'gece-eskortu': 1, 'son-sosisli': 1, 'ikinci-ev': 1 } }) })`);
+      ok(/class="mt-wl"/.test(top) && /mt-dogsit/.test(top) && /#D9442E/.test(top) && !/#3D5BD9/.test(top), 'birincide kanat, yanında Ayhan Abi, elinde (pahalı olan) sosisli');
+      const bare = t.ev(`mtClimb('x-', { r: 3, c: '#FFE14D', g: mtGear({ items: {} }), flip: true })`);
+      ok(!/mt-wl|mt-dog|mt-reach/.test(bare) && /mt-sweat/.test(bare) && /matrix\(-1/.test(bare), 'ürünsüz üçüncü yamaçta terler, aynalanmış madalya sayısı düz'); }
     t.ev("G['logout-shared']()"); await t.wait(150);
     eq(t.ev('privPath()'), 'data/users/viewer-e/private', 'çıkınca kendi özel kaydı');
     eq(JSON.stringify(t.ev('myCourses()')), '["MATH131"]', 'kendi Derslerim’i geri geldi');

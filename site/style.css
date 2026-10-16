@@ -642,22 +642,59 @@ button.rank-row:hover{background:var(--surface-2)}
 .home-main.lead-open{grid-template-columns:1fr}
 .home-main.lead-open .lead{order:-1;position:static}
 @media (max-width:900px){.lead{position:static}}
-.podium{display:grid;grid-template-columns:1fr 1.18fr 1fr;align-items:end;gap:8px;margin:16px 0 8px}
-.pod{appearance:none;background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
-.pod.empty{cursor:default}
-.pod.p1{--mc:#FFD23F;--mc2:#E0A800}.pod.p2{--mc:#EEF1F7;--mc2:#A9B3C6}.pod.p3{--mc:#F2B27A;--mc2:#C47A43}
-.pod .avatar.pod-av{width:50px;height:50px;font-size:1.5rem;box-shadow:0 0 0 3px #111C4E,0 0 0 6px var(--mc);animation:popin .55s cubic-bezier(.2,1.5,.4,1) .15s both}
-.pod.p1 .avatar.pod-av{width:64px;height:64px;font-size:2rem;animation-delay:0s}
-.pod.p3 .avatar.pod-av{animation-delay:.25s}
-.pod:hover .avatar.pod-av{transform:translateY(-3px)}
-.pod-name{font-weight:700;font-size:.82rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pod.is-me .pod-name{color:#FFE14D}
-.pod-val{font-size:.72rem;color:rgba(243,245,255,.8)}
-.pod-val b{font-family:var(--f-display);font-weight:800;font-stretch:78%;font-size:1.08rem;color:#FFE14D}
-.pod-step{position:relative;overflow:hidden;width:100%;display:grid;place-items:center;border-radius:12px 12px 4px 4px;background:linear-gradient(180deg,var(--mc) 0%,var(--mc2) 100%);color:#111C4E;font-family:var(--f-display);font-weight:800;font-stretch:75%;font-size:1.6rem;transform-origin:bottom;animation:rise .65s cubic-bezier(.2,.9,.3,1.15) both;margin-top:4px}
-.pod.p1 .pod-step{height:94px}.pod.p2 .pod-step{height:68px;animation-delay:.1s}.pod.p3 .pod-step{height:52px;animation-delay:.2s}
-.pod.p1 .pod-step::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);transform:translateX(-120%);animation:shine 3.4s ease-in-out 1.2s infinite}
-.crown{width:32px;height:21px;margin-bottom:-4px;animation:bob 2.6s ease-in-out infinite;filter:drop-shadow(0 2px 0 rgba(0,0,0,.3))}
+/* Kayışdağı zirvesi (summitHtml): sıralamanın ilk üçü dağda, altlarında madalyalı künyeleri */
+.mt{position:relative;max-width:520px;margin:12px auto 6px;container-type:inline-size}
+.mt-art{display:block;width:100%;height:auto;overflow:visible;-webkit-tap-highlight-color:transparent}
+.mt-art text,.mt-medal text{font-family:var(--f-display);font-weight:800;font-stretch:80%}
+.mt-who{cursor:pointer}
+.mt-who:hover{filter:brightness(1.07)}
+.mt .k{stroke:#8E99CF;stroke-width:1.4px}
+.mt-dogsit .af-tail{transform-box:fill-box;transform-origin:0 100%;animation:wag 1s ease-in-out infinite}
+.mt-dogsit .af-head{transform-box:fill-box;transform-origin:50% 90%;animation:ayTilt 5s ease-in-out infinite}
+.mt-hero{transform-box:fill-box;transform-origin:50% 100%;animation:mtBreath 3.6s ease-in-out infinite}
+.mt-climb{animation:mtClimb 1.7s ease-in-out infinite}.mt-climb.d2{animation-duration:2.1s;animation-delay:.4s}
+.mt-reach{transform-box:fill-box;transform-origin:0 100%;animation:mtReach 1.7s ease-in-out infinite}
+.mt-flag{transform-box:fill-box;transform-origin:100% 50%;animation:mtFlag 2.3s ease-in-out infinite}
+.mt-wl{transform-box:fill-box;transform-origin:100% 55%;animation:mtWing 2.6s ease-in-out infinite}
+.mt-swing{transform-box:fill-box;transform-origin:50% 0;animation:mtSwing 3.2s ease-in-out infinite}
+.mt-spin{transform-box:fill-box;transform-origin:50% 50%;animation:mtSpin 16s linear infinite}
+.mt-glint{transform-box:fill-box;transform-origin:50% 50%;animation:mtGlint 3.6s ease-in-out 1s infinite}
+.mt-beam{animation:mtBeam 2.6s ease-in-out infinite}
+.mt-me{animation:mtMe 1.2s ease-in-out infinite}
+.mt-sweat{opacity:0;animation:mtSweat 1.8s ease-in infinite}.mt-sweat.d1{animation-delay:.9s}
+.mt-steam{animation:mtSteam 2s ease-in-out infinite}
+.mt-tw{animation:mtTw 2.8s ease-in-out infinite}.mt-tw.d1{animation-delay:.9s}.mt-tw.d2{animation-delay:1.8s}
+.mt-sh{animation:mtSh 3.6s ease-in-out infinite}
+@keyframes mtBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.012,1.022)}}
+@keyframes mtClimb{0%,100%{transform:translate(0,0)}50%{transform:translate(1.4px,-1.2px)}}
+@keyframes mtReach{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg)}}
+@keyframes mtFlag{0%,100%{transform:skewY(0) scaleX(1)}50%{transform:skewY(-5deg) scaleX(.94)}}
+@keyframes mtWing{0%,100%{transform:rotate(0)}50%{transform:rotate(-10deg)}}
+@keyframes mtSwing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes mtSpin{to{transform:rotate(360deg)}}
+@keyframes mtGlint{0%,72%,100%{transform:scale(0);opacity:0}80%{transform:scale(1.2);opacity:1}90%{transform:scale(.5);opacity:.5}}
+@keyframes mtBeam{0%,100%{opacity:1}50%{opacity:.55}}
+@keyframes mtMe{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes mtSweat{0%{opacity:0;transform:translate(0,0)}25%{opacity:1}100%{opacity:0;transform:translate(-4px,9px)}}
+@keyframes mtSteam{0%{opacity:0;transform:translateY(2px)}50%{opacity:.9}100%{opacity:0;transform:translateY(-3px)}}
+@keyframes mtTw{0%,100%{opacity:.95}50%{opacity:.25}}
+@keyframes mtSh{0%{transform:translateX(-26px)}55%,100%{transform:translateX(30px)}}
+.mt-tags{display:grid;grid-template-columns:1fr 1.14fr 1fr;gap:8px;align-items:end;margin-top:-30px;position:relative}
+.mt-tag{--mt-b:rgba(255,255,255,.18);appearance:none;font:inherit;color:inherit;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;margin-top:26px;padding:22px 6px 9px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.04));border:1.5px solid var(--mt-b);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 18px -12px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:popin .5s cubic-bezier(.2,1.5,.4,1) .15s both;transition:transform .2s ease}
+.mt-tag:hover{transform:translateY(-2px)}
+.mt-tag.t1{--mt-b:rgba(255,210,63,.65);background:linear-gradient(180deg,rgba(255,210,63,.26),rgba(255,210,63,.06));padding-top:28px;animation-delay:0s}
+.mt-tag.t2{--mt-b:rgba(211,217,230,.5)}
+.mt-tag.t3{--mt-b:rgba(227,150,90,.55);animation-delay:.25s}
+.mt-tag.empty{visibility:hidden}
+.mt-medal{position:absolute;top:-25px;left:50%;width:34px;height:44px;margin-left:-17px;filter:drop-shadow(0 3px 0 rgba(0,0,0,.3));overflow:visible}
+.mt-tag.t1 .mt-medal{top:-32px;width:42px;height:55px;margin-left:-21px}
+.mt-name{display:flex;align-items:center;justify-content:center;gap:5px;max-width:100%;font-weight:700;font-size:.82rem;line-height:1.25}
+.mt-name > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-tag .avatar.mt-av{width:20px;height:20px;font-size:.7rem}
+.mt-tag.is-me .mt-name{color:#FFE14D}
+.mt-val{font-size:.72rem;color:rgba(243,245,255,.8)}
+.mt-val b{font-family:var(--f-display);font-weight:800;font-stretch:78%;font-size:1.08rem;color:#FFE14D}
+@container (max-width:340px){.mt-tags{gap:6px}.mt-name{font-size:.78rem}.mt-tag .avatar.mt-av{display:none}}
 .board{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px}
 .board.detail{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));column-gap:16px}
 .brow{width:100%;display:flex;align-items:center;gap:10px;padding:7px 8px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;animation:slidein .45s ease-out both}
@@ -813,10 +850,13 @@ button.rank-row:hover{background:var(--surface-2)}
 .lead .fx-glow{color:#FFD23F;text-shadow:0 0 12px rgba(255,200,60,.85)}
 .avatar.fr-selcuklu{box-shadow:0 0 0 2px var(--surface),0 0 0 5px #C9955A,0 0 0 7px #5E3F1C}
 .lead .avatar.fr-selcuklu{box-shadow:0 0 0 2px #111C4E,0 0 0 5px #C9955A,0 0 0 7px #5E3F1C}
-.avatar.fx-wings{position:relative;overflow:visible}
+/* Kartal Kanatları: kanatlar profil resminin ve çerçevesinin arkasından, resmin üst yarısından çıkar (her yanda çapın üçte biri kadar).
+   Resim kendi katmanında (isolation): ::before kanat en arkada, ::after resmin zemini ve çerçevesi (box-shadow) kanadın kökünü örter */
+.avatar.fx-wings{position:relative;overflow:visible;isolation:isolate}
 .avatar.fx-wings.pic img{border-radius:50%}
-.avatar.fx-wings::before{content:"";position:absolute;left:-68%;right:-68%;top:-10%;bottom:4%;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 60'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFF1B8'/%3E%3Cstop offset='.55' stop-color='%23FFC43D'/%3E%3Cstop offset='1' stop-color='%23D9820B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M52 34C40 18 22 10 4 14c9 4 15 9 18 14-10-1-17 3-20 8 10 0 17 2 23 6-7 3-11 8-11 14 11-6 22-11 38-16z' fill='url(%23g)' stroke='%237A4A00' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M68 34c12-16 30-24 48-20-9 4-15 9-18 14 10-1 17 3 20 8-10 0-17 2-23 6 7 3 11 8 11 14-11-6-22-11-38-16z' fill='url(%23g)' stroke='%237A4A00' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;z-index:-1;pointer-events:none;transform-origin:50% 60%;animation:wingPulse 2.6s ease-in-out infinite}
-@keyframes wingPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07) translateY(-1px)}}
+.avatar.fx-wings::before{content:"";position:absolute;left:-34%;right:-34%;top:-16%;bottom:18%;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 168 98'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFF1B8'/%3E%3Cstop offset='.5' stop-color='%23FFC43D'/%3E%3Cstop offset='1' stop-color='%23D9820B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg id='w'%3E%3Cpath d='M62 46C48 30 30 16 6 12C10 18 11 22 10 27C16 26 20 28 22 31C18 36 17 40 16 45C22 43 27 45 29 48C26 53 26 57 25 61C31 58 36 59 39 62C38 66 38 70 37 74C44 70 52 64 64 58Z' fill='url(%23g)' stroke='%237A4A00' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M22 31C32 36 42 42 56 48M29 48C36 51 42 55 54 58M10 27C24 28 40 34 54 42' fill='none' stroke='%23B86E06' stroke-width='1.6' stroke-linecap='round' opacity='.7'/%3E%3Cpath d='M13 16C25 18 37 24 47 32' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' opacity='.6'/%3E%3C/g%3E%3Cg transform='matrix(-1 0 0 1 168 0)'%3E%3Cpath d='M62 46C48 30 30 16 6 12C10 18 11 22 10 27C16 26 20 28 22 31C18 36 17 40 16 45C22 43 27 45 29 48C26 53 26 57 25 61C31 58 36 59 39 62C38 66 38 70 37 74C44 70 52 64 64 58Z' fill='url(%23g)' stroke='%237A4A00' stroke-width='2.6' stroke-linejoin='round'/%3E%3Cpath d='M22 31C32 36 42 42 56 48M29 48C36 51 42 55 54 58M10 27C24 28 40 34 54 42' fill='none' stroke='%23B86E06' stroke-width='1.6' stroke-linecap='round' opacity='.7'/%3E%3Cpath d='M13 16C25 18 37 24 47 32' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' opacity='.6'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;z-index:-2;pointer-events:none;transform-origin:50% 68%;animation:wingFlap 2.8s ease-in-out infinite}
+.avatar.fx-wings::after{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;box-shadow:inherit;z-index:-1;pointer-events:none}
+@keyframes wingFlap{0%,100%{transform:none}50%{transform:translateY(-3%) scale(1.04)}}
 
 /* ===== Dersler: bölüm ve ders planı ===== */
 .bol-sel{flex:1 1 260px;width:auto;max-width:420px}
@@ -1378,6 +1418,8 @@ button.rank-row:hover{background:var(--surface-2)}
 .pf-sticker:hover{transform:rotate(1deg) scale(1.02)}
 .avatar.hero{position:relative;width:136px;height:136px;font-size:4.5rem;line-height:1;box-shadow:0 0 0 7px #fff,0 18px 26px -12px rgba(17,28,78,.55);text-shadow:0 5px 10px rgba(17,28,78,.22)}
 .avatar.hero::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 32% 24%,rgba(255,255,255,.55),rgba(255,255,255,0) 50%);pointer-events:none}
+.avatar.hero.fx-wings::after{background:radial-gradient(circle at 32% 24%,rgba(255,255,255,.55),rgba(255,255,255,0) 50%),var(--avbg,var(--pen-soft))}
+.avatar.hero.fx-wings.pic::after{background-color:var(--surface-2)}
 .avatar.hero.harf{font-size:3.4rem;letter-spacing:.02em;text-shadow:none}
 .avatar.hero.framed{box-shadow:0 0 0 7px #fff,0 0 0 11px #E0A800,0 18px 26px -12px rgba(17,28,78,.55)}
 .avatar.hero.fr-selcuklu{box-shadow:0 0 0 7px #fff,0 0 0 11px #C9955A,0 0 0 14px #5E3F1C,0 18px 26px -12px rgba(17,28,78,.55)}
