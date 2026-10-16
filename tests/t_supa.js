@@ -92,9 +92,12 @@ function googleMock(w, log) {
 const doc = async (be, col, id) => { const r = await q1(be, 'select data from public.docs where col = $1 and id = $2', [col, id]); return r ? r.data : null; };
 const lastCode = (be, email) => { const m = [...be.mails].reverse().find(x => x.email === email); return m ? m.code : null; };
 
+const pwOf = local => 'Sifre-' + local;
 async function signup(t, be, local, prof) {
   t.ev('openAuth()'); await sleep(60);
+  t.$('.modal [data-r=to-signup]').click(); await sleep(40);
   t.$('#au-mail').value = local;
+  t.$('#au-pw').value = pwOf(local);
   await t.submit('.modal form', 200);
   const email = local + '@std.yeditepe.edu.tr';
   await t.until(() => t.$('#au-code'), 'kod adımı ' + local);
@@ -110,6 +113,7 @@ async function signup(t, be, local, prof) {
   if (prof.bolum) { t.$(`.modal .bp-opt[data-bid="${prof.bolum}"]`).click(); await t.submit('.modal form', 300); }
   else { t.$('.modal [data-r=skip]').click(); await sleep(300); }
   await t.until(() => !t.$('.modal') && t.ev('!!myAcc()'), 'hesap açıldı ' + local);
+  eq(be.passwords.get(email), pwOf(local), 'kayıtta belirlenen şifre kaydedildi: ' + local);
 }
 
 (async () => {
@@ -125,13 +129,26 @@ async function signup(t, be, local, prof) {
     ok(!v.$('[data-r=acc]').hidden && /Giriş yap/.test(v.text('[data-r=acc]')), 'giriş düğmesi görünür');
     eq(v.ev('S.me.startsWith("l")'), true, 'girişsizken yerel kimlik');
     await v.go('#/dersler');
-    await v.until(() => v.$('.modal') && v.$('#au-mail'), 'herkese açık olmayan sayfa giriş ister');
-    ok(/6 haneli bir giriş kodu/.test(v.text('.modal')), 'kodla giriş anlatılıyor');
+    await v.until(() => v.$('.modal') && v.$('#au-lmail'), 'herkese açık olmayan sayfa giriş ister');
+    ok(v.text('.modal-head h2') === 'Giriş yap' && !!v.$('.modal #au-lpw') && !!v.$('.modal .btn-go[type=submit]') && !!v.$('.modal .btn-new[data-r=to-signup]'), 'önce giriş ekranı: e-posta, şifre, yeşil Giriş yap, kırmızı Kayıt ol');
+    { const kids = v.$$('.modal form > *'); ok(kids.indexOf(v.$('.modal .btn-go')) < kids.indexOf(v.$('.modal .btn-new')), 'Kayıt ol, Giriş yap’ın altında'); }
+    ok(/Notları, HocaÖlçer’i/.test(v.text('.modal .auth-why') || ''), 'neden giriş istendiği yazıyor');
+    ok(!!v.$('.modal [data-r=forgot]'), 'Şifremi unuttum bağlantısı');
+    v.$('.modal [data-r=to-signup]').click(); await sleep(40);
+    ok(v.text('.modal-head h2') === 'Kayıt ol' && !!v.$('#au-mail') && !!v.$('#au-pw'), 'Kayıt ol: okul e-postası ve şifre');
+    ok(/6 haneli doğrulama kodu/.test(v.text('.modal')), 'kodla doğrulama anlatılıyor');
     ok(!v.$('.demo-code'), 'kod ekranda gösterilmiyor');
-    v.$('#au-mail').value = 'biri@gmail.com';
+    v.$('[data-r=pw-eye]').click(); await sleep(10);
+    ok(v.$('#au-pw').type === 'text' && v.$('[data-r=pw-eye]').getAttribute('aria-pressed') === 'true', 'şifre göz düğmesiyle görünür');
+    v.$('#au-mail').value = 'biri@gmail.com'; v.$('#au-pw').value = 'Sifre-1234';
     await v.submit('.modal form', 80);
     ok(/Yalnızca @std\.yeditepe\.edu\.tr/.test(v.text('.modal .err')), 'okul dışı adres reddedilir');
-    eq(be.mails.length, 0, 'okul dışı adrese kod gitmedi');
+    v.$('#au-mail').value = 'kisa.sifre'; v.$('#au-pw').value = '1234567';
+    await v.submit('.modal form', 80);
+    ok(/en az 8 karakter/.test(v.text('.modal .err')), 'kısa şifre reddedilir: ' + v.text('.modal .err'));
+    eq(be.mails.length, 0, 'okul dışı adrese ve kısa şifreyle kod gitmedi');
+    v.$('.modal [data-r=to-login]').click(); await sleep(30);
+    ok(!!v.$('.modal #au-lmail') && v.text('.modal-head h2') === 'Giriş yap', 'Kayıt ol’dan girişe dönülür');
     { const r = await v.cl.client.auth.signInWithOtp({ email: 'biri@gmail.com', options: { shouldCreateUser: true } });
       ok(r.error && r.error.code === 'unexpected_failure', 'sunucu da okul dışı kaydı reddeder'); }
     { const r = await v.cl.client.rpc('doc_set', { p_col: 'notes', p_id: 'x1', p_data: { cid: 'CSE211', title: 'xx', drive: 'https://drive.google.com/x' } });
@@ -306,6 +323,8 @@ async function signup(t, be, local, prof) {
       ok(c && c.data.by === '' && c.data.byk === B.ev(`pk('comments', ${JSON.stringify(c.id)})`), 'anonim yorum takma adla'); }
     await A.go('#/');
     await A.until(() => A.ev('notifState().newCm') >= 1, 'A\'ya yorum bildirimi');
+    await A.until(() => A.text('[data-r=cms] .cm-by') === 'Anonim', 'son yorumlarda anonim yorum');
+    ok(!A.$('[data-r=cms] .cm-by .spy-name, [data-r=cms] .cm-by svg') && !!A.$('[data-r=cms] li .avatar'), 'son yorumlarda profil resmi var, adın yanında casus simgesi yok');
     noErr(A, 'A canlı'); noErr(B, 'B etkileşim');
 
     console.log('5) HocaÖlçer ve DersÖlçer');
@@ -339,6 +358,20 @@ async function signup(t, be, local, prof) {
     eq(B.text('.zor-card .dol-z .dol-num') + ' ' + B.text('.zor-card .dol-z .dol-word'), '4,0/5 Kolay', 'zorluk puanı: 1 en zor, 4 kolay');
     await A.go('#/ders/CSE211');
     await A.until(() => /1 öğrenci oyladı/.test(A.text('.zor-card')) && /Oy ver/.test(A.text('[data-g=zor]')), 'A oyu görüyor, kendisininki değil');
+    // yorum sınırı: bir kişi bir derse en çok 3 yorum (anonim de sayılır)
+    await B.go('#/ders/CSE211?tab=yorumlar'); await sleep(150);
+    for (let i = 0; i < 3; i++) {
+      B.$('#main [data-r=form] textarea').value = 'Ders yorumu ' + (i + 1);
+      if (i === 1) B.$('#main [data-r=anon]').click();
+      await B.submit('#main [data-r=form]', 350);
+    }
+    await B.until(() => B.$('#main [data-r=form]').hidden && !B.$('#main [data-r=full]').hidden, 'üç yorumdan sonra yorum kutusu kapanır');
+    ok(/en çok 3 yorum/.test(B.text('#main [data-r=full]')), 'sınır açıklaması: ' + B.text('#main [data-r=full]'));
+    eq((await q1(be, "select count(*)::int as n from public.docs where col = 'comments' and data->>'tid' = 'CSE211'")).n, 3, 'derste B\'nin üç yorumu');
+    { const r = await B.cl.client.rpc('doc_set', { p_col: 'comments', p_id: 'fazla1', p_data: { tt: 'course', tid: 'CSE211', text: 'dördüncü', anon: true } });
+      ok(r.error && /en çok 3 yorum/.test(r.error.message), 'sunucu dördüncü yorumu reddeder: ' + (r.error && r.error.message)); }
+    await A.go('#/ders/CSE211?tab=yorumlar'); await sleep(150);
+    ok(!A.$('#main [data-r=form]').hidden && A.$('#main [data-r=full]').hidden, 'sınır kişi başı: A yazabilir');
     noErr(A, 'A HocaÖlçer'); noErr(B, 'B HocaÖlçer');
 
     console.log('6) not isteği: anonim notla karşılanır');
@@ -377,7 +410,6 @@ async function signup(t, be, local, prof) {
     await dashboardUser(be, 'yonetici@yediwiki.com', 'Test-Yonetici-1');
     const C = await tab(be, { name: 'yönetici' });
     C.ev('openAuth()'); await sleep(60);
-    C.$('.modal [data-r=to-login]').click(); await sleep(40);
     ok(!C.$('.modal .mail-dom').hidden, 'okul uzantısı başta görünür');
     C.typeIn(C.$('#au-lmail'), 'yonetici@yediwiki.com');
     eq(C.$('#au-lmail').value, 'yonetici@yediwiki.com', 'başka uzantılı tam adres kutuda kalır');
@@ -405,11 +437,12 @@ async function signup(t, be, local, prof) {
     const Dn = await tab(be, { name: 'deneme' });
     Dn.ev('openAuth()'); await sleep(60);
     const m0 = be.mails.length;
-    Dn.$('#au-mail').value = 'deneme123';
+    Dn.$('.modal [data-r=to-signup]').click(); await sleep(40);
+    Dn.$('#au-mail').value = 'deneme123'; Dn.$('#au-pw').value = 'herhangi-bir';
     await Dn.submit('.modal form', 150);
-    ok(!!Dn.$('#au-lpw') && Dn.$('#au-lmail').value === 'deneme123', 'ilk ekranda deneme123 yazınca şifre ekranına geçer');
+    ok(!!Dn.$('#au-lpw') && Dn.$('#au-lmail').value === 'deneme123', 'Kayıt ol’da deneme123 yazınca giriş ekranına döner');
     eq(be.mails.length, m0, 'deneme hesabına kod gönderilmedi');
-    ok(/şifreyle girer/.test(Dn.text('.modal')), 'şifre ekranında açıklama');
+    ok(/şifreyle girer/.test(Dn.text('.modal')), 'giriş ekranında açıklama');
     Dn.$('#au-lpw').value = 'deneme123';
     await Dn.submit('.modal form', 300);
     await Dn.until(() => Dn.ev('!!myAcc()') && !Dn.$('.modal'), 'deneme hesabına girildi');
@@ -434,7 +467,42 @@ async function signup(t, be, local, prof) {
     await B2.until(() => B2.text('#main .km-sec:nth-child(1) .km-count') === '1' && B2.text('#main .km-sec:nth-child(2) .km-count') === '1', 'Katkılarım: anonim not ve puan tanındı');
     noErr(B2, 'oturum');
 
-    for (const t of [v, A, B, C, Dn, B2]) t.close();
+    console.log('10) öğrenci şifreyle girer; şifremi unuttum');
+    B.ev('openAuth()'); await sleep(60);
+    { const m1 = be.mails.length;
+      B.$('#au-lmail').value = 'bora.kaya'; B.$('#au-lpw').value = 'yanlis-sifre';
+      await B.submit('.modal form', 200);
+      ok(/şifre hatalı/i.test(B.text('.modal .err')) && /Şifremi unuttum/.test(B.text('.modal .err')), 'yanlış şifrede Şifremi unuttum önerilir: ' + B.text('.modal .err'));
+      B.$('#au-lpw').value = pwOf('bora.kaya');
+      await B.submit('.modal form', 300);
+      await B.until(() => !B.$('.modal') && B.ev('myAcc() && myAcc().username') === 'borakaya', 'öğrenci şifreyle girdi');
+      eq(be.mails.length, m1, 'şifreyle girişte kod gönderilmez'); }
+    be.noRateLimit = true;
+    const F = await tab(be, { name: 'şifre yenileme' });
+    F.ev('openAuth()'); await sleep(60);
+    F.typeIn(F.$('#au-lmail'), 'olmayan.biri');
+    F.$('.modal [data-r=forgot]').click(); await sleep(40);
+    ok(F.text('.modal-head h2') === 'Şifreni yenile' && F.$('#au-fmail').value === 'olmayan.biri' && !!F.$('#au-fpw'), 'Şifremi unuttum: yazılan e-posta taşındı');
+    F.$('#au-fpw').value = 'Yeni-Sifre-1';
+    await F.submit('.modal form', 200);
+    ok(/hesap yok/.test(F.text('.modal .err')), 'hesabı olmayana kod gitmez: ' + F.text('.modal .err'));
+    eq((await q1(be, "select count(*)::int as n from auth.users where email = 'olmayan.biri@std.yeditepe.edu.tr'")).n, 0, 'şifre yenilemede hesap açılmaz');
+    be.minPw = 12;   // sunucu daha uzun şifre isterse: kod doğrulanır, şifre yeniden sorulur
+    F.$('#au-fmail').value = 'ali.veli'; F.$('#au-fpw').value = 'Yeni-Sifre';
+    await F.submit('.modal form', 200);
+    await F.until(() => F.$('#au-code'), 'şifre yenileme kodu adımı');
+    F.$('#au-code').value = lastCode(be, 'ali.veli@std.yeditepe.edu.tr');
+    await F.submit('.modal form', 300);
+    await F.until(() => F.$('#au-npw') && /zayıf/.test(F.text('.modal .err')), 'sunucu şifreyi zayıf bulunca yeni şifre istenir');
+    F.$('#au-npw').value = 'Yeni-Sifre-123';
+    await F.submit('.modal form', 300);
+    await F.until(() => !F.$('.modal') && F.ev('myAcc() && myAcc().username') === 'aliveli', 'şifre yenilendi, giriş yapıldı');
+    eq(be.passwords.get('ali.veli@std.yeditepe.edu.tr'), 'Yeni-Sifre-123', 'yeni şifre kaydedildi');
+    ok(/Şifren yenilendi/.test(F.text('#toasts')), 'şifre yenilendi iletisi');
+    be.minPw = 0; be.noRateLimit = false;
+    noErr(B, 'şifreyle giriş'); noErr(F, 'şifre yenileme');
+
+    for (const t of [v, A, B, C, Dn, B2, F]) t.close();
   } catch (e) {
     fail++; console.log('  ✗ beklenmeyen hata: ' + (e && e.stack || e));
   } finally {

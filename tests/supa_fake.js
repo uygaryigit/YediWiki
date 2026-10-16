@@ -1,5 +1,5 @@
 // supabase-js'in testler için sahtesi: aynı arayüz, arkasında yerel PostgreSQL'deki gerçek şema, kurallar, RLS ve tetikleyiciler.
-// Auth: e-posta kodu (kod e-posta yerine `mails` listesine düşer), şifreyle giriş; PostgREST: docs okuma ve RPC; Realtime: LISTEN/NOTIFY.
+// Auth: e-posta kodu (kod e-posta yerine `mails` listesine düşer), şifreyle giriş, şifre belirleme; PostgREST: docs okuma ve RPC; Realtime: LISTEN/NOTIFY.
 const { Pool, Client } = require('pg');
 
 const PG = { host: process.env.PGHOST || '/var/tmp/ywpg', port: +(process.env.PGPORT || 54329), user: 'postgres' };
@@ -152,6 +152,17 @@ function makeClient(be, { delay = 2 } = {}) {
       const u = (await be.pool.query('select id::text as id, email, email_confirmed_at from auth.users where lower(email) = $1', [email])).rows[0];
       if (!u || !pw || pw !== password) return { data: { user: null, session: null }, error: { code: 'invalid_credentials', message: 'Invalid login credentials', status: 400 } };
       return signIn(u);
+    },
+    // Oturum açıkken şifre belirleme (kodla girdikten sonra); Supabase gibi: kısa şifre zayıf, aynı şifre "farklı olmalı"
+    async updateUser({ password } = {}) {
+      if (!st.session) return { data: { user: null }, error: { code: 'session_not_found', message: 'Auth session missing!', status: 400 } };
+      if (password != null) {
+        const em = lower(st.session.user.email);
+        if (String(password).length < (be.minPw || 6)) return { data: { user: null }, error: { code: 'weak_password', message: `Password should be at least ${be.minPw || 6} characters.`, status: 422 } };
+        if (be.passwords.get(em) === String(password)) return { data: { user: null }, error: { code: 'same_password', message: 'New password should be different from the old password.', status: 422 } };
+        be.passwords.set(em, String(password));
+      }
+      return { data: { user: st.session.user }, error: null };
     },
     async signOut() { st.session = null; emit('SIGNED_OUT', null); return { error: null }; }
   };

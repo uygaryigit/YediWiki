@@ -11,11 +11,12 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - 0003 (`not_oylari`, notlara ▲/▼ oy) 14 Ekim'de bağlayıcıyla uygulandı; canlıdaki işlevler yereldekiyle aynı (md5 denetlendi).
   - 0004 (`istek_nedeni`, istekte isteğe bağlı `why`, en çok 300) 16 Ekim'de bağlayıcıyla uygulandı; canlıda denendi.
   - 0005 (`karakter_govde_kiyafet`, users'ta `govde` e/k/d ve `kiyafet` tisort/kapusonlu/mont; başka değer reddedilir) 17 Ekim'de bağlayıcıyla uygulandı (öncesinde canlı `users_norm` 0002 ile aynıydı, md5).
+  - 0006 (`yorum_siniri`, `public.docs` üzerinde tetikleyici `yw_private.comment_limit`) 17 Ekim'de bağlayıcıyla uygulandı; canlıdaki işlev yereldekiyle aynı (md5). doc_set / doc_update değişmedi.
 - **Hesaplar:**
   - `yonetici@yediwiki.com`: yönetici, şifreyle girer.
   - `deneme123@std.yeditepe.edu.tr`: ortak deneme hesabı, şifreyle girer.
   - Karakter vücutları (17 Ekim, kullanıcının isteğiyle elle): `deneme123` erkek; `azrock` (Azra) ve `dilara.bahtiyar` kadın. Seçmeyen eski hesaplar "diğer" çizilir.
-  - Öğrenciler okul e-postasına gelen kodla girer.
+  - Öğrenciler kayıt olurken şifre belirler ve şifreyle girer; kod yalnızca kayıtta ve şifre yenilemede gider. 17 Ekim'den önce yalnızca kodla açılmış hesaplar bir kez “Şifremi unuttum” ile şifre belirler.
 - **Yayın:** Cloudflare Workers, yalnızca statik dosya (`wrangler.jsonc`, `dist/`). GitHub `main`'den otomatik derlenir; dağıtım çalışıyor.
   - `yediwiki.uygaryigit.workers.dev` Türkiye'den açılmıyor (erişim sorunu); site yediwiki.com üzerinden kullanılacak.
 - **Alan adları (13 Ekim):** `yediwiki.com` ve `yediwiki.xyz` Cloudflare'e eklendi (Free). Natro'da isim sunucuları `colin.ns.cloudflare.com` ve `wren.ns.cloudflare.com` yapıldı; .com kaydında görünüyor, Cloudflare'in etkinleştirmesi bekleniyor.
@@ -76,6 +77,20 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
 - **Düğmeler (16 Ekim):** Parlama yok (kullanıcı fazla buldu). `.btn` sade, altta koyu bir kenar (`--edge`): üzerine gelince hafif kalkar, basınca iner.
 - **Yenilikler bölümü kaldırıldı (14 Ekim):** Kullanıcı istemiyor; yenilik penceresi ve test listesi geri eklenmesin. Ayhan Abi turu Hakkında sayfasındaki düğmeyle de başlar.
 
+- **Giriş ekranı (17 Ekim):** Sitede önce giriş (`stepLogin`): okul e-postası, şifre (yanında “Şifremi unuttum”), yeşil Giriş yap (`.btn-go`); altında “Hesabın yok mu?” ve kırmızı Kayıt ol (`.btn-new`).
+  - Kayıt ol (`stepSignup`): e-posta + şifre (en az 8, `PW_MIN`, göz düğmesi) → kod → profil → bölüm. Şifremi unuttum (`stepForgot`): e-posta + yeni şifre → kod (`shouldCreateUser: false`, hesap yoksa kod gitmez).
+  - Kod doğrulanınca şifre `updateUser` ile yazılır (`setPassword`); sunucu zayıf bulursa oturum açık kalır, yeni şifre sorulur (`stepSetPw`). Kayıt ol'da var olan hesabın e-postası yazılırsa giriş yapılır, şifre yenilenir.
+  - Yönetici ve deneme hesabı aynı giriş ekranından girer; Kayıt ol'a yazılırlarsa girişe döner. claude.ai sürümünde ilk ekran yine hesap açma.
+- **Kod hizası (17 Ekim):** Ders listelerinde kod kutusu en az 5.5em, ortalı (`.row-link > .code:first-child`, seçmeli seçenekleri, arama önerileri, not istekleri); adlar aynı hizadan başlar. En uzun yaygın kod COMM 400; DENTGT kodları biraz taşar.
+- **Bu dönemki dersler (17 Ekim):** Dersler sayfasında kendi bölümünün planındayken, aramıyorken listenin üstünde kutu (`[data-r=now]`, `nowHtml`): dönemin zorunlu dersleri ve seçilmiş seçmeliler. Dönem giriş yılından (`nowSem`: Güz Ağustos-Ocak, Bahar Şubat-Temmuz; yıllık planda sınıf).
+  - ‹ › ile düzeltilir (`semStep`, hazırlık okuyan için); seçim özel kayıtta `donem[bölüm] = { s, t }`, dönem değişince bir ilerler.
+- **HocaÖlçer (17 Ekim):** Arama ya da fakülte seçilmedikçe yalnızca son puanlanan 10 hoca (en yenisi üstte) ve “Tüm hocaları göster”; tüm listede sıralama seçicisi ve “Son puanlananlara dön”.
+  - Genel puan ağırlıklı (`CRIT_W`, `critAll`): anlatım 0,35, not verme 0,30, ödev yükü 0,20, devamsızlık 0,15. Karnede “ağırlıklı genel puan”.
+- **Yorum sınırı (17 Ekim):** Bir kişi bir hocaya ya da bir derse en çok 3 yorum (`CM_LIMIT`, anonim dahil); not yorumlarında sınır yok, yönetici serbest. Sınır dolunca yorum kutusu yerine açıklama; puanlama penceresinde yorum yazılamaz, yalnızca puan kaydedilir.
+  - Sunucuda 0006: yorum silinince yer açılır; yorumun yeri (`tt`, `tid`) sonradan değişmez.
+- **Son yorumlar (17 Ekim):** Anonim yorumda profil resmi casus, ad düz “Anonim” (casus simgesi yok).
+- **Zirve künyeleri (17 Ekim):** Podyum gibi alt kenarlar hizalı, 1. en yüksek, 2. biraz alçak, 3. en alçak (üst boşluk 38/30/22 piksel); adlar daha büyük ve kalın (.96rem, 1. için 1.04rem).
+
 ## Sıradaki işler
 
 1. **Drive seçiciyi dene:** yediwiki.com'da "Drive'dan seç" ile gerçek bir Google hesabından dosya seç; paylaşım ayarı ve önizleme.
@@ -105,4 +120,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1523/1523, `npm run test:site` 118/118, `npm run test:db` 97/97.
+- **Beklenen sonuçlar:** `npm test` 1544/1544, `npm run test:site` 142/142, `npm run test:db` 118/118.

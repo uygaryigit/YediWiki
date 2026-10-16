@@ -108,8 +108,38 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(/ön lisans/.test(t.text('.bol-head')), 'ön lisans etiketi');
     noErr(t, 'bölüm planları');
 
-    console.log('4) mezuniyet yolu ve seçmeli satırları');
+    console.log('4) bu dönemki dersler, mezuniyet yolu ve seçmeli satırları');
     await t.go('#/dersler?b=bilgisayar-muhendisligi');
+    { const now = new Date(), M = now.getMonth(), guz = M >= 7 || M === 0, ay = M >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+      const P = CATJ.planlar['bilgisayar-muhendisligi'], sems = Object.keys(P.donemler).map(Number).sort((a, b) => a - b);
+      const sn = Math.min(sems[sems.length - 1], Math.max(sems[0], (ay - 2023) * 2 + (guz ? 1 : 2)));
+      const box = t.$('[data-r=now] .now-sem');
+      ok(box && /Bu dönemki dersler/.test(box.textContent) && t.text('[data-r=now] .now-term') === `${ay}-${ay + 1} ${guz ? 'Güz' : 'Bahar'}`, 'kendi bölümünde Bu dönemki dersler: ' + (box && t.text('[data-r=now] .now-term')));
+      ok(new RegExp(`^${sn}\\. dönem · ${Math.ceil(sn / 2)}\\. sınıf ${sn % 2 ? 'Güz' : 'Bahar'}$`).test(t.text('[data-r=now] .now-lbl')), 'dönem giriş yılından (2023): ' + t.text('[data-r=now] .now-lbl'));
+      eq(t.$$('[data-r=now] .row-link .code').map(e => e.textContent.replace(' ', '')).join(), P.donemler[sn].dersler.join(), 'bu dönemin dersleri plandaki gibi');
+      ok(!t.$('[data-r=list] .now-sem') && !t.$('[data-r=now] [data-g=done]') && !t.$('[data-r=now] .el-row'), 'plan listesi aynı kaldı; kutuda ✓ ve seçmeli satırı yok');
+      const prev = t.$('[data-r=now] [data-g=sem-step][data-d="-1"]');
+      prev.click(); await t.wait(120);
+      ok(new RegExp(`^${sn - 1}\\. dönem`).test(t.text('[data-r=now] .now-lbl')), 'okla bir önceki döneme: ' + t.text('[data-r=now] .now-lbl'));
+      const sv = JSON.parse(t.ev("JSON.stringify(privGet('donem')['bilgisayar-muhendisligi'])"));
+      ok(sv && sv.s === sn - 1 && sv.t > 0, 'seçim hesabın özel kaydında: ' + JSON.stringify(sv));
+      eq(t.ev(`nowSem('bilgisayar-muhendisligi', planOf('bilgisayar-muhendisligi')).sn`), sn - 1, 'seçim korunur');
+      { const nx = t.ev(`(() => { const t = acadNow(); return termIdx(t); })()`), v2 = JSON.parse(t.ev("JSON.stringify(privGet('donem')['bilgisayar-muhendisligi'])"));
+        eq(v2.t, nx, 'seçimin dönemi bu dönem'); }
+      t.ev(`privPut('donem', 'bilgisayar-muhendisligi', { s: ${sn - 1}, t: termIdx(acadNow()) - 1 })`); await t.wait(80);
+      eq(t.ev(`nowSem('bilgisayar-muhendisligi', planOf('bilgisayar-muhendisligi')).sn`), Math.min(sems[sems.length - 1], sn), 'yeni döneme geçince seçim bir ilerler');
+      t.ev(`privPut('donem', 'bilgisayar-muhendisligi', null)`); await t.wait(80);
+      const f = t.$('[data-r=f]'); f.value = 'cse'; f.dispatchEvent(new t.w.Event('input')); await t.wait(60);
+      ok(!t.$('[data-r=now] .now-sem'), 'ararken bu dönem kutusu yok');
+      f.value = ''; f.dispatchEvent(new t.w.Event('input')); await t.wait(60);
+      await t.go('#/dersler?b=matematik');
+      ok(!t.$('[data-r=now] .now-sem'), 'başka bölümün planında bu dönem kutusu yok');
+      await t.go('#/dersler?b=tip');
+      ok(!t.$('[data-r=now] .now-sem'), 'Tıp planında da yok (kendi bölümü değil)');
+      t.store.put('users/' + t.me, Object.assign(student(), { yil: ay - 2 })); await t.wait(120);
+      eq(t.ev(`nowSem('tip', planOf('tip')).sn`), 3, 'yıllık planda dönem sınıf: iki yıl önce giren 3. sınıf');
+      t.store.put('users/' + t.me, student()); await t.wait(120);
+      await t.go('#/dersler?b=bilgisayar-muhendisligi'); }
     ok(/0\/32 zorunlu ders, 0\/13 seçmeli, 0\/143 kredi/.test(t.text('.grad')), 'başlangıç: ' + t.text('.grad-top'));
     eq(CATJ.planlar['bilgisayar-muhendisligi'].kredi, 143, 'planın kredisi mezuniyet yolundakiyle aynı');
     t.$('[data-g=done][data-id=CSE101]').click(); await t.wait(80);
@@ -1171,9 +1201,21 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(row && /Son olarak \d{4}-\d{4} döneminde verdi/.test(row.textContent), 'dersi verenler sekmesinde: ' + (row && row.textContent));
     ok(/akademik kadro sayfalarındaki ders listelerinden/.test(t.text('[data-r=panel]')), 'kaynak notu');
     await t.go('#/hocaolcer');
-    ok(t.$$('[data-r=list] .row-link').length === 60 && /Daha fazla göster \(\d+ hoca daha\)/.test(t.text('[data-r=list] [data-r=more]')), 'HocaÖlçer ilk 60 hoca, devamı düğmede');
+    { const rated = t.ev('[...S.hocas.values()].filter(h => ratingsOf(h).length).length'), shown = t.$$('[data-r=list] .row-link');
+      ok(/Son puanlanan hocalar/.test(t.text('[data-r=list] .sub-h')) && shown.length === Math.min(10, rated) && (rated || /Henüz puanlanan hoca yok/.test(t.text('[data-r=list]'))), 'HocaÖlçer önce son puanlanan hocaları gösterir: ' + shown.length + '/' + rated);
+      const last = shown.map(a => t.ev(`Math.max(...ratingsOf(S.hocas.get(${JSON.stringify(a.getAttribute('href').slice(7))})).map(r => r.at))`));
+      ok(last.every((x, i) => !i || last[i - 1] >= x), 'en son puanlanan en üstte');
+      ok(t.$('[data-r=sort]').hidden && /Tüm hocaları göster \(\d+ hoca\)/.test(t.text('[data-r=list] [data-r=all]')), 'sıralama gizli, Tüm hocaları göster düğmesi'); }
+    t.$('[data-r=list] [data-r=all]').click(); await t.wait(60);
+    ok(t.$$('[data-r=list] .row-link').length === 60 && /Daha fazla göster \(\d+ hoca daha\)/.test(t.text('[data-r=list] [data-r=more]')) && !t.$('[data-r=sort]').hidden, 'Tümünü göster: ilk 60 hoca, devamı düğmede, sıralama görünür');
     t.$('[data-r=list] [data-r=more]').click(); await t.wait(60);
     ok(t.$$('[data-r=list] .row-link').length > 60, 'daha fazla göster');
+    t.$('[data-r=list] [data-r=recent]').click(); await t.wait(60);
+    ok(/Son puanlanan hocalar/.test(t.text('[data-r=list]')) && t.$$('[data-r=list] .row-link').length <= 10, 'son puanlananlara dönülür');
+    { const w = JSON.parse(t.ev('JSON.stringify(CRIT_W)'));
+      ok(w.a > w.n && w.n > w.o && w.o > w.d && Math.abs(w.a + w.n + w.o + w.d - 1) < 1e-9, 'ağırlıklar: anlatım > not verme > ödev yükü > devamsızlık, toplam 1');
+      ok(Math.abs(t.ev('critAll({ a: 5, o: 1, n: 3, d: 1 })') - (5 * w.a + 1 * w.o + 3 * w.n + 1 * w.d)) < 1e-9 && Math.abs(t.ev('critAll({ a: 4, o: 4, n: 4, d: 4 })') - 4) < 1e-9, 'genel puan ağırlıklı');
+}
     ok(/Hoca listesi Yeditepe’nin sitesindeki akademik kadro sayfalarından alındı/.test(t.text('#main')), 'kaynak satırı');
     const facs = [...t.$$('[data-r=dept] option')].map(o => o.textContent);
     ok(facs.includes(h.fac), 'fakülte süzgeci kadrodaki fakülteleri listeler');
@@ -1195,6 +1237,11 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(!t.$('.modal #r-course') && d && d.kadro === true && d.ratings[t.me] && d.ratings[t.me].c === cid && !d.name, 'ilk puanda kayıt açıldı, ad kadrodan gelir: ' + hid + ' ' + JSON.stringify(d).slice(0, 300));
     eq(t.ev(`S.hocas.get(${JSON.stringify(hid)}).name`), h.name, 'birleşik kayıtta ad kadrodaki gibi');
     eq(t.ev(`hocaStats(S.hocas.get(${JSON.stringify(hid)})).cnt`), 1, 'puan sayıldı');
+    { const o = JSON.parse(t.ev(`JSON.stringify((() => { const s = hocaStats(S.hocas.get(${JSON.stringify(hid)})); return { all: s.all, w: critAll(s) }; })())`));
+      ok(o.all > 0 && Math.abs(o.all - o.w) < 1e-9, 'karnedeki genel puan ağırlıklı: ' + JSON.stringify(o)); }
+    await t.go('#/hocaolcer');
+    ok(t.$$('[data-r=list] .row-link')[0] && t.$$('[data-r=list] .row-link')[0].getAttribute('href') === '#/hoca/' + hid && /az önce/.test(t.text('[data-r=list] .row-sub')), 'yeni puanlanan hoca son puanlananların başında');
+    await t.go('#/hoca/' + hid);
     t.ev(`removeRating(${JSON.stringify(hid)})`); await t.wait(60);
     if (t.$('.modal [data-ok]')) { t.$('.modal [data-ok]').click(); await t.wait(200); }
     eq(t.ev(`hocaStats(S.hocas.get(${JSON.stringify(hid)})).cnt`), 0, 'puan kaldırıldı');

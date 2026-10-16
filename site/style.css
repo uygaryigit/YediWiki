@@ -682,19 +682,20 @@ button.rank-row:hover{background:var(--surface-2)}
 .mt-tags{display:grid;grid-template-columns:1fr 1.14fr 1fr;gap:8px;align-items:end;margin-top:-30px;position:relative}
 .mt-tag{--mt-b:rgba(255,255,255,.18);appearance:none;font:inherit;color:inherit;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;margin-top:26px;padding:22px 6px 9px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.04));border:1.5px solid var(--mt-b);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 18px -12px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:popin .5s cubic-bezier(.2,1.5,.4,1) .15s both;transition:transform .2s ease}
 .mt-tag:hover{transform:translateY(-2px)}
-.mt-tag.t1{--mt-b:rgba(255,210,63,.65);background:linear-gradient(180deg,rgba(255,210,63,.26),rgba(255,210,63,.06));padding-top:28px;animation-delay:0s}
-.mt-tag.t2{--mt-b:rgba(211,217,230,.5)}
+.mt-tag.t1{--mt-b:rgba(255,210,63,.65);background:linear-gradient(180deg,rgba(255,210,63,.26),rgba(255,210,63,.06));padding-top:38px;animation-delay:0s}
+.mt-tag.t2{--mt-b:rgba(211,217,230,.5);padding-top:30px}
 .mt-tag.t3{--mt-b:rgba(227,150,90,.55);animation-delay:.25s}
 .mt-tag.empty{visibility:hidden}
 .mt-medal{position:absolute;top:-25px;left:50%;width:34px;height:44px;margin-left:-17px;filter:drop-shadow(0 3px 0 rgba(0,0,0,.3));overflow:visible}
 .mt-tag.t1 .mt-medal{top:-32px;width:42px;height:55px;margin-left:-21px}
-.mt-name{display:flex;align-items:center;justify-content:center;gap:5px;max-width:100%;font-weight:700;font-size:.82rem;line-height:1.25}
+.mt-name{display:flex;align-items:center;justify-content:center;gap:6px;max-width:100%;font-weight:800;font-size:.96rem;line-height:1.25;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.mt-tag.t1 .mt-name{font-size:1.04rem}
 .mt-name > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mt-tag .avatar.mt-av{width:20px;height:20px;font-size:.7rem}
+.mt-tag .avatar.mt-av{width:24px;height:24px;font-size:.78rem}
 .mt-tag.is-me .mt-name{color:#FFE14D}
 .mt-val{font-size:.72rem;color:rgba(243,245,255,.8)}
 .mt-val b{font-family:var(--f-display);font-weight:800;font-stretch:78%;font-size:1.08rem;color:#FFE14D}
-@container (max-width:340px){.mt-tags{gap:6px}.mt-name{font-size:.78rem}.mt-tag .avatar.mt-av{display:none}}
+@container (max-width:340px){.mt-tags{gap:6px}.mt-name,.mt-tag.t1 .mt-name{font-size:.88rem}.mt-tag .avatar.mt-av{display:none}}
 .board{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px}
 .board.detail{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));column-gap:16px}
 .brow{width:100%;display:flex;align-items:center;gap:10px;padding:7px 8px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;animation:slidein .45s ease-out both}
@@ -1753,3 +1754,37 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 .cm-to.cm-hoca{background:color-mix(in srgb,#A155FF 14%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,#A155FF 35%,transparent)}
 .cm-g{flex:none;width:18px;height:18px}
 .cm-list .code{font-size:.86rem}
+
+/* Ders listelerinde kod sabit genişlikte: kodun uzunluğu ne olursa olsun adlar aynı hizadan başlar (en uzun yaygın kod COMM 400) */
+.row-link > .code:first-child,.el-opt > .code,.cb-item > .code,.rq-line > .code:first-child{min-width:5.5em;justify-content:center}
+
+/* Giriş ve kayıt: hesabı olan yeşil Giriş yap ile girer, altında kırmızı Kayıt ol */
+.auth-form .auth-main{width:100%;margin-top:6px}
+.btn-go{background:var(--green);border-color:var(--green);color:var(--surface);--edge:color-mix(in srgb,var(--green) 58%,#000)}
+.btn-go:hover{background:color-mix(in srgb,var(--green) 88%,#000);border-color:transparent}
+.btn-new{background:var(--red);border-color:var(--red);color:var(--surface);--edge:color-mix(in srgb,var(--red) 58%,#000)}
+.btn-new:hover{background:color-mix(in srgb,var(--red) 88%,#000);border-color:transparent}
+.auth-or{display:flex;align-items:center;gap:12px;margin:22px 0 8px;color:var(--ink-3);font-size:.86rem;font-weight:650}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.auth-form .auth-alt{text-align:center;margin:14px 0 0;font-size:.9rem;color:var(--ink-2)}
+.auth-sep{margin:0 10px;color:var(--ink-3)}
+.auth-forgot{font-size:.84rem}
+.pw-in{position:relative}
+.pw-in .input{padding-right:46px}
+.pw-eye{position:absolute;top:50%;right:5px;transform:translateY(-50%);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:8px;background:none;color:var(--ink-3);cursor:pointer}
+.pw-eye:hover{color:var(--ink);background:var(--surface-2)}
+.pw-eye .ic{width:20px;height:20px}
+
+/* Dersler: kendi bölümünde bu dönemin dersleri en üstte */
+.now-sem{margin:22px 0 0;padding:14px 14px 10px;border-radius:var(--r-lg);background:var(--pen-soft);border:1.5px solid color-mix(in srgb,var(--pen) 28%,transparent)}
+.now-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 14px;margin-bottom:10px}
+.now-head h2{margin:0;font-family:var(--f-display);font-stretch:85%;font-size:1.3rem;font-weight:800;line-height:1.15}
+.now-term{margin:2px 0 0;color:var(--ink-2);font-size:.85rem;font-weight:650}
+.now-step{display:inline-flex;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px}
+.now-step .iconbtn{padding:6px;border-radius:999px;color:var(--ink-2)}
+.now-step .iconbtn:hover{background:var(--surface-2);color:var(--ink)}
+.now-step .iconbtn[disabled]{opacity:.3;cursor:default;background:none}
+.now-lbl{font-size:.86rem;font-weight:650;padding:0 4px;white-space:nowrap}
+.now-lbl b{font-family:var(--f-display);font-weight:800}
+.now-empty{margin:6px 0}
+.now-fine{margin:10px 2px 2px}

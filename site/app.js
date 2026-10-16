@@ -14,6 +14,9 @@ const CRIT = [
   { k: 'n', name: 'Not verme', lo: 'çok sıkı', hi: 'çok cömert' },
   { k: 'd', name: 'Devamsızlık', lo: 'çok katı', hi: 'esnek' }
 ];
+/* Genel puanda kriterlerin ağırlığı: anlatım en çok, not verme ona yakın, ödev yükü biraz daha az, devamsızlık en az */
+const CRIT_W = { a: 0.35, n: 0.30, o: 0.20, d: 0.15 };
+const critAll = r => CRIT.reduce((s, c) => s + CRIT_W[c.k] * (+r[c.k] || 0), 0);
 const NOTE_TYPES = [{ k: 'not', name: 'Ders notu' }, { k: 'sinav', name: 'Çıkmış sınav' }];
 const noteType = n => (n && n.type === 'sinav' ? NOTE_TYPES[1] : NOTE_TYPES[0]);   // eski türler (özet, ödev, lab, diğer) ders notu sayılır
 const TITLES = ['Prof. Dr.', 'Doç. Dr.', 'Dr. Öğr. Üyesi', 'Öğr. Gör. Dr.', 'Öğr. Gör.', 'Arş. Gör. Dr.', 'Arş. Gör.'];
@@ -56,6 +59,8 @@ const MARKET = [
 ];
 const MARKET_BY_ID = Object.fromEntries(MARKET.map(m => [m.id, m]));
 const REPORT_LIMIT = 3;
+/* Bir kişi bir hocaya ya da bir derse en çok bu kadar yorum yazar (anonim de sayılır); sunucuda da aynı sınır var */
+const CM_LIMIT = 3;
 
 const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
@@ -499,11 +504,11 @@ function ratingsOf(h) {
     .filter(([, r]) => r && typeof r === 'object' && CRIT.every(c => typeof r[c.k] === 'number' && r[c.k] >= 0.5 && r[c.k] <= 5))
     .map(([key, r]) => ({ key, a: r.a, o: r.o, n: r.n, d: r.d, c: r.c || '', tk: +r.tk || 0, at: +r.at || 0 }));
 }
-/* cnt: puan sayısı; a, o, n, d: kriter ortalamaları ("n" not verme kriteridir, sayı değil); all: genel ortalama */
+/* cnt: puan sayısı; a, o, n, d: kriter ortalamaları ("n" not verme kriteridir, sayı değil); all: ağırlıklı genel puan (CRIT_W) */
 function hocaStats(h) {
   const rs = ratingsOf(h), cnt = rs.length, out = { cnt };
   for (const c of CRIT) out[c.k] = cnt ? rs.reduce((s, r) => s + r[c.k], 0) / cnt : 0;
-  out.all = cnt ? CRIT.reduce((s, c) => s + out[c.k], 0) / CRIT.length : 0;
+  out.all = cnt ? critAll(out) : 0;
   return out;
 }
 const emptyCounts = () => Object.fromEntries(GRADES.map(x => [x.g, 0]));
@@ -515,6 +520,10 @@ function distStats(counts) {
 function nearestLetter(avg) { let best = GRADES[0]; for (const x of GRADES.slice(0, 8)) if (Math.abs(x.p - avg) < Math.abs(best.p - avg)) best = x; return best.g; }
 function notesWhere(pred) { const out = []; for (const [id, n] of S.notes) if (n && pred(n)) out.push(Object.assign({ id }, n)); return out; }
 function commentsWhere(pred) { const out = []; for (const [id, c] of S.comments) if (c && pred(c)) out.push(Object.assign({ id }, c)); return out; }
+/* Hoca ve ders yorumlarında kişi başı sınır: yazdıklarım (anonimler dahil) */
+const myCommentCount = (tt, tid) => commentsWhere(c => c.tt === tt && c.tid === tid && isMine(c)).length;
+const cmLimited = tt => tt === 'hoca' || tt === 'course';
+const cmFullMsg = tt => `${tt === 'hoca' ? 'Bu hocaya' : 'Bu derse'} en çok ${CM_LIMIT} yorum yazılabilir. Yeni yorum için eski yorumlarından birini silebilirsin.`;
 function commentCounts() {
   return memoized('cc', () => {
     const m = new Map();
@@ -877,10 +886,25 @@ function authErrTr(e) {
   if (!st || /fetch|network/i.test(msg)) return 'Bağlantı sorunu. İnternetini kontrol edip tekrar dene.';
   return 'Giriş yapılamadı. Biraz sonra tekrar dene.';
 }
-async function sendOtp(email) {
-  try { const { error } = await S.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } }); return error ? authErrTr(error) : ''; }
-  catch (e) { return authErrTr(e); }
+/* create: false ise (şifre yenileme) hesap yoksa kod gitmez */
+async function sendOtp(email, create = true) {
+  const no = e => !create && (String((e && e.code) || '') === 'otp_disabled' || /signups? not allowed/i.test(String((e && e.message) || '')));
+  try {
+    const { error } = await S.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: create } });
+    return !error ? '' : no(error) ? 'Bu e-postayla açılmış bir hesap yok. Hesap açmak için “Kayıt ol”a bas.' : authErrTr(error);
+  } catch (e) { return authErrTr(e); }
 }
+/* Kod doğrulandıktan sonra (oturum açıkken) şifre belirlenir; aynı şifre yeniden yazıldıysa da sorun yok */
+async function setPassword(pw) {
+  let error = null;
+  try { ({ error } = await S.sb.auth.updateUser({ password: pw })); } catch (e) { error = e; }
+  if (!error) return '';
+  const code = String(error.code || ''), msg = String(error.message || '');
+  if (code === 'same_password' || /should be different/i.test(msg)) return '';
+  if (code === 'weak_password' || /password/i.test(msg) && /weak|short|at least|characters/i.test(msg)) return 'Bu şifre çok zayıf. Daha uzun, harf ve rakam karışık bir şifre seç.';
+  return authErrTr(error);
+}
+const PW_MIN = 8;
 
 /* ================= Hata yönetimi ================= */
 function dbErrMsg(e) {
@@ -1318,6 +1342,7 @@ const G = {
   'cap-clear': id => capClear(id),
   'cap-hide': (id, el) => capHide(id, el.dataset.k),
   'cap-unhide': (id, el) => capUnhide(id, +el.dataset.sem),
+  'sem-step': (id, el) => semStep(id, +el.dataset.d || 0),
   'recent-clear': () => { ls.set('recent', []); changed(); },
   'dview-max': (id, el) => dviewMax(el.closest('.dview')),
   'welcome': () => { if (hasAcc()) openWelcome(); else openAuth(); },
@@ -1635,7 +1660,7 @@ function openRateModal(hid, { cid = '' } = {}) {
     }
     const tk = +$('#r-term', m.el).value || 0;
     const text = $('#r-text', m.el).value.trim();
-    
+    if (text && !S.owner && myCommentCount('hoca', hid) >= CM_LIMIT) { err.textContent = cmFullMsg('hoca') + ' Yorumu boş bırakırsan yalnızca puanın kaydedilir.'; return; }
     const cref = text ? S.db.collection('comments').doc() : null;
     const btn = $('[type=submit]', m.el); btn.disabled = true;
     const r = { a: vals.a, o: vals.o, n: vals.n, d: vals.d };
@@ -2500,13 +2525,40 @@ function openAuth(opts = {}) {
   if (hasAcc()) { location.hash = '#/profil'; return; }
   if (modalStack.some(x => x.isAuth)) return;
   const st = { email: '', code: '', showName: false, showYil: true, avk: 'emoji', emoji: AV_EMOJI[Math.floor(Math.random() * AV_EMOJI.length)], harf: '', urun: '', color: AV_COLORS[Math.floor(Math.random() * AV_COLORS.length)], pic: '', items: {} };
-  const m = openModal({ title: 'Yeditepe hesabınla gir', body: '<div data-r="host"></div>' });
+  const m = openModal({ title: S.supa ? 'Giriş yap' : 'Yeditepe hesabınla gir', body: '<div data-r="host"></div>' });
   m.isAuth = true;
   const host = $('[data-r=host]', m.el);
+  const setTitle = t => { const h = $('.modal-head h2', m.el); if (h) h.textContent = t; };
+  const why = () => (opts.reason ? '<p class="auth-why">Notları, HocaÖlçer’i ve Kubbe’yi görmek için giriş yap. Giriş yapınca kaldığın yerden devam edersin.</p>' : '');
+  /* Sitede: Kayıt ol (e-posta + şifre -> kod) ve Şifremi unuttum (e-posta + yeni şifre -> kod) aynı kod adımına gider */
+  const pwField = (id, label) => `<div class="field"><label for="${id}">${label}</label><div class="pw-in"><input id="${id}" class="input" type="password" autocomplete="new-password" maxlength="72"><button type="button" class="pw-eye" data-r="pw-eye" aria-label="Şifreyi göster" aria-pressed="false">${icon('eye')}</button></div><p class="help">En az ${PW_MIN} karakter.</p></div>`;
+  function wirePwEye() {
+    $$('[data-r=pw-eye]', host).forEach(b => b.addEventListener('click', () => {
+      const inp = b.parentElement.querySelector('input'), on = inp.type === 'password';
+      inp.type = on ? 'text' : 'password'; b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'Şifreyi gizle' : 'Şifreyi göster');
+      b.innerHTML = icon(on ? 'eyeoff' : 'eye'); inp.focus();
+    }));
+  }
+  /* Okul e-postası ve şifre; yanlışsa hata yazısını döndürür */
+  function mailPw(mailSel, pwSel) {
+    const v = mailOf($(mailSel, host).value), pw = $(pwSel, host).value;
+    if (v === null) return { e: `Yalnızca ${MAIL_DOMAIN} uzantılı okul e-postasıyla hesap açılır.` };
+    if (!MAIL_RE.test(v)) return { e: 'E-postanın @ işaretinden önceki kısmını yaz, örneğin ad.soyad.' };
+    if (pw.length < PW_MIN) return { e: `Şifre en az ${PW_MIN} karakter olmalı.` };
+    return { v, pw };
+  }
+  async function sendFor(mode, btn, err, v, pw) {
+    const lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Gönderiliyor…';
+    const r = await sendOtp(v, mode !== 'reset');
+    btn.disabled = false; btn.textContent = lbl;
+    if (r) { err.textContent = r; return; }
+    Object.assign(st, { email: v, pw, mode, sentAt: Date.now() }); step2();
+  }
   function step1() {
+    if (S.supa) { stepSignup(); return; }
     host.innerHTML = `<form novalidate>
-      ${opts.reason ? '<p class="auth-why">Notları, HocaÖlçer’i ve Kubbe’yi görmek için giriş yap. Giriş yapınca kaldığın yerden devam edersin.</p>' : ''}
-      <p class="help">YediWiki yalnızca Yeditepe öğrencilerine açıktır. Okul e-postanın @ işaretinden önceki kısmını yazman yeter.${S.supa ? ' Adresine 6 haneli bir giriş kodu göndereceğiz; hesabın yoksa ilk girişte açılır.' : ''}</p>
+      ${why()}
+      <p class="help">YediWiki yalnızca Yeditepe öğrencilerine açıktır. Okul e-postanın @ işaretinden önceki kısmını yazman yeter.</p>
       ${mailFieldHtml('au-mail', 'Okul e-postan', st.email, 'email')}
       <p class="err" role="alert"></p>
       <p class="auth-alt">Sana verilmiş bir hesap mı var? <button type="button" class="linkbtn" data-r="to-login">E-posta ve şifreyle giriş yap</button></p>
@@ -2516,20 +2568,9 @@ function openAuth(opts = {}) {
     const err = $('.err', host);
     $('form', host).addEventListener('submit', async e => {
       e.preventDefault();
-      if (S.supa) {
-        const raw = $('#au-mail', host).value.trim().toLowerCase().replace(/\s+/g, ''), full = raw.includes('@') ? raw : raw + MAIL_DOMAIN;
-        if (PW_ACCOUNTS.includes(full)) { st.loginMail = full; stepLogin(); return; }
-      }
       const v = mailOf($('#au-mail', host).value);
       if (v === null) { err.textContent = `Yalnızca ${MAIL_DOMAIN} uzantılı okul e-postasıyla hesap açılır.`; return; }
       if (!MAIL_RE.test(v)) { err.textContent = 'E-postanın @ işaretinden önceki kısmını yaz, örneğin ad.soyad.'; return; }
-      if (S.supa) {
-        const btn = $('[type=submit]', host); btn.disabled = true; btn.textContent = 'Gönderiliyor…';
-        const r = await sendOtp(v);
-        btn.disabled = false; btn.textContent = 'Doğrulama kodu gönder';
-        if (r) { err.textContent = r; return; }
-        st.email = v; st.sentAt = Date.now(); step2(); return;
-      }
       if (S.out && userOf(S.baseMe)) { err.textContent = 'Bu cihazda zaten bir hesabın var. E-posta ve şifreyle giriş yap.'; return; }
       if (await mailTaken(v)) { err.textContent = 'Bu e-posta ile açılmış bir hesap var.'; return; }
       st.email = v;
@@ -2537,6 +2578,81 @@ function openAuth(opts = {}) {
       step2();
     });
     setTimeout(() => { const i = $('#au-mail', host); if (i) i.focus(); }, 40);
+  }
+  /* Kayıt ol: okul e-postası ve şifre, sonra e-postaya gelen kod */
+  function stepSignup() {
+    setTitle('Kayıt ol');
+    host.innerHTML = `<form novalidate class="auth-form">
+      <p class="help">YediWiki yalnızca Yeditepe öğrencilerine açıktır. Okul e-postanı yaz, bir şifre belirle; adresine 6 haneli doğrulama kodu göndereceğiz.</p>
+      ${mailFieldHtml('au-mail', 'Okul e-postan', st.email, 'email')}
+      ${pwField('au-pw', 'Şifre belirle')}
+      <p class="err" role="alert"></p>
+      <button class="btn btn-primary btn-lg auth-main" type="submit">Doğrulama kodu gönder</button>
+      <p class="auth-alt">Hesabın var mı? <button type="button" class="linkbtn" data-r="to-login">Giriş yap</button></p></form>`;
+    $('[data-r=to-login]', host).addEventListener('click', stepLogin);
+    wireMailField($('#au-mail', host)); wirePwEye();
+    const err = $('.err', host);
+    $('form', host).addEventListener('submit', async e => {
+      e.preventDefault();
+      err.textContent = '';
+      const raw = $('#au-mail', host).value.trim().toLowerCase().replace(/\s+/g, ''), full = raw.includes('@') ? raw : raw + MAIL_DOMAIN;
+      if (PW_ACCOUNTS.includes(full)) { st.loginMail = full; stepLogin(); return; }
+      const r = mailPw('#au-mail', '#au-pw');
+      if (r.e) { err.textContent = r.e; return; }
+      await sendFor('signup', $('[type=submit]', host), err, r.v, r.pw);
+    });
+    setTimeout(() => { const i = $('#au-mail', host); if (i) i.focus(); }, 40);
+  }
+  /* Şifremi unuttum (ya da önceden kodla girip hiç şifre belirlememiş öğrenci): e-posta ve yeni şifre, sonra kod */
+  function stepForgot() {
+    setTitle('Şifreni yenile');
+    const pre = st.email || (S.supa && st.loginTyped) || '';
+    host.innerHTML = `<form novalidate class="auth-form">
+      <p class="help">Okul e-postanı ve yeni şifreni yaz. Adresine gelen kodu girince yeni şifren geçerli olur ve giriş yaparsın.</p>
+      ${mailFieldHtml('au-fmail', 'Okul e-postan', pre, 'email')}
+      ${pwField('au-fpw', 'Yeni şifre')}
+      <p class="err" role="alert"></p>
+      <button class="btn btn-primary btn-lg auth-main" type="submit">Kod gönder</button>
+      <p class="auth-alt"><button type="button" class="linkbtn" data-r="to-login">Girişe dön</button></p></form>`;
+    $('[data-r=to-login]', host).addEventListener('click', stepLogin);
+    wireMailField($('#au-fmail', host)); wirePwEye();
+    const err = $('.err', host);
+    $('form', host).addEventListener('submit', async e => {
+      e.preventDefault();
+      err.textContent = '';
+      const raw = $('#au-fmail', host).value.trim().toLowerCase().replace(/\s+/g, ''), full = raw.includes('@') ? raw : raw + MAIL_DOMAIN;
+      if (PW_ACCOUNTS.includes(full)) { err.textContent = 'Bu hesabın şifresi buradan değiştirilemez.'; return; }
+      const r = mailPw('#au-fmail', '#au-fpw');
+      if (r.e) { err.textContent = r.e; return; }
+      await sendFor('reset', $('[type=submit]', host), err, r.v, r.pw);
+    });
+    setTimeout(() => { const i = $(pre ? '#au-fpw' : '#au-fmail', host); if (i) i.focus(); }, 40);
+  }
+  /* Şifre kod doğrulandıktan sonra yazılamadıysa (ör. sunucu zayıf buldu): oturum açık, yalnızca yeni şifre istenir */
+  function stepSetPw(msg) {
+    setTitle('Şifreni belirle');
+    host.innerHTML = `<form novalidate class="auth-form">
+      <p class="help ok">${esc(st.email)} doğrulandı.</p>
+      ${pwField('au-npw', 'Şifre')}
+      <p class="err" role="alert">${esc(msg || '')}</p>
+      <button class="btn btn-primary btn-lg auth-main" type="submit">Şifreyi kaydet</button></form>`;
+    wirePwEye();
+    const err = $('.err', host);
+    $('form', host).addEventListener('submit', async e => {
+      e.preventDefault();
+      const pw = $('#au-npw', host).value;
+      if (pw.length < PW_MIN) { err.textContent = `Şifre en az ${PW_MIN} karakter olmalı.`; return; }
+      const btn = $('[type=submit]', host); btn.disabled = true;
+      const r = await setPassword(pw);
+      btn.disabled = false;
+      if (r) { err.textContent = r; return; }
+      st.pw = ''; afterCode();
+    });
+    setTimeout(() => { const i = $('#au-npw', host); if (i) i.focus(); }, 40);
+  }
+  function afterCode() {
+    if (hasAcc()) { signedIn(st.mode === 'reset' ? 'Şifren yenilendi' : st.mode === 'signup' ? 'Bu e-postayla hesabın zaten vardı. Şifren kaydedildi' : ''); return; }
+    step3();
   }
   function step2() {
     if (S.supa) { step2Site(); return; }
@@ -2557,18 +2673,18 @@ function openAuth(opts = {}) {
   }
   /* Sitede kod gerçekten e-postaya gider; doğrulanınca oturum açılır, hesap yoksa profil adımına geçilir */
   function step2Site() {
-    host.innerHTML = `<form novalidate>
+    host.innerHTML = `<form novalidate class="auth-form">
       <p class="help">Kod <b>${esc(st.email)}</b> adresine gönderildi. Birkaç dakika içinde gelmezse gereksiz (spam) klasörüne de bak.</p>
       <div class="field"><label for="au-code">Gelen kod</label><input id="au-code" class="input code-in" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="000000"></div>
       <p class="err" role="alert"></p>
-      <p class="auth-alt"><button type="button" class="linkbtn" data-r="resend">Kodu yeniden gönder</button></p>
-      <div class="modal-foot"><button type="button" class="btn btn-ghost" data-r="back">Geri</button><button class="btn btn-primary" type="submit">Doğrula</button></div></form>`;
+      <button class="btn btn-primary btn-lg auth-main" type="submit">Doğrula</button>
+      <p class="auth-alt"><button type="button" class="linkbtn" data-r="back">Geri</button><span class="auth-sep" aria-hidden="true">·</span><button type="button" class="linkbtn" data-r="resend">Kodu yeniden gönder</button></p></form>`;
     const err = $('.err', host);
-    $('[data-r=back]', host).addEventListener('click', step1);
+    $('[data-r=back]', host).addEventListener('click', st.mode === 'reset' ? stepForgot : step1);
     $('[data-r=resend]', host).addEventListener('click', async () => {
       const left = Math.ceil((60000 - (Date.now() - (st.sentAt || 0))) / 1000);
       if (left > 0) { err.textContent = `Yeni kod için ${left} saniye bekle.`; return; }
-      const r = await sendOtp(st.email);
+      const r = await sendOtp(st.email, st.mode !== 'reset');
       if (r) { err.textContent = r; return; }
       st.sentAt = Date.now(); err.textContent = ''; toast('Yeni kod gönderildi');
     });
@@ -2583,13 +2699,19 @@ function openAuth(opts = {}) {
       btn.disabled = false; btn.textContent = 'Doğrula';
       if (!res || res.error || !res.data || !res.data.session) { err.textContent = authErrTr(res && res.error); return; }
       await applySession(res.data.session);
-      if (hasAcc()) { signedIn(); return; }
-      step3();
+      if (st.pw) {
+        btn.disabled = true;
+        const pe = await setPassword(st.pw);
+        btn.disabled = false;
+        if (pe) { stepSetPw(pe); return; }
+        st.pw = '';
+      }
+      afterCode();
     });
     setTimeout(() => { const i = $('#au-code', host); if (i) i.focus(); }, 40);
   }
-  function signedIn() {
-    m.close(); toast(`Giriş yapıldı: @${(myAcc() || {}).username || ''}`); changed();
+  function signedIn(note) {
+    m.close(); toast(`${note ? note + '. ' : ''}Giriş yapıldı: @${(myAcc() || {}).username || ''}`); changed();
     const nx = S.pendingHash; S.pendingHash = null;
     if (nx && nx !== location.hash) location.hash = nx; else route();
   }
@@ -2672,31 +2794,43 @@ function openAuth(opts = {}) {
     const nx = S.pendingHash; S.pendingHash = null;
     if (nx && nx !== location.hash) location.hash = nx;
   }
+  /* Hesabı olan önce buradan girer (yeşil Giriş yap); altında kırmızı Kayıt ol. Sitede öğrenciler de şifreyle girer */
   function stepLogin() {
-    host.innerHTML = `<form novalidate>
-      <p class="help">${S.supa ? 'Yönetici ve ortak deneme hesabı şifreyle girer; okul adresi değilse adresin tamamını yaz. Öğrenciler okul e-postasına gelen kodla girer.' : S.readOnly ? 'Bu sayfayı görüntüleme izniyle açtın. Sana verilen hesapla girip siteyi gezebilirsin.' : S.out ? 'Hesabından çıktın. Deneme hesabıyla ya da kendi e-posta ve şifrenle giriş yap.' : 'Sana verilen e-posta ve şifreyle giriş yap.'}</p>
+    setTitle(S.supa ? 'Giriş yap' : 'Yeditepe hesabınla gir');
+    const canSignup = !(S.readOnly || S.out);
+    const help = S.supa ? '' : S.readOnly ? 'Bu sayfayı görüntüleme izniyle açtın. Sana verilen hesapla girip siteyi gezebilirsin.' : S.out ? 'Hesabından çıktın. Deneme hesabıyla ya da kendi e-posta ve şifrenle giriş yap.' : 'Sana verilen e-posta ve şifreyle giriş yap.';
+    host.innerHTML = `<form novalidate class="auth-form">
+      ${st.loginMail ? '' : why()}
+      ${help ? `<p class="help">${help}</p>` : ''}
       ${st.loginMail ? '<p class="help ok">Bu hesap kodla değil şifreyle girer.</p>' : ''}
-      ${mailFieldHtml('au-lmail', 'E-posta', st.loginMail || '')}
-      <div class="field"><label for="au-lpw">Şifre</label><input id="au-lpw" class="input" type="password" autocomplete="current-password"></div>
+      ${mailFieldHtml('au-lmail', S.supa ? 'Okul e-postan' : 'E-posta', st.loginMail || st.loginTyped || '')}
+      <div class="field"><div class="lbl-row"><label class="label" for="au-lpw">Şifre</label>${S.supa ? '<button type="button" class="linkbtn auth-forgot" data-r="forgot">Şifremi unuttum</button>' : ''}</div><input id="au-lpw" class="input" type="password" autocomplete="current-password"></div>
       <p class="err" role="alert"></p>
-      ${S.readOnly || S.out ? '' : '<p class="auth-alt">Hesabın yok mu? <button type="button" class="linkbtn" data-r="to-signup">Yeditepe mailinle hesap aç</button></p>'}
-      <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">Giriş yap</button></div></form>`;
-    const err = $('.err', host), back = $('[data-r=to-signup]', host);
-    if (back) back.addEventListener('click', step1);
-    wireMailField($('#au-lmail', host));
+      <button class="btn btn-go btn-lg auth-main" type="submit">Giriş yap</button>
+      ${canSignup ? '<p class="auth-or"><span>Hesabın yok mu?</span></p><button type="button" class="btn btn-new btn-lg auth-main" data-r="to-signup">Kayıt ol</button>' : ''}</form>`;
+    const err = $('.err', host), back = $('[data-r=to-signup]', host), fg = $('[data-r=forgot]', host), lm = $('#au-lmail', host);
+    const keep = () => { const v = mailOf(lm.value); st.loginTyped = v && !PW_ACCOUNTS.includes(v) ? v : ''; };
+    if (back) back.addEventListener('click', () => { keep(); st.loginMail = ''; if (st.loginTyped && !st.email) st.email = st.loginTyped; step1(); });
+    if (fg) fg.addEventListener('click', () => { keep(); stepForgot(); });
+    wireMailField(lm);
     $('form', host).addEventListener('submit', async e => {
       e.preventDefault();
       err.textContent = '';
-      const rawMail = $('#au-lmail', host).value.trim().toLowerCase().replace(/\s+/g, '');
+      const rawMail = lm.value.trim().toLowerCase().replace(/\s+/g, '');
       const mail = S.supa && rawMail.includes('@') ? rawMail : mailOf(rawMail);
       if (mail === null) { err.textContent = `Yalnızca ${MAIL_DOMAIN} uzantılı adreslerle giriş yapılır.`; return; }
       if (!mail) { err.textContent = 'E-postanın @ işaretinden önceki kısmını yaz.'; return; }
+      if (S.supa && !$('#au-lpw', host).value) { err.textContent = 'Şifreni yaz. Şifren yoksa ya da unuttuysan “Şifremi unuttum”a bas.'; return; }
       const btn = $('[type=submit]', host); btn.disabled = true; btn.textContent = 'Kontrol ediliyor…';
       if (S.supa) {
         let res = null;
         try { res = await S.sb.auth.signInWithPassword({ email: mail, password: $('#au-lpw', host).value }); } catch (ex) { res = { error: ex }; }
         btn.disabled = false; btn.textContent = 'Giriş yap';
-        if (!res || res.error || !res.data || !res.data.session) { err.textContent = authErrTr(res && res.error); return; }
+        if (!res || res.error || !res.data || !res.data.session) {
+          const t = authErrTr(res && res.error);
+          err.textContent = t === 'E-posta ya da şifre hatalı.' && !PW_ACCOUNTS.includes(mail) ? t + ' Şifren yoksa ya da unuttuysan “Şifremi unuttum”a bas.' : t;
+          return;
+        }
         await applySession(res.data.session);
         if (hasAcc()) signedIn(); else step3();
         return;
@@ -2715,7 +2849,7 @@ function openAuth(opts = {}) {
     setTimeout(() => { const i = $(st.loginMail ? '#au-lpw' : '#au-lmail', host); if (i) i.focus(); }, 40);
   }
   if (S.supa && S.session) step3();
-  else if (S.readOnly || opts.login || S.out) stepLogin(); else step1();
+  else if (S.supa || S.readOnly || opts.login || S.out) stepLogin(); else step1();
 }
 function openProfileEdit() {
   if (!needAcc()) return;
@@ -2822,7 +2956,7 @@ function commentHtml(c) {
   if (c.tk) bits.push(`<span>${esc(termLabel(c.tk))}</span>`);
   let rate = '';
   if (c.r && typeof c.r === 'object' && CRIT.every(k => typeof c.r[k.k] === 'number')) {
-    const avg = CRIT.reduce((s, k) => s + c.r[k.k], 0) / CRIT.length;
+    const avg = critAll(c.r);
     rate = `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>`;
   }
   const mine = isMine(c), lk = likeCount(c), anon = !!c.anon;
@@ -2857,6 +2991,7 @@ function commentsBlock(el, { tt, tid, ctx = '' }) {
         <p class="err" role="alert"></p>
         <p class="fine" data-r="who"></p>
       </form>
+      <div class="composer locked" data-r="full" hidden><p class="muted" data-r="fullmsg"></p></div>
       <div class="composer locked" data-r="locked" hidden>
         <p class="muted">Yorum yazmak, not paylaşmak ve puanlamak için Yeditepe hesabın gerekli.</p>
         <button type="button" class="btn btn-primary btn-sm" data-r="login">${icon('star')}Hesabımla gir</button>
@@ -2887,6 +3022,7 @@ function commentsBlock(el, { tt, tid, ctx = '' }) {
     const text = ta.value.trim();
     if (!text) { err.textContent = 'Yorum boş olamaz.'; return; }
     if (!needAcc()) return;
+    if (cmLimited(tt) && !S.owner && myCommentCount(tt, tid) >= CM_LIMIT) { err.textContent = cmFullMsg(tt); return; }
     const doc = { tt, tid, text: text.slice(0, 1000), anon, by: S.me, at: Date.now(), likes: {}, reports: {} };
     let pc = null;
     if (ctx === 'course' && ctxEl && ctxEl.value && S.hocas.has(ctxEl.value)) doc.h = ctxEl.value;
@@ -2904,9 +3040,11 @@ function commentsBlock(el, { tt, tid, ctx = '' }) {
   paintWho();
   const api = {
     refresh() {
-      const acc = hasAcc();
-      $('[data-r=form]', el).hidden = !acc;
+      const acc = hasAcc(), full = acc && cmLimited(tt) && !S.owner && myCommentCount(tt, tid) >= CM_LIMIT;
+      $('[data-r=form]', el).hidden = !acc || full;
       $('[data-r=locked]', el).hidden = acc;
+      $('[data-r=full]', el).hidden = !full;
+      if (full) $('[data-r=fullmsg]', el).textContent = cmFullMsg(tt);
       paintWho();
       const all = commentsWhere(c => c.tt === tt && c.tid === tid);
       const vis = all.filter(c => !isHidden(c));
@@ -3758,6 +3896,32 @@ function openZorModal(cid) {
   const del = $('[data-r=zdel]', m.el);
   if (del) del.addEventListener('click', async () => { if (await write(() => zorWrite(cid, null), 'Oyun kaldırıldı')) m.close(); });
 }
+/* Bu dönem: giriş yılından planın kaçıncı dönemi olduğu tahmin edilir (Güz: Ağustos-Ocak, Bahar: Şubat-Temmuz).
+   Hazırlık okuyan ya da dönemi farklı olan öğrenci oklarla düzeltir. Seçim hesabın özel kaydında: donem[bölüm] = { s: dönem, t: seçildiği dönemin sırası };
+   dönem değişince seçim de bir ilerler. */
+function acadNow(now = new Date()) { const Y = now.getFullYear(), M = now.getMonth(), guz = M >= 7 || M === 0; return { y: M >= 7 ? Y : Y - 1, guz }; }
+const termIdx = t => t.y * 2 + (t.guz ? 0 : 1);
+const planSems = P => Object.keys(P.plan || {}).map(Number).filter(n => n > 0).sort((a, b) => a - b);
+function nowSem(bol, P) {
+  const sems = planSems(P);
+  if (!sems.length) return null;
+  const t = acadNow(), ti = termIdx(t), yil = +((userOf(S.me) || {}).yil) || 0, sv = privGet('donem')[bol];
+  let sn;
+  if (sv && typeof sv === 'object' && +sv.s > 0 && +sv.t > 0) sn = +sv.s + (P.yillik ? t.y - Math.floor(+sv.t / 2) : ti - +sv.t);
+  else if (yil) sn = P.yillik ? t.y - yil + 1 : (t.y - yil) * 2 + (t.guz ? 1 : 2);
+  else sn = sems[0];
+  sn = clamp(sn, sems[0], sems[sems.length - 1]);
+  if (!sems.includes(sn)) sn = sems.find(x => x > sn) || sems[sems.length - 1];
+  return { sn, sems, ti, tk: t.y * 10 + (t.guz ? 1 : 2) };
+}
+function semStep(bol, d) {
+  const P = planOf(bol);
+  if (!P || !d || !needAcc()) return;
+  const ns = nowSem(bol, P);
+  if (!ns) return;
+  const nx = ns.sems[clamp(ns.sems.indexOf(ns.sn) + d, 0, ns.sems.length - 1)];
+  if (nx !== ns.sn) privPut('donem', bol, { s: nx, t: ns.ti });
+}
 /* Mezuniyet yolu */
 function doneCourses() {
   const p = S.priv && Array.isArray(S.priv.done) ? S.priv.done : null;
@@ -4186,9 +4350,9 @@ ROUTES[''] = function viewHome(root) {
         const where = c.tt === 'course' ? { href: '#/ders/' + c.tid + '?tab=yorumlar', label: codeOf(c.tid), k: 'ders' }
           : c.tt === 'hoca' ? { href: '#/hoca/' + c.tid, label: hocaFull(S.hocas.get(c.tid)) || 'Hoca', k: 'hoca' }
           : { href: '#/not/' + c.tid, label: ((S.notes.get(c.tid) || {}).title || 'Not'), k: 'not' };
-        const avg = c.r && CRIT.every(k => typeof c.r[k.k] === 'number') ? CRIT.reduce((s, k) => s + c.r[k.k], 0) / CRIT.length : null;
+        const avg = c.r && CRIT.every(k => typeof c.r[k.k] === 'number') ? critAll(c.r) : null;
         const to = where.k === 'ders' ? `<span class="code">${esc(where.label)}</span>` : `<span class="cm-to cm-${where.k}">${gl(where.k === 'hoca' ? 'gradcap' : 'note', 'cm-g')}<span>${esc(where.label)}</span></span>`;
-        return `<li><a class="row-link" href="${esc(where.href)}">${avatarHtml(c.by, { anon: !!c.anon })}<span class="row-main"><span class="row-title cm-line"><span class="cm-by">${whoHtml(c.by, c.anon, c.nick)}</span><svg class="cm-arrow" viewBox="0 0 24 12" role="img" aria-label="yorumladı"><path d="M1.5 6H20M15.5 1.8 20.6 6l-5.1 4.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>${to}</span><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end">${avg != null ? `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>` : `<span>${esc(ago(c.at))}</span>`}</span></a></li>`;
+        return `<li><a class="row-link" href="${esc(where.href)}">${avatarHtml(c.by, { anon: !!c.anon })}<span class="row-main"><span class="row-title cm-line"><span class="cm-by">${esc(displayName(c.by, c.anon, c.nick))}</span><svg class="cm-arrow" viewBox="0 0 24 12" role="img" aria-label="yorumladı"><path d="M1.5 6H20M15.5 1.8 20.6 6l-5.1 4.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>${to}</span><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end">${avg != null ? `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>` : `<span>${esc(ago(c.at))}</span>`}</span></a></li>`;
       }).join('')}</ul>` : emptyHtml('Henüz yorum yok', 'Bir dersi ya da hocayı ilk yorumlayan sen ol.');
       applyWidths(R('cms'));
       renderLead();
@@ -4241,6 +4405,7 @@ ROUTES['dersler'] = function viewCourses(root, r) {
       <div class="head-actions" data-owner hidden><button type="button" class="btn btn-primary" data-g="add-course">${icon('plus')}Ders ekle</button></div></div>
     <div class="toolbar"><select class="select bol-sel" data-r="bol" aria-label="Bölüm"></select>
       <label class="search sm cb-wrap grow">${icon('search')}<input class="input" data-r="f" type="search" placeholder="Ders kodu ya da adıyla ara" aria-label="Derslerde ara"></label></div>
+    <div data-r="now"></div>
     <div class="panel pt0" data-r="list"></div></div>`;
   const f = $('[data-r=f]', root), bSel = $('[data-r=bol]', root);
   f.addEventListener('input', () => { LIST.lim = 80; api.refresh(); });
@@ -4251,10 +4416,27 @@ ROUTES['dersler'] = function viewCourses(root, r) {
     const a = (actCache || (actCache = courseActivity())).get(id) || { notes: 0 };
     return `<li><a class="row-link" href="#/ders/${esc(id)}"><span class="code">${esc(c.code || codeOf(id))}</span><span class="row-main"><span class="row-title">${esc(c.name || 'Ders adı yükleniyor')}</span>${extra}</span><span class="row-end">${zchipHtml(id)}${loadText(c) ? `<span class="ects">${loadText(c)}</span>` : ''}${a.notes ? `<span>${a.notes} not</span>` : ''}</span></a></li>`;
   };
+  /* Kendi bölümünün planında, aramıyorken: bu dönemin dersleri en üstte (seçmelilerden yalnızca seçilmiş olanlar) */
+  const nowHtml = (bol, P, two) => {
+    const ns = nowSem(bol, P);
+    if (!ns) return '';
+    const sn = ns.sn, ids = Array.isArray(P.plan[sn]) ? P.plan[sn].slice() : [], els = (P.el && P.el[sn]) || [];
+    const picked = els.map((e, i) => elPick(elKey(bol, sn, i, e))).filter(id => id && !ids.includes(id));
+    if (two && (!!two.P2.yillik === !!P.yillik)) for (const id of (Array.isArray(two.P2.plan[sn]) ? two.P2.plan[sn] : [])) if (!two.mainIds.has(id) && !two.hid.has(id) && !ids.includes(id)) ids.push(id);
+    const openEl = els.length - els.filter((e, i) => elPick(elKey(bol, sn, i, e))).length;
+    const btn = (d, lbl, off) => `<button type="button" class="iconbtn" data-g="sem-step" data-id="${esc(bol)}" data-d="${d}" aria-label="${lbl}"${off ? ' disabled' : ''}>${icon(d < 0 ? 'cl' : 'cr')}</button>`;
+    const i = ns.sems.indexOf(sn);
+    const rows = ids.map(id => courseRow(id)).join('') + picked.map(id => courseRow(id, '<span class="row-sub">Seçmeli</span>')).join('');
+    return `<section class="now-sem" aria-labelledby="now-h"><div class="now-head"><div><h2 id="now-h">Bu dönemki dersler</h2><p class="now-term">${esc(termLabel(ns.tk))}</p></div>`
+      + `<div class="now-step" role="group" aria-label="Kaçıncı dönemdesin">${btn(-1, 'Önceki dönem', i <= 0)}<span class="now-lbl">${P.yillik ? esc(semLabel(P, sn)) : `<b>${sn}.</b> dönem · ${esc(semLabel(P, sn))}`}</span>${btn(1, 'Sonraki dönem', i >= ns.sems.length - 1)}</div></div>`
+      + (rows ? `<ul class="list">${rows}</ul>` : '<p class="muted now-empty">Bu dönemin planında ders yok.</p>')
+      + `<p class="fine now-fine">${openEl ? `${openEl} seçmeli henüz seçilmedi; aşağıda ${esc(semLabel(P, sn))} planından seç. ` : ''}Dönem giriş yılından hesaplandı. Hazırlık okuduysan ya da dönemin farklıysa oklarla düzelt.</p></section>`;
+  };
   const api = {
     refresh() {
-      const el = $('[data-r=list]', root), st = waitState();
+      const el = $('[data-r=list]', root), st = waitState(), nowEl = $('[data-r=now]', root);
       actCache = null;
+      nowEl.innerHTML = '';
       if (st === 'nodb') { el.innerHTML = noDbHtml(); return; }
       if (st === 'loading' || !allLoaded()) { el.innerHTML = loadingHtml(); return; }
       const facs = new Map();
@@ -4340,6 +4522,7 @@ ROUTES['dersler'] = function viewCourses(root, r) {
           else if (ae.dataset && ae.dataset.g && ae.dataset.id) fsel = `[data-g="${ae.dataset.g}"][data-id="${ae.dataset.id}"]` + (ae.dataset.c != null ? `[data-c="${ae.dataset.c}"]` : '');
         }
         const fscroll = EL_SCROLL; EL_FOCUS = ''; EL_SCROLL = false;
+        if (accd && !q && bol === (userOf(S.me) || {}).bolum) { nowEl.innerHTML = nowHtml(bol, P, P2 ? { P2, mainIds, hid } : null); applyWidths(nowEl); }
         const tail = hasEls ? (hasPools ? ' Seçmelilerin ders listeleri fakülte sitesinden alındı: mavi seçmeli satırına basınca o seçmeli için alınabilecek dersler açılır, birini seçince satırda o dersin adı görünür. Listesi çok uzun olan seçmelilerde (serbest, tamamlayıcı) aldığın dersi tüm dersler arasında arayıp seçebilirsin.' : ' Mavi seçmeli satırına basıp aldığın dersi tüm dersler arasında arayıp seçebilirsin.') : '';
         el.innerHTML = head + gradHtml(P, bol, P2 ? { P2, b2, cap, mainIds, hid: new Set([...hid, ...sharedEl]) } : null) + (secs + elSec || emptyHtml('Eşleşen ders yok', 'Aramayı temizle.')) + `<p class="fine">Zorunlu dersler${hasEls ? ' ve seçmeliler' : ''} Yeditepe AKTS Bilgi Paketi’ndeki ders planından alındı${progKnown && progTot ? `; planın toplamı ${fmtKr(progTot)} kredi` : ''}.${tail}${P2 ? ` ${esc(capTag(cap))} programının dersleri ${esc(b2.ad || cap.b)} planından; ana programında da olan dersler bir kez gösterilir.` : ''}</p>`; applyWidths(el);
         el.querySelectorAll('[data-r=el-q]').forEach(inp => { const v = EL_Q.get(inp.dataset.id); if (v) { inp.value = v; elFilter(inp); } });
@@ -4509,17 +4692,28 @@ function courseHocasTab(panel, cid) {
 ROUTES['hocaolcer'] = function viewHocas(root) {
   root.innerHTML = `<div class="wrap">
     <div class="page-intro"><h1>HocaÖlçer</h1>
-      <p>Hocalar dört kriterde, 5 yıldız üzerinden buçuklu puanlanır: anlatım, ödev yükü, not verme ve devamsızlık. Her kriterde 5 yıldız öğrenci açısından en iyi durumdur. Puanlar anonimdir.</p>
+      <p>Hocalar dört kriterde, 5 yıldız üzerinden buçuklu puanlanır: anlatım, ödev yükü, not verme ve devamsızlık. Her kriterde 5 yıldız öğrenci açısından en iyi durumdur. Genel puanda en çok anlatım ve not verme sayılır, sonra ödev yükü, en az devamsızlık. Puanlar anonimdir.</p>
       ${CAT.hocas.size ? `<p class="fine">Hoca listesi Yeditepe’nin sitesindeki akademik kadro sayfalarından alındı: ${CAT.hocas.size} kişi, unvanı, fakültesi, bölümü ve verdiği dersler. Ders kodu yazınca o dersi verenler çıkar.</p>` : ''}
       <div class="head-actions" data-owner hidden><button type="button" class="btn btn-primary" data-g="add-hoca">${icon('plus')}Hoca ekle</button></div></div>
     <div class="toolbar"><label class="search sm cb-wrap grow">${icon('search')}<input class="input" data-r="f" type="search" placeholder="Hoca adı ya da ders kodu, örn. CSE 211" aria-label="Hocalarda ara"></label>
       <select class="select sm" data-r="dept" aria-label="Fakülte"></select>
-      <select class="select sm" data-r="sort" aria-label="Sıralama"><option value="n">En çok puanlanan</option><option value="top">En yüksek puan</option><option value="az">A’dan Z’ye</option></select></div>
+      <select class="select sm" data-r="sort" aria-label="Sıralama" hidden><option value="n">En çok puanlanan</option><option value="top">En yüksek puan</option><option value="az">A’dan Z’ye</option></select></div>
     <div class="panel pt0" data-r="list"></div></div>`;
   const f = $('[data-r=f]', root), dSel = $('[data-r=dept]', root), sSel = $('[data-r=sort]', root);
-  let lim = 60;
+  // Arama ya da fakülte seçilmedikçe yalnızca son puanlanan hocalar görünür; hepsi "Tüm hocaları göster" ile açılır
+  let lim = 60, showAll = false;
   [f, dSel, sSel].forEach(x => x.addEventListener(x === f ? 'input' : 'change', () => { lim = 60; api.refresh(); }));
-  $('[data-r=list]', root).addEventListener('click', e => { if (e.target.closest('[data-r=more]')) { lim += 120; api.refresh(); } });
+  $('[data-r=list]', root).addEventListener('click', e => {
+    if (e.target.closest('[data-r=more]')) { lim += 120; api.refresh(); }
+    else if (e.target.closest('[data-r=all]')) { showAll = true; lim = 60; api.refresh(); }
+    else if (e.target.closest('[data-r=recent]')) { showAll = false; api.refresh(); }
+  });
+  const hocaRow = (x, tail) => {
+    const cs = [...coursesOfHoca(x.id).entries()].sort((a, b) => b[1].son - a[1].son).slice(0, 3).map(([cid]) => cid);
+    const sub = [x.h.dept, cs.map(codeOf).join(', ')].filter(Boolean).join(' / ') + (tail ? (x.h.dept || cs.length ? ' · ' : '') + tail : '');
+    return `<li><a class="row-link" href="#/hoca/${esc(x.id)}"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><span class="row-title">${esc(hocaFull(x.h))}${x.h.demo ? '<span class="tag">örnek kayıt</span>' : ''}</span><span class="row-sub">${esc(sub)}</span></span><span class="row-end">${x.st.cnt ? `<span class="minirate">${starsHtml(x.st.all, 'sm')}${fmt1(x.st.all)}</span><span>${x.st.cnt} puan</span>` : '<span>Puan yok</span>'}</span></a></li>`;
+  };
+  const allBtn = () => `<div class="more-wrap"><button type="button" class="btn" data-r="all">Tüm hocaları göster (${S.hocas.size} hoca)</button></div>`;
   const api = {
     refresh() {
       const el = $('[data-r=list]', root), st = waitState();
@@ -4532,6 +4726,21 @@ ROUTES['hocaolcer'] = function viewHocas(root) {
       dSel.innerHTML = '<option value="">Tüm fakülteler</option>' + depts.map(d => `<option>${esc(d)}</option>`).join('');
       dSel.value = depts.includes(cur) ? cur : '';
       dSel.hidden = !depts.length;
+      const listing = showAll || !!f.value.trim() || !!dSel.value;
+      sSel.hidden = !listing;
+      if (!listing) {
+        const recent = [];
+        for (const [id, h] of S.hocas) {
+          const rs = ratingsOf(h);
+          if (rs.length) recent.push({ id, h, st: hocaStats(h), last: Math.max(...rs.map(r => r.at)) });
+        }
+        recent.sort((a, b) => b.last - a.last);
+        el.innerHTML = `<h2 class="sub-h">Son puanlanan hocalar</h2>`
+          + (recent.length ? `<ul class="list">${recent.slice(0, 10).map(x => hocaRow(x, x.last ? ago(x.last) : '')).join('')}</ul>` : emptyHtml('Henüz puanlanan hoca yok', 'Hocanı arayıp ilk puanı sen ver.'))
+          + allBtn();
+        applyWidths(el);
+        return;
+      }
       const q = fold(f.value), qc = parseCode(f.value), byCode = qc && S.courses.has(qc.id) ? hocasOfCourse(qc.id) : null;
       let all = [...S.hocas.entries()].map(([id, h]) => ({ id, h, st: hocaStats(h) }));
       let tot = 0, cnt = 0;
@@ -4543,10 +4752,9 @@ ROUTES['hocaolcer'] = function viewHocas(root) {
       all.sort(s === 'az' ? (a, b) => a.h.name.localeCompare(b.h.name, 'tr') : s === 'top' ? (a, b) => b.bayes - a.bayes || b.st.cnt - a.st.cnt : (a, b) => b.st.cnt - a.st.cnt || a.h.name.localeCompare(b.h.name, 'tr'));
       if (!all.length) { el.innerHTML = emptyHtml('Eşleşen hoca yok', byCode ? `${qc.code} dersini veren hoca kadro listesinde görünmüyor.` : 'Yalnızca soyadıyla aramayı dene. Listede olmayan bir hoca varsa site yönetimine bildir.'); return; }
       const more = all.length - lim;
-      el.innerHTML = (byCode ? `<p class="fine mb">${esc(qc.code)} dersini verenler: ${all.length} hoca</p>` : '') + `<ul class="list">${all.slice(0, lim).map(x => {
-        const cs = [...coursesOfHoca(x.id).entries()].sort((a, b) => b[1].son - a[1].son).slice(0, 3).map(([cid]) => cid);
-        return `<li><a class="row-link" href="#/hoca/${esc(x.id)}"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><span class="row-title">${esc(hocaFull(x.h))}${x.h.demo ? '<span class="tag">örnek kayıt</span>' : ''}</span><span class="row-sub">${esc([x.h.dept, cs.map(codeOf).join(', ')].filter(Boolean).join(' / '))}</span></span><span class="row-end">${x.st.cnt ? `<span class="minirate">${starsHtml(x.st.all, 'sm')}${fmt1(x.st.all)}</span><span>${x.st.cnt} puan</span>` : '<span>Puan yok</span>'}</span></a></li>`;
-      }).join('')}</ul>` + (more > 0 ? `<div class="more-wrap"><button type="button" class="btn" data-r="more">Daha fazla göster (${more} hoca daha)</button></div>` : '');
+      const head = byCode ? `<p class="fine mb">${esc(qc.code)} dersini verenler: ${all.length} hoca</p>`
+        : !q && !dSel.value ? `<p class="list-info">Tüm hocalar: <b>${all.length}</b>. <button type="button" class="linkbtn" data-r="recent">Son puanlananlara dön</button></p>` : '';
+      el.innerHTML = head + `<ul class="list">${all.slice(0, lim).map(x => hocaRow(x)).join('')}</ul>` + (more > 0 ? `<div class="more-wrap"><button type="button" class="btn" data-r="more">Daha fazla göster (${more} hoca daha)</button></div>` : '');
       applyWidths(el);
     }
   };
@@ -4606,7 +4814,7 @@ ROUTES['hoca'] = function viewHoca(root, r) {
     const k = $('[data-r=karne]', root);
     k.innerHTML = !st.cnt
       ? `<div class="karne-sum"><div class="karne-big" aria-hidden="true">–</div><p>Henüz puan yok</p></div><div class="karne-rows"><p class="muted">Bu hocayı ilk değerlendiren sen ol. Anlatım, ödev yükü, not verme ve devamsızlık ayrı ayrı puanlanır.</p></div>`
-      : `<div class="karne-sum"><div class="karne-big">${fmt1(st.all)}</div><p>${starsHtml(st.all, 'lg')}</p><p>${st.cnt} öğrencinin puanıyla, 5 üzerinden genel ortalama</p></div>
+      : `<div class="karne-sum"><div class="karne-big">${fmt1(st.all)}</div><p>${starsHtml(st.all, 'lg')}</p><p>${st.cnt} öğrencinin puanıyla, 5 üzerinden ağırlıklı genel puan</p></div>
         <div class="karne-rows">${CRIT.map(c => `<div class="karne-row"><span class="k-name">${esc(c.name)}</span>${starsHtml(st[c.k])}<b class="k-val">${fmt1(st[c.k])}</b><span class="k-scale">1 = ${esc(c.lo)}, 5 = ${esc(c.hi)}</span></div>`).join('')}</div>
         ${mine ? `<p class="karne-mine">Senin puanın: ${CRIT.map(c => `${esc(c.name)} ${fmt1(mine[c.k])}`).join(', ')}. <button type="button" class="linkbtn" data-g="unrate" data-id="${esc(hid)}">Puanımı kaldır</button></p>` : ''}`;
     applyWidths(k);
@@ -4636,7 +4844,7 @@ function hocaCoursesTab(panel, hid) {
       if (!m.size) { el.innerHTML = emptyHtml('Bu hocaya bağlı ders yok', 'Hocayı puanlarken ya da not paylaşırken dersi seçtiğinde burada görünür.'); return; }
       const rows = [...m.entries()].sort((a, b) => b[1].son - a[1].son || (b[1].ratings + b[1].notes + b[1].grades) - (a[1].ratings + a[1].notes + a[1].grades) || CODE_COLL.compare(a[0], b[0]));
       el.innerHTML = `<ul class="list">${rows.map(([cid, o]) => {
-        const avg = o.rs.length ? o.rs.reduce((s, r) => s + CRIT.reduce((t, c) => t + r[c.k], 0) / CRIT.length, 0) / o.rs.length : 0;
+        const avg = o.rs.length ? o.rs.reduce((s, r) => s + critAll(r), 0) / o.rs.length : 0;
         const bits = [o.son ? `son: ${yilAd(o.son)}` : '', o.ratings ? `${o.ratings} puan` : '', o.notes ? `${o.notes} not` : '', o.comments ? `${o.comments} yorum` : ''].filter(Boolean).join(', ');
         return `<li><a class="row-link" href="#/ders/${esc(cid)}"><span class="code">${esc(codeOf(cid))}</span><span class="row-main"><span class="row-title">${esc(courseName(cid) || 'Ders adı girilmemiş')}</span><span class="row-sub">${esc(bits)}</span></span><span class="row-end">${o.rs.length ? `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>` : ''}</span></a></li>`;
       }).join('')}</ul>`;
@@ -4860,7 +5068,7 @@ ROUTES['katkilarim'] = function viewMine(root) {
       const empty = (txt, href, cta) => `<div class="km-empty"><p>${txt}</p><a class="btn btn-sm btn-primary" href="${href}">${cta}</a></div>`;
       el.innerHTML =
         sec('Notlarım', notes.length, notes.length ? `<ul class="list">${notes.map(n => noteRow(n, { showCourse: true }).replace('</li>', `<div class="cm-actions pad"><button type="button" class="iconbtn" data-g="del-note" data-id="${esc(n.id)}">${icon('trash')}Sil</button></div></li>`)).join('')}</ul>` : empty(`Henüz not paylaşmadın. Her not ${KUBBE.note} kubbe kazandırır.`, '#/paylas', `${icon('up')}Not paylaş`)) +
-        sec('HocaÖlçer puanlarım', rates.length, rates.length ? `<ul class="list">${rates.map(x => { const avg = CRIT.reduce((s, c) => s + x.r[c.k], 0) / CRIT.length; return `<li><div class="row-link"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><a class="row-title" href="#/hoca/${esc(x.hid)}">${esc(hocaFull(x.h))}</a><span class="row-sub">${CRIT.map(c => `${esc(c.name)} ${fmt1(x.r[c.k])}`).join(', ')}</span></span><span class="row-end"><span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span><button type="button" class="iconbtn" data-g="rate" data-hid="${esc(x.hid)}">${icon('edit')}Güncelle</button><button type="button" class="iconbtn" data-g="unrate" data-id="${esc(x.hid)}">${icon('trash')}Kaldır</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz bir hocayı puanlamadın. Her HocaÖlçer puanı ${KUBBE.rating} kubbe kazandırır.`, '#/hocaolcer', `${icon('star')}HocaÖlçer’e git`)) +
+        sec('HocaÖlçer puanlarım', rates.length, rates.length ? `<ul class="list">${rates.map(x => { const avg = critAll(x.r); return `<li><div class="row-link"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><a class="row-title" href="#/hoca/${esc(x.hid)}">${esc(hocaFull(x.h))}</a><span class="row-sub">${CRIT.map(c => `${esc(c.name)} ${fmt1(x.r[c.k])}`).join(', ')}</span></span><span class="row-end"><span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span><button type="button" class="iconbtn" data-g="rate" data-hid="${esc(x.hid)}">${icon('edit')}Güncelle</button><button type="button" class="iconbtn" data-g="unrate" data-id="${esc(x.hid)}">${icon('trash')}Kaldır</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz bir hocayı puanlamadın. Her HocaÖlçer puanı ${KUBBE.rating} kubbe kazandırır.`, '#/hocaolcer', `${icon('star')}HocaÖlçer’e git`)) +
         sec('Yorumlarım', cms.length, cms.length ? `<ul class="list">${cms.map(c => { const where = c.tt === 'course' ? `#/ders/${c.tid}?tab=yorumlar` : c.tt === 'hoca' ? `#/hoca/${c.tid}` : `#/not/${c.tid}`; const label = c.tt === 'course' ? codeOf(c.tid) : c.tt === 'hoca' ? hocaName(c.tid) : ((S.notes.get(c.tid) || {}).title || 'Not'); return `<li><div class="row-link"><span class="row-main"><a class="row-title" href="${esc(where)}">${esc(label || 'Silinmiş içerik')}</a><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end"><span>${esc(ago(c.at))}</span><button type="button" class="iconbtn" data-g="del-comment" data-id="${esc(c.id)}">${icon('trash')}Sil</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz yorum yazmadın. Her yorum ${KUBBE.comment} kubbe kazandırır.`, '#/dersler', `${icon('book')}Derslere göz at`));
       lazyPhotos(el); applyWidths(el);
     }

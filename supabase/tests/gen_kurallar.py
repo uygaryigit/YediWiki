@@ -186,6 +186,32 @@ step('A notunu silince yorumları ve karşılama kubbesi de gider', A, "select p
      'ok', f"not exists (select 1 from public.docs where (col = 'notes' and id = 'tA1') or (col = 'comments' and id in ('tC2', 'tC3'))) "
            f"and {U(B,'kb,comments')}::int = 0 and {P(B,'kb,comments')}::int = 0 and {U(A,'kb,fills')}::int = 0")
 
+# ---- yorum sınırı: bir kişi bir derse ya da hocaya en çok 3 yorum (anonim de sayılır); not yorumunda sınır yok
+for i, an in enumerate([False, True, False]):
+    step(f'B derse {i + 1}. yorumunu yazar', B, f"select public.doc_set('comments', 'tL{i}', {j({'tt':'course','tid':'CSE211','text':'yorum','anon':an})})", 'ok')
+step('B aynı derse 4. yorumu yazamaz (anonim de olsa)', B, f"select public.doc_set('comments', 'tL3', {j({'tt':'course','tid':'CSE211','text':'dördüncü','anon':True})})",
+     'fail', "not exists (select 1 from public.docs where col = 'comments' and id = 'tL3')")
+step('Sınır kişi başı: A aynı derse yazar', A, f"select public.doc_set('comments', 'tL4', {j({'tt':'course','tid':'CSE211','text':'benim','anon':False})})", 'ok')
+step('B başka derse yazar', B, f"select public.doc_set('comments', 'tL5', {j({'tt':'course','tid':'MATH131','text':'başka','anon':False})})", 'ok')
+step('Yorumun yeri sonradan değişmez', B, f"select public.doc_update('comments', 'tL5', {j({'tid':'CSE211'})})",
+     'fail', f"{DOC('comments','tL5','tid')} = 'MATH131'")
+step('Yorum yeniden yazılırken de yeri değişmez', B, f"select public.doc_set('comments', 'tL5', {j({'tt':'course','tid':'CSE211','text':'taşı'})})",
+     'fail', f"{DOC('comments','tL5','tid')} = 'MATH131'")
+step('Sınırdayken yorumun yazısı düzeltilir', B, f"select public.doc_update('comments', 'tL0', {j({'text':'düzeltildi'})})", 'ok', f"{DOC('comments','tL0','text')} = 'düzeltildi'")
+step('Sınırdaki yorum beğenilir', A, f"select public.doc_update('comments', 'tL0', jsonb_build_object('likes', jsonb_build_object({K(A,'comments','tL0')}, true)))", 'ok')
+step('Bir yorumunu silen yerine yenisini yazabilir', B, "select public.doc_delete('comments', 'tL1')", 'ok')
+step('Silinen yorumun yerine yeni yorum', B, f"select public.doc_set('comments', 'tL6', {j({'tt':'course','tid':'CSE211','text':'yeni','anon':True})})", 'ok')
+for i in range(3):
+    step(f'B hocaya {i + 1}. yorumunu yazar', B, f"select public.doc_set('comments', 'tH{i}', {j({'tt':'hoca','tid':H,'text':'hoca yorumu','anon':True})})", 'ok')
+step('B aynı hocaya 4. yorumu yazamaz', B, f"select public.doc_set('comments', 'tH3', {j({'tt':'hoca','tid':H,'text':'fazla'})})",
+     'fail', "not exists (select 1 from public.docs where col = 'comments' and id = 'tH3')")
+for i in range(4):
+    step(f'Not yorumunda sınır yok ({i + 1})', B, f"select public.doc_set('comments', 'tN{i}', {j({'tt':'note','tid':'tA2','text':'not yorumu'})})", 'ok')
+step('Deneme yorumları silinir, kubbe yeniden sayılır', C,
+     "select count(public.doc_delete('comments', x) is null) from unnest(array['tL0','tL2','tL4','tL5','tL6','tH0','tH1','tH2','tN0','tN1','tN2','tN3']) x",
+     'ok', f"not exists (select 1 from public.docs where col = 'comments' and (id like 'tL%' or id like 'tH%' or id like 'tN%')) "
+           f"and {U(B,'kb,comments')}::int = 0 and {P(B,'kb,comments')}::int = 0 and {U(B,'kb,likes')}::int = 0")
+
 # ---- DersÖlçer
 step('A DersÖlçer oyu verir (takma adla, ders belgesinde)', A, f"select public.doc_set('zor', 'CSE211', jsonb_build_object('v', jsonb_build_object({K(A,'zor','CSE211')}, '{{\"z\":4,\"y\":3,\"x\":1}}'::jsonb)))",
      'ok', f"(select data->'v'->{K(A,'zor','CSE211')}->>'z' = '4' and data->'v'->{K(A,'zor','CSE211')}->'x' is null and (data->'v'->{K(A,'zor','CSE211')}->>'at')::bigint > 0 from public.docs where col = 'zor' and id = 'CSE211')")
