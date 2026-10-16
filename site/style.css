@@ -1520,3 +1520,84 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 .emoji-btn[aria-pressed="true"]{border:2px solid var(--pen);background:var(--pen-soft)}
 .color-btn{width:30px;height:30px;box-shadow:inset 0 0 0 1px rgba(17,28,78,.12)}
 .color-btn[aria-pressed="true"]{border-color:var(--pen);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--pen)}
+
+/* ===== Çizilmiş simgeler: sitede düz emoji yok (gl, avArt) ===== */
+.gl{display:inline-block;width:1.2em;height:1.2em;flex:none;vertical-align:-.22em;overflow:visible}
+.gl-in{width:1.15em;height:1.15em;margin:0 .12em;vertical-align:-.24em}
+.gl-ok{color:var(--green)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gl{filter:drop-shadow(0 0 .7px rgba(233,237,251,.8))}}
+:root[data-theme="dark"] .gl{filter:drop-shadow(0 0 .7px rgba(233,237,251,.8))}
+.avatar .gl,.bdg-medal .gl,.req-card .gl,.toast .gl,.done-btn .gl{filter:none!important}
+.h-gl{width:1.3em;height:1.3em;margin-right:8px;vertical-align:-.26em}
+.seg-btn .gl{width:1.15em;height:1.15em;margin-right:5px;vertical-align:-.22em}
+.seg-btn[aria-pressed="true"] .gl-flame{transform-origin:50% 90%;animation:flick 1.5s ease-in-out infinite}
+@keyframes flick{0%,100%{transform:scale(1) rotate(0)}30%{transform:scale(1.05,.95) rotate(-3deg)}60%{transform:scale(.97,1.05) rotate(2deg)}}
+.btn .gl,.chip .gl{width:1.25em;height:1.25em;margin-right:2px}
+.k-coin{width:1.2em;height:1.2em;vertical-align:-.26em}
+.kubbe-chip .k-coin{width:19px;height:19px}
+.dome-price .k-coin{width:1.05em;height:1.05em}
+.kfloat .k-coin{margin-right:6px}
+.avatar .av-art{width:80%;height:80%;display:block;vertical-align:0;overflow:visible}
+.avatar.anon{background:linear-gradient(160deg,#DCE2F0,#AEB9D3)}
+.avatar.anon .av-art{width:88%;height:88%;margin-top:16%}
+.spy-name{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.spy-name .gl{width:1.4em;height:1.4em;vertical-align:0}
+.badge-mini img{display:inline-block;width:1.3em;height:1.3em;vertical-align:-.3em}
+.tag .tag-art{width:1.35em;height:1.35em;vertical-align:-.35em;margin-right:4px}
+.bdg-g{font-size:1rem;line-height:0}
+.bdg-g .gl{width:34px;height:34px;display:block;filter:drop-shadow(0 2px 0 rgba(120,70,0,.25))!important}
+.reqbox-ico .gl{width:38px;height:38px;display:block}
+.req-banner-ico{width:28px;height:28px;flex:none}
+.toast-ico .gl{width:20px;height:20px;margin-right:8px;vertical-align:-5px}
+.fxp .gl{width:20px;height:20px;display:block}
+.fxp.coin .gl{width:22px;height:22px}
+.vscore{display:inline-flex;align-items:center;gap:3px}
+.vscore .gl{width:1.05em;height:1.05em;vertical-align:0}
+.done-btn .gl{width:18px;height:18px}
+.emoji-btn{padding:3px;display:grid;place-items:center}
+.emoji-btn .av-art{width:100%;height:100%;display:block}
+.grad-top .gl-in{margin:0 6px 0 0}
+
+/* ===== Parlak düğmeler: üstte hafif ışık, iç parıltı; üzerine gelince parlama süzülür ===== */
+:root{--gloss:rgba(255,255,255,.78);--gloss-line:rgba(255,255,255,.95);--shine:rgba(255,255,255,.6)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--gloss:rgba(255,255,255,.08);--gloss-line:rgba(255,255,255,.14);--shine:rgba(255,255,255,.15)}}
+:root[data-theme="dark"]{--gloss:rgba(255,255,255,.08);--gloss-line:rgba(255,255,255,.14);--shine:rgba(255,255,255,.15)}
+.lead{--gloss:rgba(255,255,255,.12);--gloss-line:rgba(255,255,255,.2);--shine:rgba(255,255,255,.22)}
+.btn{position:relative;isolation:isolate;box-shadow:inset 0 1px 0 var(--gloss-line),0 1px 2px rgba(17,28,78,.08),0 8px 16px -12px rgba(17,28,78,.5);transition:transform .15s ease,box-shadow .2s ease,background-color .15s,border-color .15s,color .15s}
+.btn::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(180deg,var(--gloss) 0%,transparent 62%);pointer-events:none}
+.btn::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:linear-gradient(105deg,transparent 38%,var(--shine) 50%,transparent 62%) no-repeat;background-size:250% 100%;background-position:120% 0;transition:background-position .75s ease}
+.btn:hover::after{background-position:-20% 0}
+.btn:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 var(--gloss-line),0 2px 4px rgba(17,28,78,.1),0 12px 22px -12px rgba(17,28,78,.55)}
+.btn:active{transform:translateY(1px)}
+.btn-primary,.btn-danger,.btn-solid{--gloss:rgba(255,255,255,.32);--gloss-line:rgba(255,255,255,.4);--shine:rgba(255,255,255,.42)}
+.btn-primary,.btn-primary:hover{box-shadow:inset 0 1px 0 var(--gloss-line),inset 0 -2px 0 rgba(0,0,0,.14),0 10px 20px -12px var(--pen)}
+.btn-danger,.btn-danger:hover{box-shadow:inset 0 1px 0 var(--gloss-line),inset 0 -2px 0 rgba(0,0,0,.14),0 10px 20px -12px var(--red)}
+.btn-ghost,.btn-ghost:hover{box-shadow:none}
+.btn-ghost::before,.btn-ghost::after,.btn[disabled]::after{display:none}
+.btn[disabled]{transform:none}
+.btn.btn-press{box-shadow:inset 0 1px 0 var(--gloss-line),0 3px 0 color-mix(in srgb,var(--ink) 70%,#000)}
+.btn-primary.btn-press{box-shadow:inset 0 1px 0 var(--gloss-line),0 3px 0 var(--pen-2)}
+.btn.btn-press:active{transform:translateY(2px);box-shadow:inset 0 1px 0 var(--gloss-line),0 1px 0 color-mix(in srgb,var(--ink) 70%,#000)}
+.seg-btn[aria-pressed="true"]{background-image:linear-gradient(180deg,var(--gloss),transparent 72%);box-shadow:inset 0 1px 0 var(--gloss-line),0 1px 2px rgba(17,28,78,.12),0 6px 12px -8px rgba(17,28,78,.45)}
+.lead .seg-btn[aria-pressed="true"]{background-image:linear-gradient(180deg,rgba(255,255,255,.6),transparent 72%);box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 6px 12px -8px rgba(0,0,0,.6)}
+.bell-btn,.acc-btn,.kubbe-chip,.req-plus{background-image:linear-gradient(180deg,var(--gloss),transparent 68%);box-shadow:inset 0 1px 0 var(--gloss-line),0 6px 12px -9px rgba(17,28,78,.5)}
+@media (prefers-reduced-motion:reduce){.btn,.btn::after{transition:none}.btn:hover{transform:none}.seg-btn .gl-flame{animation:none!important}}
+
+/* ===== Ana sayfa: sağ sütun (sıralama ve altında not istekleri) ===== */
+.home-right{display:grid;gap:18px;align-content:start;position:static}
+.home-right .lead{position:static}
+.home-main.lead-open .home-right{order:-1}
+.lead-top h2 .h-gl{width:1.25em;height:1.25em}
+.req-card{--ink:#111C4E;--ink-2:#414B74;--ink-3:#6B5A3A;--surface:#FFFDF5;--surface-2:#FFF3D0;--line:#EBC97A;--pen:#2447D5;--pen-2:#1A37AE;--pen-ink:#fff;--pen-soft:#E6EBFD;--gloss:rgba(255,255,255,.78);--gloss-line:rgba(255,255,255,.95);--shine:rgba(255,255,255,.6);position:relative;isolation:isolate;overflow:hidden;border-radius:22px;padding:16px 14px 14px;color:#3A2600;background:radial-gradient(120% 70% at 100% 0%,#FFF6C4 0%,rgba(255,246,196,0) 60%),linear-gradient(165deg,#FFE680 0%,#FFC94D 55%,#FFAD2B 100%);border:1px solid #E5A11A;box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 22px 40px -26px rgba(160,90,0,.8)}
+.req-card::before{content:"";position:absolute;z-index:-1;right:-34px;top:-38px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.28)}
+.req-card-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.req-card-ico{flex:none;display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:#FFFDF5;box-shadow:inset 0 -3px 0 rgba(160,90,0,.18),0 8px 16px -10px rgba(120,60,0,.7)}
+.req-card-ico .gl{width:38px;height:38px;transform-origin:30% 70%;animation:megaphone 3s ease-in-out infinite}
+.req-card h2{font-size:1.18rem;color:#2A1A00}
+.req-card-top p{font-size:.82rem;color:#5A4210;margin-top:2px;line-height:1.35}
+.req-card .reqs{margin:0}
+.req-card .req{background:#FFFDF5;border-color:rgba(160,100,0,.22);box-shadow:0 8px 16px -14px rgba(120,60,0,.8)}
+.req-card .req-acts{width:100%}
+.req-card-all{width:100%;margin-top:12px;background:#FFFDF5;border-color:rgba(160,100,0,.3);color:#3A2600}
+.req-empty{font-size:.88rem;line-height:1.45;color:#5A4210;background:rgba(255,253,245,.72);border:1.5px dashed rgba(160,100,0,.38);border-radius:14px;padding:12px}
+@media (prefers-reduced-motion:reduce){.req-card-ico .gl{animation:none}}

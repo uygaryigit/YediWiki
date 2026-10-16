@@ -2,7 +2,7 @@
 
 Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma kurallarını tutar.
 
-## Durum (14 Ekim 2026)
+## Durum (16 Ekim 2026)
 
 - **Kod:** bu depo, `main` dalı.
 - **Supabase (canlı):** proje `efyrrbqdiilpqnqzsphk`.
@@ -46,12 +46,17 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
 - **Bölümler katalogdan (14 Ekim):** Bölüm adı, fakültesi ve dili `data/catalog.json`'dan derlemede gömülür (`CAT.bols`); veritabanındaki `bolumler` kayıtları üstüne biner (`mergeBolumler`). Canlı veritabanında bölüm kaydı yok, gerek de yok.
 - **Hesap açma (14 Ekim):** Kod doğrulandıktan sonra iki adım: Profilin (kullanıcı adı e-postanın baş kısmından, `userFromMail`; ad soyad ve giriş yılında göz düğmesi) → Bölümün (aranabilir bölüm seçici, ders planı özeti; "sonra seçerim" var). Telefon yalnızca profil düzenlemede.
 - **Profil sayfası (14 Ekim):** Profil resminin rengiyle boyalı kareli kapak, bantlı çıkartma büyük profil resmi, kubbe biçiminde bakiye, bölüm etiketi ders planına gider; gözle ad ve giriş yılı tek dokunuşla gizlenir/gösterilir (`toggleVis`). Profilde ve Katkılarım'da "Kubbe ve market" düğmesi yok (kullanıcı istemiyor).
-- **Ana sayfa:** Notlarda en çok 6 kart (+ haftanın notu), Son yorumlar 3, hemen altında Gündemdeki dersler (6). Ayrı Derslerim bölümü yok (kullanıcı istemiyor); yeni not rozeti Dersler > Derslerim listesinde (`freshNotes`).
+- **Ana sayfa:** Notlarda en çok 6 kart (+ haftanın notu), Son yorumlar 3, hemen altında Gündemdeki dersler (6). Not istekleri sağ sütunda, Kubbe sıralamasının altında sarı kutuda (`.home-right`, `.req-card`; istek yoksa davet yazısı); sağ sütun yapışkan değil. Ayrı Derslerim bölümü yok (kullanıcı istemiyor); yeni not rozeti Dersler > Derslerim listesinde (`freshNotes`).
 - **DersÖlçer (14 Ekim):** Ders sayfası başlığında sağda büyük kart (dar ekranda alta iner). Zorluk çizim biber (`chiliSvg`: renk kırmızıdan yeşile, zor derste ısı dalgası), iş yükü kitap yığını (`booksSvg`: ağırlaştıkça yükselir); emoji yok.
   - Ekranda puan: 1 en zor / en ağır, 5 en kolay / en hafif. Kayıtta `z` ve `y` derecedir (5 en zor); puan = 6 − derece (`puanOf`, `degOf`). Bu yüzden göç gerekmedi.
 - **Not istekleri (14 Ekim):** Tür (vize, final, özet, çıkmış) her yerden kalktı; istek kısa açıklamayla (`reqTitle`), aynı açıklamalı açık istek ikinci kez açılmaz (`reqNorm`). Sunucu eski `kind` alanını "genel" yazar.
-  - İsteklerin göründüğü yerler (ders sayfası kutusu, ana sayfa "Not istekleri", `/istekler`) şimdilik olduğu gibi. Kullanıcı bir öneri sistemi anlatacak, istekler o zaman başka sayfada toplanacak; kendiliğinden kurma.
+  - İsteklerin göründüğü yerler (ders sayfası kutusu, ana sayfada sağdaki sarı kutu, `/istekler`). Kullanıcı bir öneri sistemi anlatacak, istekler o zaman başka sayfada toplanacak; kendiliğinden kurma.
 - **Bildirim paneli (15 Ekim):** Ortadaki pencere değil, zilin altında açılan küçük panel (`openNotifs`, `placeNotifs`, `#nf-pop`); zile yeniden basınca, dışarı basınca, Esc'te ya da bir bildirime gidince kapanır. Tur açıkken Esc önce paneli kapatır.
+- **Çizilmiş simgeler (16 Ekim):** Sitede emoji yok. Simgeler `GL` / `gl(ad, sınıf)` (48'lik: alev, megafon, kep, pati, konfeti, rozet simgeleri, oy okları, kubbe sikkesi, casus...).
+  - Profil resminde "Karakter" sekmesi: 24 çizim (`AV_ART`, `avArt`); kayıtta anahtar yine emoji (`AV_EMOJI`), serbest emoji yazma kutusu kalktı; listede olmayan eski emoji sabit bir karaktere düşer.
+  - Anonim: profil resmi casus, profil resmi olmayan yerlerde adın yanında casus (`spyName`, `whoHtml`); Anonim seçeneklerinde de casus.
+  - Pazar küçük rozetleri ve "Aldıkları" ürün çiziminden (`itemAvSrc`); parçacıklar (`burst`) çizim anahtarı alır; `toast(yazı, tür, simge)`.
+- **Parlak düğmeler (16 Ekim):** `.btn` üstte ışık (`::before`, `--gloss`), üzerine gelince parlama süzülür (`::after`, `--shine`); seçili sekme, zil, hesap ve kubbe düğmelerinde de ışık. Koyu kutuda (`.lead`) değişkenler kısılır.
 - **Yenilikler bölümü kaldırıldı (14 Ekim):** Kullanıcı istemiyor; yenilik penceresi ve test listesi geri eklenmesin. Ayhan Abi turu Hakkında sayfasındaki düğmeyle de başlar.
 
 ## Sıradaki işler
@@ -66,6 +71,7 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Panel işleri:** Cloudflare, Natro, Resend ve Supabase paneli adımlarını kullanıcıya tek tek yaptırma; tarayıcı bağlıysa kendin yap. Kullanıcıdan yalnızca giriş yapmasını iste.
 - **Şifre ve anahtarlar:** Şifre yazma ve isteme. Gizli anahtarları (service_role, API token, Resend anahtarı) sohbette isteme. Supabase publishable anahtarı herkese açıktır (`site/config.json`).
+- **Emoji yok:** Sitenin hiçbir yerinde düz emoji kullanılmaz (kullanıcı istemiyor). Simge gerekirse sitenin çizim diliyle çizilir (koyu kontur, düz renk, ışık çizgisi) ve `GL`'ye eklenir; `npm test` sayfalarda emoji arar.
 - **Kayıt:** Yalnızca `@std.yeditepe.edu.tr` adresleri, artı yukarıdaki iki özel hesap.
 - **İçerik:**
   - Ders ve hoca ekleme yalnızca yöneticiye açık.
@@ -82,4 +88,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1487/1487, `npm run test:site` 116/116, `npm run test:db` 95/95.
+- **Beklenen sonuçlar:** `npm test` 1496/1496, `npm run test:site` 116/116, `npm run test:db` 95/95.

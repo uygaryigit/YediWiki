@@ -44,15 +44,15 @@ const RARITY = {
   efsane: { ad: 'Efsane', c: '#FF9F0A' }
 };
 const MARKET = [
-  { id: 'gece-eskortu', name: 'Gece Eskortu', desc: 'Gece üst kapıdan yurda kadar sana eşlik eden Ayhan Abi. Profilinde adının yanında yürür.', price: 1200, rar: 'efsane', kind: 'Yoldaş', mini: '🐕' },
-  { id: 'kartal-kanatlari', name: 'Kartal Kanatları', desc: 'Yeditepe Kartalları için: profil resminin arkasında altın kanatlar açılır.', price: 1500, rar: 'efsane', kind: 'Profil efekti', mini: '🦅' },
-  { id: 'altin-ring', name: 'Altın Ring Bileti', desc: 'Tıklım tıklım ringde yer bulmanın efsanevi yolu. Adının yanında altın bilet.', price: 700, rar: 'epik', kind: 'Rozet', mini: '🎫' },
-  { id: 'selcuklu-kapi', name: 'Selçuklu Kapısı', desc: '22 metrelik kampüs kapılarından ilham alan taş desenli profil çerçevesi.', price: 900, rar: 'epik', kind: 'Çerçeve', mini: '' },
-  { id: 'gunes-aurasi', name: 'Güneş Paneli Aurası', desc: 'Çatıdaki güneş santralinden enerji: kullanıcı adın altın gibi parlar.', price: 800, rar: 'epik', kind: 'İsim efekti', mini: '' },
-  { id: 'yokus-canavari', name: 'Yokuş Canavarı', desc: 'Kayışdağı yokuşunu “oy anam” demeden çıkanlara verilir.', price: 350, rar: 'nadir', kind: 'Rozet', mini: '⛰️' },
-  { id: 'son-sosisli', name: 'Son Sosisli', desc: 'Kantinde “kalmadı” denmeden alınabilmiş efsanevi sosisli.', price: 300, rar: 'nadir', kind: 'Rozet', mini: '🌭' },
-  { id: 'ikinci-ev', name: 'İkinci Ev Kupası', desc: 'Kütüphaneden kaçıp kafede ders çalışanların kupası.', price: 200, rar: 'yaygin', kind: 'Rozet', mini: '☕' },
-  { id: 'karsi-durum', name: 'Karşıdaki Dürüm', desc: 'Ders arası karşıya geçip alınan dürüm. Klasik.', price: 150, rar: 'yaygin', kind: 'Rozet', mini: '🌯' }
+  { id: 'gece-eskortu', name: 'Gece Eskortu', desc: 'Gece üst kapıdan yurda kadar sana eşlik eden Ayhan Abi. Profilinde adının yanında yürür.', price: 1200, rar: 'efsane', kind: 'Yoldaş', mini: 1 },
+  { id: 'kartal-kanatlari', name: 'Kartal Kanatları', desc: 'Yeditepe Kartalları için: profil resminin arkasında altın kanatlar açılır.', price: 1500, rar: 'efsane', kind: 'Profil efekti', mini: 1 },
+  { id: 'altin-ring', name: 'Altın Ring Bileti', desc: 'Tıklım tıklım ringde yer bulmanın efsanevi yolu. Adının yanında altın bilet.', price: 700, rar: 'epik', kind: 'Rozet', mini: 1 },
+  { id: 'selcuklu-kapi', name: 'Selçuklu Kapısı', desc: '22 metrelik kampüs kapılarından ilham alan taş desenli profil çerçevesi.', price: 900, rar: 'epik', kind: 'Çerçeve', mini: 0 },
+  { id: 'gunes-aurasi', name: 'Güneş Paneli Aurası', desc: 'Çatıdaki güneş santralinden enerji: kullanıcı adın altın gibi parlar.', price: 800, rar: 'epik', kind: 'İsim efekti', mini: 0 },
+  { id: 'yokus-canavari', name: 'Yokuş Canavarı', desc: 'Kayışdağı yokuşunu “oy anam” demeden çıkanlara verilir.', price: 350, rar: 'nadir', kind: 'Rozet', mini: 1 },
+  { id: 'son-sosisli', name: 'Son Sosisli', desc: 'Kantinde “kalmadı” denmeden alınabilmiş efsanevi sosisli.', price: 300, rar: 'nadir', kind: 'Rozet', mini: 1 },
+  { id: 'ikinci-ev', name: 'İkinci Ev Kupası', desc: 'Kütüphaneden kaçıp kafede ders çalışanların kupası.', price: 200, rar: 'yaygin', kind: 'Rozet', mini: 1 },
+  { id: 'karsi-durum', name: 'Karşıdaki Dürüm', desc: 'Ders arası karşıya geçip alınan dürüm. Klasik.', price: 150, rar: 'yaygin', kind: 'Rozet', mini: 1 }
 ];
 const MARKET_BY_ID = Object.fromEntries(MARKET.map(m => [m.id, m]));
 const REPORT_LIMIT = 3;
@@ -97,6 +97,94 @@ const ICONS = {
   kubbe: '<path d="M4 20h16"/><path d="M6.5 20v-5.5a5.5 5.5 0 0 1 11 0V20"/><path d="M12 3.5v3"/>'
 };
 const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+/* ================= Çizilmiş simgeler: sitede düz emoji yok =================
+   Her simge kendi çizimi: koyu kontur, düz renkler, beyaz ışık çizgisi. Yeni bir simge gerekirse buraya çizilir, emoji yazılmaz.
+   gl(ad, sınıf): 48'lik çizim (satır içi SVG). avArt(anahtar): profil resmi karakteri (64'lük); kayıtlarda anahtar eski emojidir. */
+const GL = (() => {
+  const O = 'stroke="#1B1330" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"';
+  const L = 'fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".6"';
+  const star = (cx, cy, R, r) => 'M' + Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r : R; return (cx + q * Math.cos(a)).toFixed(1) + ' ' + (cy + q * Math.sin(a)).toFixed(1); }).join('L') + 'z';
+  const toe = (x, y, a) => `<ellipse cx="${x}" cy="${y}" rx="3.9" ry="4.9" transform="rotate(${a} ${x} ${y})" fill="#3B3B48" ${O}/>`;
+  const ARROW = 'M24 5 41 23h-9v13a3 3 0 0 1-3 3H19a3 3 0 0 1-3-3V23H7z';
+  return {
+    flame: `<path d="M24 3c2 8 13 11 13 24a13 13 0 0 1-26 0c0-5 2-9 5-12 1 4 3 6 5 6-1-6 0-12 3-18z" fill="#FF5A36" ${O}/><path d="M24 16c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 1 4 3 4-1-4 0-8 1-11z" fill="#FFA22E"/><path d="M24 27c1.5 3 4.5 4.6 4.5 8a4.5 4.5 0 0 1-9 0c0-3.4 3-5 4.5-8z" fill="#FFE14D"/><path d="M31.5 17.5c2.2 2.6 3.5 5.6 3.5 9" ${L}/>`,
+    megaphone: `<path d="M12 29.5 14 38h5l-1.2-8.5" fill="#2447D5" ${O}/><rect x="6" y="19" width="11" height="11" rx="3" fill="#FFB020" ${O}/><path d="M16 19.5 33 10v29l-17-9.5z" fill="#3D7BFF" ${O}/><ellipse cx="33" cy="24.5" rx="3.4" ry="14.5" fill="#FFE14D" ${O}/><path d="M19.5 20.5 29 15" ${L}/><path d="M39.5 18c1.8 1.8 2.8 4 2.8 6.5s-1 4.7-2.8 6.5M43.5 13.5c2.9 3 4.3 6.8 4.3 11s-1.4 8-4.3 11" fill="none" stroke="#FF4D6D" stroke-width="2.4" stroke-linecap="round"/>`,
+    gradcap: `<path d="M12 21v9c0 3.5 5.4 6.5 12 6.5S36 33.5 36 30v-9l-12 5z" fill="#2B3C94" ${O}/><path d="M24 8 45 17 24 26 3 17z" fill="#3551C9" ${O}/><path d="M13.5 15.6 23 11.6" ${L}/><path d="M24 17l12.5 4.5V32" fill="none" stroke="#FFB020" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M34 31h5l1.2 7.5h-7.4z" fill="#FFB020" ${O}/><circle cx="24" cy="17" r="2.2" fill="#FFB020"/>`,
+    paw: `<path d="M24 22.5c6 0 11.5 6.5 11.5 11.6 0 4-3 6.4-6.4 5.8-2.1-.4-3.4-1.6-5.1-1.6s-3 1.2-5.1 1.6c-3.4.6-6.4-1.8-6.4-5.8 0-5.1 5.5-11.6 11.5-11.6z" fill="#3B3B48" ${O}/>${toe(11.5, 20.5, -22)}${toe(19, 11.5, -8)}${toe(29, 11.5, 8)}${toe(36.5, 20.5, 22)}<path d="M19 29.4c1.4-1.6 3-2.4 5-2.4" fill="none" stroke="#7A7A88" stroke-width="2" stroke-linecap="round"/>`,
+    party: `<path d="M6 42 16.5 15.5 32.5 31.5z" fill="#FFB020" ${O}/><path d="M10 33.5l4.5 4.5M13 25.5l9 9" stroke="#FF4D6D" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="24.5" cy="23.5" rx="11.3" ry="3.4" transform="rotate(45 24.5 23.5)" fill="#FF4D6D" ${O}/><path d="M28 10c2-2.6 4.6-.6 6.6-3M38 21c2.4.6 3 3.6 5.4 3.4" fill="none" stroke="#3D7BFF" stroke-width="2.4" stroke-linecap="round"/><circle cx="25" cy="6.5" r="2.1" fill="#3FB67E"/><circle cx="41.5" cy="11" r="2.3" fill="#FF4D6D"/><circle cx="43" cy="31" r="1.9" fill="#A155FF"/><rect x="33.5" y="14" width="4.4" height="4.4" rx="1" transform="rotate(25 35.7 16.2)" fill="#FFE14D" stroke="#1B1330" stroke-width="1.2"/>`,
+    heart: `<path d="M24 41C10.5 32 5 24 5 17 5 11.5 9 7.5 14.2 7.5c4 0 7.4 2.3 9.8 5.9 2.4-3.6 5.8-5.9 9.8-5.9C39 7.5 43 11.5 43 17c0 7-5.5 15-19 24z" fill="#FF4D6D" ${O}/><path d="M10.5 14.5c1-2.4 3.2-3.6 5.6-3.4" ${L}/>`,
+    star: `<path d="${star(24, 25.5, 19.5, 8.6)}" fill="#FFC53D" ${O}/><path d="M20.6 15.6l-1.7 4" ${L}/>`,
+    note: `<rect x="7" y="5" width="27" height="35" rx="3" fill="#FFFFFF" ${O}/><path d="M12.5 13h16M12.5 19h16M12.5 25h9" stroke="#9DB0FF" stroke-width="2.4" stroke-linecap="round"/><g transform="rotate(45 32 26)"><rect x="29" y="11" width="7" height="3.6" fill="#FF4D6D" ${O}/><rect x="29" y="14.6" width="7" height="17.4" fill="#FFC53D" ${O}/><path d="M29 32h7l-3.5 6.5z" fill="#F6E2BE" ${O}/><path d="M31.6 36.4l.9 1.7.9-1.7z" fill="#1B1330"/></g>`,
+    books: `<rect x="5" y="32" width="37" height="9" rx="2" fill="#3D7BFF" ${O}/><path d="M37 34.5v4" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/><path d="M10 33.3v6.4" stroke="#FFE14D" stroke-width="2.2"/><rect x="8" y="23" width="33" height="9" rx="2" fill="#FF4D6D" ${O}/><path d="M36 25.5v4" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/><path d="M13 24.3v6.4" stroke="#FFE14D" stroke-width="2.2"/><g transform="rotate(-7 23 18)"><rect x="7" y="13.5" width="31" height="9" rx="2" fill="#3FB67E" ${O}/><path d="M33 16v4" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/><path d="M12 14.8v6.4" stroke="#FFE14D" stroke-width="2.2"/></g>`,
+    bubble: `<path d="M9 8h30a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H22l-9 8v-8H9a5 5 0 0 1-5-5V13a5 5 0 0 1 5-5z" fill="#FFFFFF" ${O}/><circle cx="15" cy="20.5" r="2.6" fill="#3D7BFF"/><circle cx="24" cy="20.5" r="2.6" fill="#3D7BFF"/><circle cx="33" cy="20.5" r="2.6" fill="#3D7BFF"/>`,
+    cay: `<ellipse cx="22" cy="42" rx="16" ry="3.6" fill="#E3E7F2" ${O}/><path d="M14.5 15.5h15c-1.4 3.4-2.6 6-2.6 10.4 0 4.6 3 7.6 3.6 12.6H13.5c.6-5 3.6-8 3.6-12.6 0-4.4-1.2-7-2.6-10.4z" fill="#C0392B"/><path d="M12.5 10h19c0 6-4.2 9-4.2 15.5S31.5 34 31.5 39h-19c0-5 4.2-7 4.2-13.5S12.5 16 12.5 10z" fill="#fff" fill-opacity=".35" ${O}/><path d="M16.5 17.5c1.2 3 2.2 5.4 2.2 8.4" ${L}/><path d="M18 7c-1.6-1.6 1.6-3 0-4.6M24 7c-1.6-1.6 1.6-3 0-4.6" fill="none" stroke="#9AA4B8" stroke-width="2" stroke-linecap="round"/><path d="M34 6h9a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-4.5L35 21v-3h-1a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3z" fill="#FFE14D" ${O}/><circle cx="35.6" cy="12" r="1.2" fill="#1B1330"/><circle cx="38.6" cy="12" r="1.2" fill="#1B1330"/><circle cx="41.6" cy="12" r="1.2" fill="#1B1330"/>`,
+    dome: `<path d="M4 41h40" stroke="#1B1330" stroke-width="2.2" stroke-linecap="round"/><rect x="8" y="30" width="32" height="11" rx="1.5" fill="#F6E2BE" ${O}/><path d="M14 39.6v-5.6M34 39.6v-5.6" stroke="#C9955A" stroke-width="2.2" stroke-linecap="round"/><path d="M20.5 41v-5a3.5 3.5 0 0 1 7 0v5" fill="#2E44B8" ${O}/><rect x="11.5" y="25" width="25" height="5" fill="#E9CFA0" ${O}/><path d="M12 25a12 12 0 0 1 24 0z" fill="#FFC53D" ${O}/><path d="M16.5 20.5c1.4-3 4-5.2 7-5.8" ${L}/><path d="M24 13V8" stroke="#1B1330" stroke-width="2.2" stroke-linecap="round"/><circle cx="24" cy="6.5" r="2.2" fill="#FFC53D" ${O}/>`,
+    trophy: `<path d="M14 10H8.5c0 6.5 3 9.5 7.5 9.5M34 10h5.5c0 6.5-3 9.5-7.5 9.5" fill="none" stroke="#1B1330" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 10H8.5c0 6.5 3 9.5 7.5 9.5M34 10h5.5c0 6.5-3 9.5-7.5 9.5" fill="none" stroke="#FFC53D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.5 6.5h21v8.5c0 7.2-4.7 12.5-10.5 12.5S13.5 22.2 13.5 15z" fill="#FFC53D" ${O}/><path d="M24 10.5l1.5 3.1 3.4.5-2.5 2.4.6 3.4-3-1.6-3 1.6.6-3.4-2.5-2.4 3.4-.5z" fill="#FFF3B8"/><path d="M17.5 10v4.5c0 3 1 5.4 2.6 7" ${L}/><path d="M21 27.5h6l1 5.5h-8z" fill="#E0A008" ${O}/><rect x="14" y="33" width="20" height="8" rx="2" fill="#7E4A24" ${O}/><rect x="19" y="35.5" width="10" height="3" rx="1" fill="#FFE14D"/>`,
+    buoy: `<path fill-rule="evenodd" d="M24 7a17 17 0 1 1 0 34 17 17 0 0 1 0-34zm0 9a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" fill="#FFFFFF"/><circle cx="24" cy="24" r="12.5" fill="none" stroke="#FF4D6D" stroke-width="9" stroke-dasharray="9.82 9.82" transform="rotate(-22.5 24 24)"/><circle cx="24" cy="24" r="17" fill="none" ${O}/><circle cx="24" cy="24" r="8" fill="none" ${O}/><path d="M12.5 15.5a14 14 0 0 1 7.5-6" ${L}/>`,
+    coin: `<circle cx="24" cy="24" r="19" fill="#FFC53D" ${O}/><circle cx="24" cy="24" r="14.5" fill="#FFD866" stroke="#D99A0B" stroke-width="2"/><path d="M15.5 31h17M17.5 31v-3.4a6.5 6.5 0 0 1 13 0V31" fill="#E9A80F" stroke="#8A5A00" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 21.2v-3.4" stroke="#8A5A00" stroke-width="2" stroke-linecap="round"/><path d="M11.5 18.5a13.5 13.5 0 0 1 7.5-7" ${L}/>`,
+    check: '<path d="M11 25.5l8.5 8.5L37 15.5" fill="none" stroke="currentColor" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    up: `<path d="${ARROW}" fill="#3FB67E" ${O}/><path d="M14 21.5l8.4-9" ${L}/>`,
+    down: `<path d="${ARROW}" transform="rotate(180 24 22)" fill="#FF4D6D" ${O}/><path d="M20 9v8" ${L}/>`,
+    spy: `<path d="M7 47c0-9.5 7.5-15 17-15s17 5.5 17 15z" fill="#3B4252" ${O}/><path d="M24 34l-5.5 13M24 34l5.5 13" stroke="#59627A" stroke-width="2"/><ellipse cx="24" cy="25" rx="9.5" ry="10" fill="#F0C48E" ${O}/><path d="M12.5 29.5l8 6-4.5 9-6.8-4.6zM35.5 29.5l-8 6 4.5 9 6.8-4.6z" fill="#59627A" ${O}/><path d="M14 17c0-6.5 3.6-11.5 10-11.5s10 5 10 11.5z" fill="#26262E" ${O}/><path d="M14.7 13.6h18.6" stroke="#FF4D6D" stroke-width="2.8"/><ellipse cx="24" cy="17.2" rx="16" ry="3.6" fill="#26262E" ${O}/><path d="M14.5 24h19" stroke="#1B1330" stroke-width="2"/><rect x="14.8" y="22.2" width="8" height="5.2" rx="2.4" fill="#111C4E" ${O}/><rect x="25.2" y="22.2" width="8" height="5.2" rx="2.4" fill="#111C4E" ${O}/><path d="M16.8 23.8l2.6-.8M27.2 23.8l2.6-.8" stroke="#9DB0FF" stroke-width="1.4" stroke-linecap="round"/><path d="M21.6 31.4h4.8" stroke="#7E4A24" stroke-width="1.6" stroke-linecap="round"/>`,
+    spark: `<path d="M24 3c1.8 9.5 5.6 14.6 18 21-12.4 6.4-16.2 11.5-18 21-1.8-9.5-5.6-14.6-18-21 12.4-6.4 16.2-11.5 18-21z" fill="#FFE14D" ${O}/>`,
+    shield: `<path d="M24 4.5 40.5 10.5V22c0 10.5-7.2 17.6-16.5 21.5C14.7 39.6 7.5 32.5 7.5 22V10.5z" fill="#3D7BFF" ${O}/><path d="M24 9.5 36 14v8c0 7.6-5 12.8-12 15.8z" fill="#2447D5"/><path d="M17 23.5l5 5L32 18.5" fill="none" stroke="#FFE14D" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>`,
+    person: `<circle cx="24" cy="17" r="8" fill="#C9D3EA" ${O}/><path d="M8 44c0-9 7-15 16-15s16 6 16 15z" fill="#C9D3EA" ${O}/>`,
+    cup: `<ellipse cx="22" cy="42.5" rx="16" ry="3.4" fill="#E3E7F2" ${O}/><path d="M33 22.5h3.2a5.2 5.2 0 0 1 0 10.4H33" fill="none" stroke="#1B1330" stroke-width="5.4" stroke-linecap="round"/><path d="M33 22.5h3.2a5.2 5.2 0 0 1 0 10.4H33" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M9.5 18h24.5v14c0 6.8-5.4 11.5-12.2 11.5S9.5 38.8 9.5 32z" fill="#FFFFFF" ${O}/><path d="M10.6 27.5h22.3" stroke="#3D7BFF" stroke-width="3.2"/><ellipse cx="21.75" cy="18" rx="12.25" ry="3.2" fill="#7E4A24" ${O}/><path d="M16 12c-2-2 2-4 0-6M22 12c-2-2 2-4 0-6M28 12c-2-2 2-4 0-6" fill="none" stroke="#9AA4B8" stroke-width="2" stroke-linecap="round"/>`
+  };
+})();
+const gl = (k, cls = '') => (GL[k] ? `<svg class="gl gl-${k}${cls ? ' ' + cls : ''}" viewBox="0 0 48 48" aria-hidden="true">${GL[k]}</svg>` : '');
+const spyName = (t = 'Anonim') => `<span class="spy-name">${gl('spy')}${esc(t)}</span>`;
+// Yazar adı: anonimse yanında casus
+function whoHtml(uid, anon, fb) { const t = displayName(uid, anon, fb); return t === 'Anonim' ? spyName() : esc(t); }
+/* Profil resmi karakterleri (kayıtta eski emoji anahtarıyla durur, ekranda çizim görünür) */
+const AV_NAMES = { '🦉': 'Baykuş', '🦊': 'Tilki', '🐼': 'Panda', '🐧': 'Penguen', '🦁': 'Aslan', '🐢': 'Kaplumbağa', '🐝': 'Arı', '🦄': 'Tek boynuzlu at', '🐳': 'Balina', '🦖': 'T-Rex', '🐙': 'Ahtapot', '🦕': 'Uzun boyunlu dinozor', '🌵': 'Kaktüs', '🍀': 'Yonca', '⚡': 'Şimşek', '🎧': 'Kulaklık', '📚': 'Kitaplar', '☕': 'Kahve', '🧩': 'Yapboz', '🚀': 'Roket', '🎸': 'Gitar', '🧠': 'Beyin', '🛰️': 'Uydu', '🥐': 'Kruvasan' };
+const AV_ART = (() => {
+  const A = 'stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"';
+  const L = 'fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".6"';
+  // U: birleşik gövde; önce kalın koyu kontur, sonra dolgu: parçaların arasında çizgi kalmaz
+  const U = (shapes, fill) => shapes.map(s => s.replace(/\/>$/, ` fill="${fill}" stroke="#1B1330" stroke-width="4.8" stroke-linejoin="round"/>`)).join('') + shapes.map(s => s.replace(/\/>$/, ` fill="${fill}"/>`)).join('');
+  const eye = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#1B1330"/><circle cx="${(x + r * 0.35).toFixed(2)}" cy="${(y - r * 0.4).toFixed(2)}" r="${(r * 0.38).toFixed(2)}" fill="#fff"/>`;
+  const eyes = (x1, x2, y, r = 2.6) => eye(x1, y, r) + eye(x2, y, r);
+  const smile = (x, y, w = 3) => `<path d="M${x - w} ${y}q${w} ${(w * 0.8).toFixed(1)} ${w * 2} 0" fill="none" stroke="#1B1330" stroke-width="2" stroke-linecap="round"/>`;
+  const blush = (x1, x2, y) => `<ellipse cx="${x1}" cy="${y}" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".7"/><ellipse cx="${x2}" cy="${y}" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".7"/>`;
+  const g48 = k => `<g transform="translate(6 6) scale(1.083)">${GL[k]}</g>`;
+  const turn = (a, s) => `<g transform="translate(32 32) rotate(${a}) translate(-32 -32)">${s}</g>`;
+  const legs = ds => ds.map(d => `<path d="${d}" fill="none" stroke="#1B1330" stroke-width="8.4" stroke-linecap="round"/>`).join('') + ds.map(d => `<path d="${d}" fill="none" stroke="#FF7AA8" stroke-width="4" stroke-linecap="round"/>`).join('');
+  const leaf = a => `<path d="M32 31c-6.2-4-12.4-9.4-9.2-15.4 2-3.8 7-3.8 9.2 0 2.2-3.8 7.2-3.8 9.2 0 3.2 6-3 11.4-9.2 15.4z" transform="rotate(${a} 32 31)" fill="#3FB67E" ${A}/>`;
+  const FOX = 'M13 11l11 9h16l11-9-1.6 19C49.4 43 41.6 53 32 53S14.6 43 14.6 30z';
+  return {
+    '🦉': U(['<path d="M15 24c0-6 2.6-11 5.6-13.6L25 16h14l4.4-5.6C46.4 13 49 18 49 24v16c0 10-7.6 17-17 17s-17-7-17-17z"/>'], '#A0673A') + `<ellipse cx="32" cy="43" rx="11" ry="11.5" fill="#F6E2BE"/><path d="M26 40.5l3 2 3-2 3 2 3-2M27.2 46.5l2.4 1.6 2.4-1.6 2.4 1.6 2.4-1.6" fill="none" stroke="#C98B55" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24.6" cy="27" r="7.2" fill="#fff" ${A}/><circle cx="39.4" cy="27" r="7.2" fill="#fff" ${A}/>${eyes(25.6, 38.4, 27.6, 3.4)}<path d="M29.4 32h5.2L32 36.6z" fill="#FFB020" ${A}/><path d="M15.6 33c-2 5-1.4 10.6 1.6 14M48.4 33c2 5 1.4 10.6-1.6 14" fill="none" stroke="#7E4A24" stroke-width="2.4" stroke-linecap="round"/>`,
+    '🦊': `<path d="${FOX}" fill="#F07C2A"/><path d="M15.6 15.2l6 4.8-4.6 3.4zM48.4 15.2l-6 4.8 4.6 3.4z" fill="#3A2416"/><path d="M14.8 33c4.4.2 9.6 3.2 11.8 8.2L32 52.6C22 52.2 15.4 43.6 14.8 33zM49.2 33c-4.4.2-9.6 3.2-11.8 8.2L32 52.6c10-.4 16.6-9 17.2-19.6z" fill="#FFF6EC"/><path d="${FOX}" fill="none" ${A}/>${eyes(25, 39, 31)}<ellipse cx="32" cy="44.5" rx="3.2" ry="2.3" fill="#1B1330"/><path d="M29 48.5q3 2 6 0" fill="none" stroke="#1B1330" stroke-width="1.8" stroke-linecap="round"/>`,
+    '🐼': `<circle cx="17" cy="18" r="7.4" fill="#26262E" ${A}/><circle cx="47" cy="18" r="7.4" fill="#26262E" ${A}/><ellipse cx="32" cy="35" rx="20.5" ry="18.5" fill="#FFFFFF" ${A}/><ellipse cx="24" cy="33" rx="5.2" ry="6.8" transform="rotate(28 24 33)" fill="#26262E"/><ellipse cx="40" cy="33" rx="5.2" ry="6.8" transform="rotate(-28 40 33)" fill="#26262E"/><circle cx="24.8" cy="32.4" r="2.1" fill="#fff"/><circle cx="39.2" cy="32.4" r="2.1" fill="#fff"/><ellipse cx="32" cy="41" rx="3.4" ry="2.4" fill="#1B1330"/><path d="M29 45.4q3 2.4 6 0" fill="none" stroke="#1B1330" stroke-width="2" stroke-linecap="round"/>${blush(19.5, 44.5, 42)}`,
+    '🐧': `<ellipse cx="24.5" cy="55" rx="5.6" ry="2.8" fill="#FFB020" ${A}/><ellipse cx="39.5" cy="55" rx="5.6" ry="2.8" fill="#FFB020" ${A}/><path d="M32 8c11 0 17.5 9 17.5 22v13c0 7.6-7.4 12.5-17.5 12.5S14.5 50.6 14.5 43V30C14.5 17 21 8 32 8z" fill="#2B2F3E" ${A}/><path d="M32 19c-3-4.4-12.5-3.4-12.5 6 0 5 2 8 2 13 0 7.6 4.4 13 10.5 13s10.5-5.4 10.5-13c0-5 2-8 2-13 0-9.4-9.5-10.4-12.5-6z" fill="#FFFFFF"/>${eyes(26.5, 37.5, 27.5)}<path d="M28 32.5h8l-4 5z" fill="#FFB020" ${A}/>${blush(23, 41, 36)}<path d="M24 12.5c2.6-1.8 5.4-2.6 8-2.6" ${L}/>`,
+    '🦁': Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6 + 0.26; return `<circle cx="${(32 + 18.5 * Math.cos(a)).toFixed(1)}" cy="${(33 + 18.5 * Math.sin(a)).toFixed(1)}" r="7.6" fill="#C2652A" ${A}/>`; }).join('') + `<circle cx="32" cy="33" r="18.6" fill="#C2652A"/><circle cx="21" cy="21.5" r="4.4" fill="#FFC53D" ${A}/><circle cx="43" cy="21.5" r="4.4" fill="#FFC53D" ${A}/><circle cx="32" cy="34" r="14.6" fill="#FFC53D" ${A}/>${eyes(26.4, 37.6, 31.5, 2.3)}<ellipse cx="32" cy="40.5" rx="6.6" ry="4.6" fill="#FFF0C8"/><path d="M29.4 37h5.2L32 40z" fill="#7E4A24" ${A}/><path d="M32 40v2.2M28.8 43.4q3.2 2.2 6.4 0" fill="none" stroke="#1B1330" stroke-width="1.8" stroke-linecap="round"/>`,
+    '🐢': `<g transform="translate(31 38) scale(1.12) translate(-31 -38)"><rect x="15" y="41" width="7.4" height="9" rx="3.2" fill="#8ED6B2" ${A}/><rect x="37" y="41" width="7.4" height="9" rx="3.2" fill="#8ED6B2" ${A}/><circle cx="50.5" cy="36" r="6.6" fill="#8ED6B2" ${A}/>${eye(52.6, 34.4, 1.7)}<path d="M50.6 38.6q2 1.4 4 .2" fill="none" stroke="#1B1330" stroke-width="1.6" stroke-linecap="round"/><path d="M11 41a19 17 0 0 1 38 0z" fill="#3FB67E" ${A}/><path d="M21.5 41l3-10.5h15l3 10.5M24.5 30.5l-5.6-5.4M39.5 30.5l5.6-5.4M32 30.5v-6.3" fill="none" stroke="#1F7A4D" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><rect x="9" y="40" width="42" height="5.4" rx="2.7" fill="#E0B354" ${A}/><path d="M17 31c1.6-3.4 4.4-6 8-7.4" ${L}/></g>`,
+    '🐝': `<ellipse cx="21" cy="19" rx="7.5" ry="10" transform="rotate(-28 21 19)" fill="#D9F0FF" ${A}/><ellipse cx="43" cy="19" rx="7.5" ry="10" transform="rotate(28 43 19)" fill="#D9F0FF" ${A}/><path d="M32 54v4.6" stroke="#1B1330" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="32" cy="38" rx="16" ry="17" fill="#FFC53D"/><path d="M16.2 36.5h31.6c.3 1.8.3 3.4.1 5H16.1c-.2-1.6-.2-3.2.1-5zM18.3 46.5h27.4c-.9 1.9-2 3.6-3.4 5H21.7c-1.4-1.4-2.5-3.1-3.4-5z" fill="#26262E"/><ellipse cx="32" cy="38" rx="16" ry="17" fill="none" ${A}/>${eyes(26, 38, 28, 2.5)}${smile(32, 32.5)}<path d="M27 21.6c-1.2-3.6-3-6-5.6-7.6M37 21.6c1.2-3.6 3-6 5.6-7.6" fill="none" stroke="#1B1330" stroke-width="2.2" stroke-linecap="round"/><circle cx="21.4" cy="13.6" r="2.2" fill="#1B1330"/><circle cx="42.6" cy="13.6" r="2.2" fill="#1B1330"/>`,
+    '🦄': `<path d="M20 20l-2-9 7.4 5.4zM44 20l2-9-7.4 5.4z" fill="#FFFFFF" ${A}/><path d="M28.6 15.6 32 1.8l3.4 13.8z" fill="#FFC53D" ${A}/><path d="M30 10.4l4-1.2M29.2 13.4l5.4-1.6" stroke="#E0A008" stroke-width="1.6" stroke-linecap="round"/><path d="M19.5 26c0-8 5.4-12.5 12.5-12.5S44.5 18 44.5 26v9.5c0 9.4-5.4 16-12.5 16s-12.5-6.6-12.5-16z" fill="#FFFFFF" ${A}/><path d="M33.4 13.6c-7.6-.6-14 3.6-14.6 10.4 3.4-2.6 8-3.8 12.4-2.6-1.4-2.6-.8-5.4 2.2-7.8z" fill="#A155FF" ${A}/><path d="M44.4 22.6c3.8 2 5.6 6.2 4.4 10.6-1.6-1.8-3.4-2.6-5.4-2.6" fill="#FF7AA8" ${A}/><ellipse cx="32" cy="43.5" rx="8.6" ry="6.6" fill="#F7C1E0" ${A}/><circle cx="29" cy="43" r="1.3" fill="#1B1330"/><circle cx="35" cy="43" r="1.3" fill="#1B1330"/><path d="M23.6 31.4q2.6-2.4 5.2 0M35.2 31.4q2.6-2.4 5.2 0" fill="none" stroke="#1B1330" stroke-width="2.2" stroke-linecap="round"/>${blush(22.8, 41.2, 37)}`,
+    '🐳': `<path d="M30 20c0-4-3-6.6-6.4-7.4M30 20c0-4 3-6.6 6.4-7.4M30 20v-8.6" fill="none" stroke="#5BB8FF" stroke-width="2.8" stroke-linecap="round"/><circle cx="22.6" cy="10.4" r="1.8" fill="#5BB8FF"/><circle cx="37.4" cy="10.4" r="1.8" fill="#5BB8FF"/><path d="M14 36c-4.6-1.6-7.4-6-7-10.6 3.4.6 6.4 3 7.8 6.2" fill="#3D7BFF" ${A}/><path d="M10 38c0-10 9.4-17.6 22-17.6S54 28 54 36.6C54 45.4 46 51 34 51H22c-7.4 0-12-5.4-12-13z" fill="#3D7BFF" ${A}/><path d="M14.6 43.6c3.4 3.6 8 5.4 14 5.4h5.4c6.6 0 12.4-2.4 15.6-7-6 1.8-13.4 2.6-19.6 2.6-5.6 0-10.8-.4-15.4-1z" fill="#D6E6FF"/>${eye(43, 34, 2.4)}<path d="M44 40q3.4 1.6 6.4-.6" fill="none" stroke="#1B1330" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="47.6" cy="37.4" rx="2.6" ry="1.5" fill="#FF8FA8" opacity=".7"/><path d="M18 31c3-4 8-6.6 13.4-7" ${L}/>`,
+    '🦖': `<path d="M18 30c0-11 8-18 19-18h7c5 0 8 3 8 8v5c0 3-2 5-5 5H36v4h12c0 4-3 7-7 7H30l-2 12H14c0-10 1-17 4-23z" fill="#3FB67E" ${A}/><path d="M38.4 30l1.5 2.6 1.5-2.6M43.4 30l1.5 2.6 1.5-2.6" fill="#fff" stroke="#1B1330" stroke-width="1.2" stroke-linejoin="round"/>${eye(42, 19.5, 2.6)}<circle cx="49" cy="17.6" r="1" fill="#1B1330"/><circle cx="26" cy="22" r="2.2" fill="#2E9466"/><circle cx="22.6" cy="29" r="1.7" fill="#2E9466"/><circle cx="31" cy="17" r="1.6" fill="#2E9466"/><path d="M29 45.6h4.4l1.6 2.6" fill="none" stroke="#1B1330" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 20c2.6-3.4 6.4-5.4 10.6-5.6" ${L}/>`,
+    '🐙': legs(['M18 40c-2 6-6.4 8.6-9.4 6.6', 'M24 43c-.4 6.4-3.4 10.4-7 10.6', 'M32 44c0 6.4.6 9.4 3.2 11.4', 'M40 43c.4 6.4 3.4 10.4 7 10.6', 'M46 40c2 6 6.4 8.6 9.4 6.6']) + `<path d="M13.5 35c0-12.6 8.2-22 18.5-22s18.5 9.4 18.5 22c0 6-4 9.6-8.4 9.6H21.9c-4.4 0-8.4-3.6-8.4-9.6z" fill="#FF7AA8" ${A}/><circle cx="39" cy="20" r="2" fill="#FFB4CE"/><circle cx="43" cy="25" r="1.4" fill="#FFB4CE"/>${eyes(26, 38, 31)}${smile(32, 36.5)}${blush(21.6, 42.4, 36)}<path d="M20 22c1.8-3.4 4.6-5.6 8-6.4" ${L}/>`,
+    '🦕': U(['<ellipse cx="27" cy="41" rx="15.5" ry="10"/>', '<path d="M35 35c4-6 6.4-14 8.2-20.4.9-3.2 3.2-5.2 6.2-5.2h2c3.2 0 5.4 2.2 5.4 5 0 2.2-1.8 4-4 4h-3.4c-1.8 6.4-3 14.4-6.2 20.4z"/>', '<path d="M12.5 40c-4.6 0-7 3-8.6 6.6 5.2.2 9.4-1 12.6-3.2z"/>', '<rect x="16" y="45" width="7.4" height="11" rx="3"/>', '<rect x="31" y="45" width="7.4" height="11" rx="3"/>'], '#7CC4E8') + `<path d="M17 39c3.6 3.4 9.4 5 15.4 4" fill="none" stroke="#4A9CC4" stroke-width="2" stroke-linecap="round"/>${eye(52, 13.6, 1.8)}<path d="M53.6 17.6q1.4.6 2.6-.4" fill="none" stroke="#1B1330" stroke-width="1.4" stroke-linecap="round"/><circle cx="24" cy="36" r="2" fill="#B8E2F6"/><circle cx="30" cy="34" r="1.6" fill="#B8E2F6"/><path d="M17.6 35.4c2.6-2.6 6-4 9.6-4.2" ${L}/>`,
+    '🌵': U(['<rect x="26" y="9.5" width="12" height="34" rx="6"/>', '<path d="M27 33.5h-6.4a4.6 4.6 0 0 1-4.6-4.6v-7.4a3.2 3.2 0 0 1 6.4 0v5.6h4.6z"/>', '<path d="M37 28.5h5.4a3.6 3.6 0 0 0 3.6-3.6v-8.4a3.2 3.2 0 0 1 6.4 0v8.4a10 10 0 0 1-10 10H37z"/>'], '#3FB67E') + `<path d="M30 14.6v3M34.4 34v3M18.4 24v2.6M49.2 20.4v2.6" stroke="#1F7A4D" stroke-width="1.8" stroke-linecap="round"/>${eyes(29, 35, 24.5, 1.8)}${smile(32, 28.4, 2.2)}<circle cx="32" cy="9" r="3.2" fill="#FF7AA8" ${A}/><rect x="17" y="41" width="30" height="6" rx="2" fill="#F08F62" ${A}/><path d="M19.4 47h25.2l-3.2 11H22.6z" fill="#E07A4F" ${A}/>`,
+    '🍀': `<path d="M33 32c4.4 8.4 6.4 14.6 4.4 23" fill="none" stroke="#1B1330" stroke-width="6" stroke-linecap="round"/><path d="M33 32c4.4 8.4 6.4 14.6 4.4 23" fill="none" stroke="#2E9466" stroke-width="2.4" stroke-linecap="round"/>${[0, 90, 180, 270].map(leaf).join('')}<path d="M32 31v-9M32 31h9M32 31v9M32 31h-9" stroke="#2E9466" stroke-width="1.8" stroke-linecap="round"/><circle cx="32" cy="31" r="2.4" fill="#2E9466"/><path d="M25.4 17.4c1-1.4 2.6-2 4-1.6" ${L}/>`,
+    '⚡': `<circle cx="32" cy="32" r="22" fill="#FFF6C2" opacity=".55"/><path d="M37 6 17 36h13.4L26 58l22-32.4H34.4z" fill="#FFE14D" ${A}/><path d="M33 13.6l-9.6 15" ${L}/>`,
+    '🎧': `<path d="M14 40v-7a18 18 0 0 1 36 0v7" fill="none" stroke="#1B1330" stroke-width="7.4" stroke-linecap="round"/><path d="M14 40v-7a18 18 0 0 1 36 0v7" fill="none" stroke="#3D7BFF" stroke-width="3"/><rect x="9" y="35" width="11.4" height="18" rx="5.2" fill="#3D7BFF" ${A}/><rect x="43.6" y="35" width="11.4" height="18" rx="5.2" fill="#3D7BFF" ${A}/><rect x="17.6" y="37" width="5.4" height="14" rx="2.7" fill="#26262E" ${A}/><rect x="41" y="37" width="5.4" height="14" rx="2.7" fill="#26262E" ${A}/><path d="M30.4 41.6V31.4l8-2.2v9.6" fill="none" stroke="#A155FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28.4" cy="42" r="2.6" fill="#A155FF"/><circle cx="36.4" cy="39" r="2.6" fill="#A155FF"/><path d="M12 37.6v6" ${L}/>`,
+    '📚': g48('books'),
+    '☕': g48('cup'),
+    '🧩': `<path d="M13 20h10a5 5 0 1 1 10 0h12v10a5 5 0 1 1 0 10v12H33a5 5 0 1 0-10 0H13V40a5 5 0 1 0 0-10z" fill="#A155FF" ${A}/><path d="M17 26c0-1.8 1.2-3.2 3-3.4" ${L}/>${eyes(25, 35, 33, 2.2)}${smile(30, 38, 2.6)}`,
+    '🚀': turn(38, `<path d="M26 47c0 6 6 10 6 10s6-4 6-10z" fill="#FFB020" ${A}/><path d="M28.6 47c0 3.6 3.4 6 3.4 6s3.4-2.4 3.4-6z" fill="#FFE14D"/><path d="M21 36l-7.4 8.4v6.6l7.4-4.4zM43 36l7.4 8.4v6.6L43 46.6z" fill="#FF4D6D" ${A}/><path d="M32 6c8 6.2 11.6 16 11.6 27.6V47H20.4V33.6C20.4 22 24 12.2 32 6z" fill="#FFFFFF" ${A}/><path d="M26.8 15.2c3.4-.6 7-.6 10.4 0" fill="none" stroke="#FF4D6D" stroke-width="2.6"/><circle cx="32" cy="27.5" r="5.4" fill="#5BB8FF" ${A}/><path d="M29.8 25.6a3 3 0 0 1 2.6-1.4" ${L}/><path d="M24 36v8" stroke="#C9D3EA" stroke-width="2.4" stroke-linecap="round"/>`),
+    '🎸': turn(40, U(['<circle cx="32" cy="45" r="11"/>', '<circle cx="32" cy="31.6" r="8.4"/>'], '#E8A65A') + `<rect x="29.6" y="4" width="4.8" height="30" rx="1.2" fill="#7E4A24" ${A}/><rect x="28" y="2.4" width="8" height="8" rx="2" fill="#3A2416" ${A}/><circle cx="32" cy="40" r="3.8" fill="#3A2416" ${A}/><rect x="27.6" y="48" width="8.8" height="2.8" rx="1" fill="#3A2416"/><path d="M31 9v40.4M33 9v40.4" stroke="#F6E2BE" stroke-width=".8"/><path d="M24.4 41.6c-.4-3 .6-6 2.6-8" ${L}/>`),
+    '🧠': U(['<circle cx="22" cy="27" r="9.4"/>', '<circle cx="32" cy="21" r="10.2"/>', '<circle cx="42" cy="27" r="9.4"/>', '<circle cx="23.6" cy="38.6" r="9"/>', '<circle cx="40.4" cy="38.6" r="9"/>', '<circle cx="32" cy="42.4" r="8.4"/>'], '#FFB4C8') + `<path d="M32 13v37.4" stroke="#D94F8A" stroke-width="2.2" stroke-linecap="round"/><path d="M23.4 23.6c3 .2 4.4 3 2.4 5.4M40.6 23.6c-3 .2-4.4 3-2.4 5.4M21.6 37c3-1 6 .8 5.4 4.2M42.4 37c-3-1-6 .8-5.4 4.2M27 16.6c1.4 1.6 1.6 3.6.6 5.4M37 16.6c-1.4 1.6-1.6 3.6-.6 5.4" fill="none" stroke="#D94F8A" stroke-width="2" stroke-linecap="round"/><path d="M17.4 23c1.4-2.6 3.6-4.2 6.2-4.6" ${L}/>`,
+    '🛰️': turn(-28, `<path d="M22 32h-3.4M42 32h3.4" stroke="#1B1330" stroke-width="2.6"/><rect x="4.6" y="25.6" width="14.4" height="12.8" rx="1.4" fill="#3D7BFF" ${A}/><rect x="45" y="25.6" width="14.4" height="12.8" rx="1.4" fill="#3D7BFF" ${A}/><path d="M9.4 25.6v12.8M14.2 25.6v12.8M4.6 32h14.4M49.8 25.6v12.8M54.6 25.6v12.8M45 32h14.4" stroke="#9DB0FF" stroke-width="1.4"/><rect x="22" y="23" width="20" height="18" rx="3" fill="#FFC53D" ${A}/><path d="M25 28h14M25 33h14M25 38h9" stroke="#E0A008" stroke-width="1.6" stroke-linecap="round"/><path d="M27 23a5 5 0 0 1 10 0z" fill="#FFFFFF" ${A}/><path d="M32 18v-5.4" stroke="#1B1330" stroke-width="2.2" stroke-linecap="round"/><circle cx="32" cy="11.4" r="2.4" fill="#FF4D6D" ${A}/>`) + '<circle cx="10" cy="12" r="1.4" fill="#FFE14D"/><circle cx="54" cy="52" r="1.6" fill="#FFE14D"/><circle cx="52" cy="10" r="1" fill="#FFE14D"/>',
+    '🥐': `<g transform="translate(32 36) scale(1.2) translate(-32 -36)"><ellipse cx="13" cy="42" rx="4.6" ry="7" transform="rotate(-62 13 42)" fill="#D98C3F" ${A}/><ellipse cx="51" cy="42" rx="4.6" ry="7" transform="rotate(62 51 42)" fill="#D98C3F" ${A}/><ellipse cx="20.6" cy="36" rx="7" ry="9.4" transform="rotate(-40 20.6 36)" fill="#E8A65A" ${A}/><ellipse cx="43.4" cy="36" rx="7" ry="9.4" transform="rotate(40 43.4 36)" fill="#E8A65A" ${A}/><ellipse cx="32" cy="32" rx="9.4" ry="11.6" fill="#F2B86E" ${A}/><path d="M27 26c1.4-3 3.4-4.4 6-4.6M17.6 31.4c1-2 2.6-3.2 4.4-3.6M42 28c2 .4 3.6 1.6 4.6 3.6" ${L}/></g>`,
+    '🛡️': g48('shield')
+  };
+})();
+function avArt(k) {
+  let f = AV_ART[k];
+  if (!f) { let h = 0; for (const ch of String(k || '')) h = (h * 31 + ch.codePointAt(0)) >>> 0; f = AV_ART[AV_EMOJI[h % AV_EMOJI.length]]; }   // listede olmayan eski emoji: hep aynı karaktere düşer
+  return `<svg class="av-art" viewBox="0 0 64 64" aria-hidden="true">${f}</svg>`;
+}
 
 /* ================= Yardımcılar ================= */
 const $ = (s, r = document) => r.querySelector(s);
@@ -522,11 +610,11 @@ function displayName(uid, anon, fallback) {
 function fullName(u) { return u ? [u.first, u.last].filter(Boolean).join(' ') : ''; }
 function badgesHtml(u) {
   if (!u) return '';
-  const minis = MARKET.filter(m => m.mini && ownsItem(u, m.id)).slice(0, 4).map(m => `<span class="badge-mini r-${m.rar}" title="${esc(m.name)}">${m.mini}</span>`).join('');
+  const minis = MARKET.filter(m => m.mini && ownsItem(u, m.id)).slice(0, 4).map(m => `<span class="badge-mini r-${m.rar}" title="${esc(m.name)}"><img src="${itemAvSrc(m.id)}" alt=""></span>`).join('');
   return (u.role === 'admin' ? '<span class="admin-tag">Yönetici</span>' : '') + minis;
 }
 function nameHtml(u, text) { return u && ownsItem(u, 'gunes-aurasi') ? `<span class="fx-glow">${esc(text)}</span>` : esc(text); }
-/* Profil resmi: emoji (istediğin), bir iki harf ya da marketten alınan ürün (animasyonlu); arka plan rengi serbest.
+/* Profil resmi: çizilmiş karakter (kayıtta emoji anahtarı, avArt), bir iki harf ya da marketten alınan ürün (animasyonlu); arka plan rengi serbest.
    avk: 'emoji' | 'harf' | 'urun' | 'foto' (eski yüklenmiş fotoğraflar görünmeye devam eder). Market efektleri (kanat, çerçeve, parlayan isim) ayrıca uygulanır */
 const okHex = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
 const avColor = u => (u && okHex(u.color) ? u.color : AV_COLORS[0]);
@@ -548,12 +636,12 @@ function avFace(u, cls = '') {
   if (k === 'urun') return `<span class="avatar art ${cls}" data-bg="${esc(bg)}" aria-hidden="true"><img src="${itemAvSrc(u.urun)}" alt=""></span>`;
   if (k === 'foto') return `<span class="avatar pic ${cls}" aria-hidden="true"><img src="${esc(u.pic)}" alt=""></span>`;
   if (k === 'harf') return `<span class="avatar harf ${darkHex(bg) ? 'on-dark' : 'on-light'} ${cls}" data-bg="${esc(bg)}" aria-hidden="true">${esc(u.harf)}</span>`;
-  return `<span class="avatar ${cls}" data-bg="${esc(bg)}" aria-hidden="true">${esc(avEmoji(u))}</span>`;
+  return `<span class="avatar ${cls}" data-bg="${esc(bg)}" aria-hidden="true">${avArt(avEmoji(u))}</span>`;
 }
 function avatarHtml(uid, { anon = false, cls = '' } = {}) {
-  if (anon) return `<span class="avatar anon ${cls}" aria-hidden="true">🫥</span>`;
+  if (anon) return `<span class="avatar anon ${cls}" aria-hidden="true">${gl('spy', 'av-art')}</span>`;
   const u = userOf(uid);
-  if (!u) return `<span class="avatar ${cls}" aria-hidden="true">🙂</span>`;
+  if (!u) return `<span class="avatar ${cls}" aria-hidden="true">${gl('person', 'av-art')}</span>`;
   return avFace(u, cls + avFx(u));
 }
 /* Market ürününün çizimi profil resmi olarak: kendi animasyonlarıyla, ayrı bir SVG görseli (kimlikler sayfadaki çizimlerle çakışmaz) */
@@ -823,12 +911,13 @@ async function retrying(fn) {
 }
 
 /* ================= Arayüz parçaları ================= */
-function toast(msg, kind = '') {
+function toast(msg, kind = '', ico = '') {
   const box = $('#toasts');
   if (!box) return;
   const el = document.createElement('div');
   el.className = 'toast' + (kind ? ' ' + kind : '');
   el.textContent = msg;
+  if (ico) el.insertAdjacentHTML('afterbegin', `<span class="toast-ico">${ico}</span>`);
   box.appendChild(el);
   const km = kind !== 'err' && /\+(\d+) kubbe/.exec(msg); if (km) kubbeFloat(+km[1]);
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, kind === 'err' ? 4600 : 3000);
@@ -1133,7 +1222,7 @@ function voteNote(id, dir, el) {
   const k = pk('notes', id);
   if (!k) return;
   const next = myVote(n) === dir ? 0 : dir;
-  if (next === 1 && el && !reduceMotion()) { const [x, y] = centerOf(el); burst(x, y, { glyphs: ['▲', '+1'], n: 6, cls: 'up', spread: 44 }); }
+  if (next === 1 && el && !reduceMotion()) { const [x, y] = centerOf(el); burst(x, y, { glyphs: ['up', '+1'], n: 6, cls: 'up', spread: 44 }); }
   write(() => S.db.doc('notes/' + id).update({ likes: { [k]: next === 1 ? true : null }, downs: { [k]: next === -1 ? true : null } }));
 }
 function voteHtml(n, { big = false } = {}) {
@@ -1143,7 +1232,7 @@ function voteHtml(n, { big = false } = {}) {
     + `<b class="vnum">${sc}</b>`
     + `<button type="button" class="vbtn vdown" data-g="vote-down" data-id="${id}" aria-pressed="${v < 0}" aria-label="Aşağı oy: işe yaramadı" title="İşe yaramadı">${icon('vdown')}</button></span>`;
 }
-const voteBadge = n => { const sc = voteScore(n); return sc ? `<span class="vscore${sc < 0 ? ' neg' : ''}">${sc > 0 ? '▲' : '▼'} ${Math.abs(sc)}</span>` : ''; };
+const voteBadge = n => { const sc = voteScore(n); return sc ? `<span class="vscore${sc < 0 ? ' neg' : ''}">${gl(sc > 0 ? 'up' : 'down')}${Math.abs(sc)}</span>` : ''; };
 async function reportItem(col, id) {
   const o = (col === 'notes' ? S.notes : S.comments).get(id);
   if (!o || !okId(id)) return;
@@ -1294,7 +1383,7 @@ function elRowHtml(bol, P, sn, i, e, o) {
   const cls = ['el-row', 'prow', pool ? 'has-pool' : P.url && e[5] ? 'has-link' : '', pick ? 'picked' : '', done ? 'done' : '', open ? 'open' : '', o.hide ? 'cap-row' : ''].filter(Boolean).join(' ');
   const sub = c ? elName(e) : pool ? `${pool.length} ders arasından seç` : 'Aldığın dersi seç';
   return `<li class="${cls}" data-k="${esc(k)}">`
-    + (o.accd ? `<button type="button" class="done-btn" data-g="el-done" data-id="${esc(k)}" aria-pressed="${done}" aria-label="${esc(c ? c.code || codeOf(pick) : elName(e))} tamamlandı">✓</button>` : '')
+    + (o.accd ? `<button type="button" class="done-btn" data-g="el-done" data-id="${esc(k)}" aria-pressed="${done}" aria-label="${esc(c ? c.code || codeOf(pick) : elName(e))} tamamlandı">${gl('check')}</button>` : '')
     + `<button type="button" class="row-link el-tog" data-g="el-open" data-id="${esc(k)}" aria-expanded="${open}" aria-controls="${esc(pid)}"><span class="code el-code">${esc(c ? c.code || codeOf(pick) : 'Seçmeli')}</span><span class="row-main"><span class="row-title">${esc(c ? c.name || '' : elName(e))}</span><span class="row-sub">${esc(sub)}</span></span><span class="row-end">${e[2] != null ? `<span class="ects">${fmtKr(+e[2])} kredi</span>` : ''}<span class="el-chev">${icon('cr')}</span></span></button>`
     + (o.hide || '')
     + (open ? `<div class="el-panel" id="${esc(pid)}">${elPanelHtml(bol, P, e, k, pick)}</div>` : '')
@@ -1364,7 +1453,7 @@ function openCapModal(bol) {
 }
 async function capClear(bol) {
   const c = capOf(bol); if (!c) return;
-  const ok = await confirmModal({ title: `${capTag(c)} programını kaldır`, text: `${bolumName(c.b)} planı bu sayfadan kalkar. Seçtiğin seçmeliler ve ✓ işaretlerin silinmez.`, ok: 'Kaldır' });
+  const ok = await confirmModal({ title: `${capTag(c)} programını kaldır`, text: `${bolumName(c.b)} planı bu sayfadan kalkar. Seçtiğin seçmeliler ve tamamladığın dersler silinmez.`, ok: 'Kaldır' });
   if (!ok) return;
   privPut('cap', bol, null);
   toast(`${capTag(c)} kaldırıldı`);
@@ -1504,7 +1593,7 @@ function openRateModal(hid, { cid = '' } = {}) {
         <div class="field"><label for="r-term">Dönem <span class="opt">isteğe bağlı</span></label><select id="r-term" class="select"><option value="">Seç</option>${terms.map(tk => `<option value="${tk}"${tk === preT ? ' selected' : ''}>${esc(termLabel(tk))}</option>`).join('')}</select></div>
       </div>
       <div class="field"><label for="r-text">Yorum <span class="opt">isteğe bağlı</span></label><textarea id="r-text" class="textarea" rows="4" maxlength="1000" placeholder="Anlatımı, sınavları, ödevleri nasıldı? Derse ve anlatıma odaklan."></textarea></div>
-      <div class="field"><span class="label">Yorum nasıl görünsün?</span><div class="chips"><button type="button" class="chip" data-anon="1" aria-pressed="true">Anonim</button><button type="button" class="chip" data-anon="0" aria-pressed="false" data-r="asme"></button></div></div>
+      <div class="field"><span class="label">Yorum nasıl görünsün?</span><div class="chips"><button type="button" class="chip" data-anon="1" aria-pressed="true">${gl('spy')}Anonim</button><button type="button" class="chip" data-anon="0" aria-pressed="false" data-r="asme"></button></div></div>
       <p class="err" role="alert"></p>
       <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">${mine ? 'Güncelle' : 'Gönder'}</button></div>
     </form>` });
@@ -1797,12 +1886,13 @@ function wireDriveBox(root) {
   render();
 }
 function fxLayer() { let l = document.getElementById('fx'); if (!l) { l = document.createElement('div'); l.id = 'fx'; l.setAttribute('aria-hidden', 'true'); document.body.appendChild(l); } return l; }
-function burst(x, y, { glyphs = ['♥'], n = 8, cls = '', spread = 70 } = {}) {
+function burst(x, y, { glyphs = ['heart'], n = 8, cls = '', spread = 70 } = {}) {
   if (reduceMotion()) return;
   const l = fxLayer();
   for (let i = 0; i < n; i++) {
     const q = document.createElement('span');
-    q.className = 'fxp ' + cls; q.textContent = glyphs[i % glyphs.length];
+    const gk = glyphs[i % glyphs.length];
+    q.className = 'fxp ' + cls; if (GL[gk]) q.innerHTML = gl(gk); else q.textContent = gk;
     const a = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.6, d = spread * (0.55 + Math.random() * 0.6);
     q.style.left = x + 'px'; q.style.top = y + 'px';
     q.style.setProperty('--dx', (Math.cos(a) * d).toFixed(1) + 'px');
@@ -1813,11 +1903,11 @@ function burst(x, y, { glyphs = ['♥'], n = 8, cls = '', spread = 70 } = {}) {
   }
 }
 function centerOf(el) { const r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null; return r && r.width ? [r.left + r.width / 2, r.top + r.height / 2] : [innerWidth / 2, innerHeight / 2]; }
-function likeFx(el, o) { if (!o || !myAcc() || isMine(o) || likedByMe(o)) return; const [x, y] = centerOf(el); burst(x, y, { glyphs: ['♥'], n: 7, cls: 'heart', spread: 46 }); }
+function likeFx(el, o) { if (!o || !myAcc() || isMine(o) || likedByMe(o)) return; const [x, y] = centerOf(el); burst(x, y, { glyphs: ['heart'], n: 7, cls: 'heart', spread: 46 }); }
 function kubbeFloat(n) {
   if (reduceMotion() || !(n > 0)) return;
   const k = document.createElement('div');
-  k.className = 'kfloat'; k.innerHTML = `<span class="k-dot">◍</span>+${n} kubbe`;
+  k.className = 'kfloat'; k.innerHTML = `${gl('coin', 'k-coin')}+${n} kubbe`;
   fxLayer().appendChild(k); setTimeout(() => k.remove(), 1700);
 }
 function introCls() { const t = Date.now(); if (!S.cardsIntroAt) S.cardsIntroAt = t; return t - S.cardsIntroAt < 1500 ? ' intro' : ''; }
@@ -1875,18 +1965,18 @@ function openNotifs() {
   if (!needAcc()) return;
   const st = notifState();
   const rows = st.items.map(x => {
-    if (x.r) return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.r.nid)}" data-close>${avatarHtml(x.r.doneBy, { anon: !x.r.doneBy, cls: 'sm' })}<span><span><b>${esc(x.r.doneBy ? displayName(x.r.doneBy, false, '') : 'Anonim biri')}</b>, ${esc(codeOf(x.r.cid))} not isteğini karşıladı 🎉</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
+    if (x.r) return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.r.nid)}" data-close>${avatarHtml(x.r.doneBy, { anon: !x.r.doneBy, cls: 'sm' })}<span><span><b>${esc(x.r.doneBy ? displayName(x.r.doneBy, false, '') : 'Anonim biri')}</b>, ${esc(codeOf(x.r.cid))} not isteğini karşıladı ${gl('party', 'gl-in')}</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
     const n = S.notes.get(x.c.tid) || {};
     const who = x.c.anon ? 'Anonim' : displayName(x.c.by, false, x.c.nick);
-    return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.c.tid)}" data-close>${avatarHtml(x.c.anon ? '' : x.c.by, { cls: 'sm' })}<span><span><b>${esc(who)}</b>, “${esc(n.title || 'notun')}” notuna yorum yazdı</span><span class="nf-text">${esc(String(x.c.text || '').slice(0, 90))}</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
+    return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.c.tid)}" data-close>${avatarHtml(x.c.by, { anon: !!x.c.anon, cls: 'sm' })}<span><span><b>${esc(who)}</b>, “${esc(n.title || 'notun')}” notuna yorum yazdı</span><span class="nf-text">${esc(String(x.c.text || '').slice(0, 90))}</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
   }).join('');
-  const lk = st.newLk ? `<li class="nf-row new nf-like"><span class="nf-ico">${icon('heart')}</span><span>Notların ve yorumların <b>${st.newLk}</b> yeni ▲ ve beğeni aldı.</span></li>` : '';
+  const lk = st.newLk ? `<li class="nf-row new nf-like"><span class="nf-ico">${icon('heart')}</span><span>Notların ve yorumların <b>${st.newLk}</b> yeni ${gl('up', 'gl-in')} oy ve beğeni aldı.</span></li>` : '';
   closeNotifs();
   const bell = $('[data-r=bell]'), p = document.createElement('div');
   p.id = 'nf-pop'; p.className = 'nf-pop'; p.tabIndex = -1;
   p.setAttribute('role', 'dialog'); p.setAttribute('aria-labelledby', 'nf-pop-t');
   p.innerHTML = `<div class="nf-head"><h2 id="nf-pop-t">Bildirimler</h2><button type="button" class="iconbtn" data-close aria-label="Kapat">${icon('x')}</button></div>`
-    + `<div class="nf-body">${(lk || rows) ? `<ul class="nf-list">${lk}${rows}</ul>` : emptyHtml('Henüz bildirim yok', 'Notuna yorum ya da ▲ gelince burada görünecek.')}</div>`;
+    + `<div class="nf-body">${(lk || rows) ? `<ul class="nf-list">${lk}${rows}</ul>` : emptyHtml('Henüz bildirim yok', 'Notuna yorum ya da oy gelince burada görünecek.')}</div>`;
   p.addEventListener('click', e => { const a = e.target.closest('a[href]'); if (a || e.target.closest('[data-close]')) closeNotifs(!a); });
   bell.after(p); bell.setAttribute('aria-expanded', 'true');
   placeNotifs();
@@ -1929,7 +2019,7 @@ function weekNoteHtml() {
   const w = weekNote(); if (!w) return '';
   const n = w.n, photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [], di = driveInfo(n.drive) || { k: 'drive', name: 'Not' };
   const c = S.courses.get(n.cid) || {};
-  return `<a class="week-note" href="#/not/${esc(n.id)}"><span class="wk-rib">${icon('star')}${esc(w.label)}</span><span class="wk-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`}</span><span class="wk-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span>${c.name ? `<span class="wk-cname">${esc(c.name)}</span>` : ''}</span><b class="wk-title">${esc(n.title)}</b><span class="meta"><span>${esc(displayName(n.by, n.anon, n.nick))}</span>${voteBadge(n)}</span></span></a>`;
+  return `<a class="week-note" href="#/not/${esc(n.id)}"><span class="wk-rib">${icon('star')}${esc(w.label)}</span><span class="wk-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`}</span><span class="wk-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span>${c.name ? `<span class="wk-cname">${esc(c.name)}</span>` : ''}</span><b class="wk-title">${esc(n.title)}</b><span class="meta"><span>${whoHtml(n.by, n.anon, n.nick)}</span>${voteBadge(n)}</span></span></a>`;
 }
 function fillMoreNotes(root, n, nid) {
   const el = $('[data-r=more]', root); if (!el) return;
@@ -1938,18 +2028,18 @@ function fillMoreNotes(root, n, nid) {
   if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; lazyPhotos(el); }
 }
 const BADGES = [
-  { id: 'ilk-not', ad: 'İlk not', d: 'İlk notunu paylaştın.', g: '📝', ok: k => k.notes >= 1 },
-  { id: 'not-5', ad: 'Not makinesi', d: '5 not paylaştın.', g: '📚', ok: k => k.notes >= 5 },
-  { id: 'ilk-yorum', ad: 'Sohbet başladı', d: 'İlk yorumunu yazdın.', g: '💬', ok: k => k.comments >= 1 },
-  { id: 'yorum-10', ad: 'Kantin muhabbeti', d: '10 yorum yazdın.', g: '🗣️', ok: k => k.comments >= 10 },
-  { id: 'ilk-puan', ad: 'Hoca ölçer', d: 'İlk hocanı puanladın.', g: '⭐', ok: k => k.ratings >= 1 },
-  { id: 'begeni-10', ad: 'Sevilen', d: '10 ▲ ya da beğeni topladın.', g: '❤️', ok: k => (k.likes || 0) + (k.ups || 0) >= 10 },
-  { id: 'kubbe-500', ad: 'Kubbe avcısı', d: 'Toplam 500 kubbeye ulaştın.', g: '🏛️', ok: k => k.all >= 500 },
-  { id: 'podyum', ad: 'Podyum', d: 'Bu dönem ilk 3’e girdin.', g: '🏆', ok: (k, uid) => { const r = ranking('term').find(x => x.uid === uid); return !!r && r.rank <= 3 && r.val > 0; } },
-  { id: 'kurtarici', ad: 'Can kurtaran', d: 'Bir not isteğini karşıladın.', g: '🛟', ok: k => (k.fills || 0) >= 1 }
+  { id: 'ilk-not', ad: 'İlk not', d: 'İlk notunu paylaştın.', g: 'note', ok: k => k.notes >= 1 },
+  { id: 'not-5', ad: 'Not makinesi', d: '5 not paylaştın.', g: 'books', ok: k => k.notes >= 5 },
+  { id: 'ilk-yorum', ad: 'Sohbet başladı', d: 'İlk yorumunu yazdın.', g: 'bubble', ok: k => k.comments >= 1 },
+  { id: 'yorum-10', ad: 'Kantin muhabbeti', d: '10 yorum yazdın.', g: 'cay', ok: k => k.comments >= 10 },
+  { id: 'ilk-puan', ad: 'Hoca ölçer', d: 'İlk hocanı puanladın.', g: 'star', ok: k => k.ratings >= 1 },
+  { id: 'begeni-10', ad: 'Sevilen', d: '10 oy ya da beğeni topladın.', g: 'heart', ok: k => (k.likes || 0) + (k.ups || 0) >= 10 },
+  { id: 'kubbe-500', ad: 'Kubbe avcısı', d: 'Toplam 500 kubbeye ulaştın.', g: 'dome', ok: k => k.all >= 500 },
+  { id: 'podyum', ad: 'Podyum', d: 'Bu dönem ilk 3’e girdin.', g: 'trophy', ok: (k, uid) => { const r = ranking('term').find(x => x.uid === uid); return !!r && r.rank <= 3 && r.val > 0; } },
+  { id: 'kurtarici', ad: 'Can kurtaran', d: 'Bir not isteğini karşıladın.', g: 'buoy', ok: k => (k.fills || 0) >= 1 }
 ];
 function earnedBadges(uid) { const k = kubbeOf(uid); return BADGES.filter(b => { try { return b.ok(k, uid); } catch (e) { return false; } }); }
-function badgeHtml(b, on) { return `<li class="bdg${on ? ' on' : ''}" title="${esc(b.d)}"><span class="bdg-medal"><span class="bdg-g">${b.g}</span></span><b>${esc(b.ad)}</b><span>${esc(on ? b.d : 'Kilitli')}</span></li>`; }
+function badgeHtml(b, on) { return `<li class="bdg${on ? ' on' : ''}" title="${esc(b.d)}"><span class="bdg-medal"><span class="bdg-g">${gl(b.g)}</span></span><b>${esc(b.ad)}</b><span>${esc(on ? b.d : 'Kilitli')}</span></li>`; }
 function badgesSectionHtml(uid) {
   const on = earnedBadges(uid).map(b => b.id);
   return `<section class="home-sec"><h2 class="sub-h">Rozetler <span class="count">${on.length}/${BADGES.length}</span></h2><ul class="bdgs">${BADGES.map(b => badgeHtml(b, on.includes(b.id))).join('')}</ul></section>`;
@@ -1962,7 +2052,7 @@ function checkBadges() {
   if (!fresh.length) return;
   ls.set(key, ids);
   const b = BADGES.find(x => x.id === fresh[0]);
-  setTimeout(() => { toast(`Yeni rozet: ${b.ad} ${b.g}`); burst(innerWidth / 2, innerHeight * 0.45, { glyphs: ['✦', '●', '◍', b.g], n: 26, cls: 'coin', spread: 160 }); }, 350);
+  setTimeout(() => { toast(`Yeni rozet: ${b.ad}`, '', gl(b.g)); burst(innerWidth / 2, innerHeight * 0.45, { glyphs: ['spark', 'coin', 'spark', b.g], n: 26, cls: 'coin', spread: 160 }); }, 350);
 }
 function animNum(el, to) {
   if (!el) return;
@@ -2169,7 +2259,7 @@ function noteCard(n) {
     <span class="ncard-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `${(() => { const di = driveInfo(n.drive) || { k: 'drive', name: 'Drive' }; return `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`; })()}${driveThumbHtml(n.drive)}`}${photos.length > 1 ? `<span class="ncard-pages">${photos.length} sayfa</span>` : ''}</span>
     <span class="ncard-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span><span class="kind kind-${noteType(n).k}">${esc(type)}</span></span>
       <span class="ncard-title">${esc(n.title)}</span>
-      <span class="meta"><span>${esc(displayName(n.by, n.anon, n.nick))}</span><span>${esc(ago(n.at))}</span>${voteBadge(n)}</span></span></a></li>`;
+      <span class="meta"><span>${whoHtml(n.by, n.anon, n.nick)}</span><span>${esc(ago(n.at))}</span>${voteBadge(n)}</span></span></a></li>`;
 }
 function noteRow(n, { showCourse = false } = {}) {
   if (isHidden(n) && !S.revealed.has(n.id)) return `<li><div class="is-hidden"><span>Bu not bildirimler nedeniyle gizlendi.</span><button type="button" class="btn btn-sm btn-ghost" data-g="reveal" data-id="${esc(n.id)}">Yine de göster</button></div></li>`;
@@ -2183,7 +2273,7 @@ function noteRow(n, { showCourse = false } = {}) {
     <div class="note-body">
       <div class="note-line">${showCourse ? `<a class="code" href="#/ders/${esc(n.cid)}">${esc(codeOf(n.cid))}</a>` : ''}<span class="kind kind-${noteType(n).k}">${esc(type)}</span></div>
       <a class="note-title" href="#/not/${esc(n.id)}">${esc(n.title)}</a>
-      <div class="meta">${n.tk ? `<span>${esc(termLabel(n.tk))}</span>` : ''}${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}<span>${esc(displayName(n.by, n.anon, n.nick))}</span><span>${esc(ago(n.at))}</span></div>
+      <div class="meta">${n.tk ? `<span>${esc(termLabel(n.tk))}</span>` : ''}${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}<span>${whoHtml(n.by, n.anon, n.nick)}</span><span>${esc(ago(n.at))}</span></div>
     </div>
     <div class="note-side">
       <span class="chips">${photos.length ? `<span class="pill">${icon('camera')}${photos.length} sayfa</span>` : ''}${n.drive ? `<span class="pill">${icon('external')}${esc((driveInfo(n.drive) || { name: 'Drive' }).name)}</span>` : ''}</span>
@@ -2209,15 +2299,14 @@ function hocaOptions(cid, sel) {
 /* Profil resmi seçici: tür (emoji / harf / market ürünü) ve arka plan rengi. Fotoğraf yüklenmez */
 function avatarPickerHtml(st) {
   const own = MARKET.filter(m => ownsItem(st, m.id));
-  const kinds = [['emoji', 'Emoji'], ['harf', 'Harf'], ['urun', 'Market']];
+  const kinds = [['emoji', 'Karakter'], ['harf', 'Harf'], ['urun', 'Market']];
   return `<div class="field"><span class="label">Profil resmi</span>
     <div class="av-pick">
       <span class="av-prev" data-r="prev"></span>
       <div class="av-opts">
         <div class="seg av-kind" role="group" aria-label="Profil resmi türü">${kinds.map(([k, ad]) => `<button type="button" class="seg-btn" data-avk="${k}" aria-pressed="${st.avk === k}">${ad}</button>`).join('')}</div>
         <div class="av-pane" data-avp="emoji">
-          <div class="emoji-grid">${AV_EMOJI.map(e => `<button type="button" class="emoji-btn" data-emoji="${esc(e)}" aria-pressed="false">${esc(e)}</button>`).join('')}</div>
-          <input class="input sm emoji-in" data-r="emoji-in" maxlength="20" autocomplete="off" placeholder="Başka bir emoji yaz ya da yapıştır" aria-label="Kendi emojin" value="${AV_EMOJI.includes(st.emoji) ? '' : esc(st.emoji || '')}">
+          <div class="emoji-grid">${AV_EMOJI.map(e => `<button type="button" class="emoji-btn" data-emoji="${esc(e)}" aria-pressed="false" aria-label="${esc(AV_NAMES[e] || 'Karakter')}" title="${esc(AV_NAMES[e] || '')}">${avArt(e)}</button>`).join('')}</div>
         </div>
         <div class="av-pane" data-avp="harf" hidden>
           <input class="input sm harf-in" data-r="harf-in" maxlength="2" autocomplete="off" placeholder="UY" aria-label="Profil resmindeki harfler" value="${esc(st.harf || '')}">
@@ -2232,7 +2321,7 @@ function avatarPickerHtml(st) {
     </div></div>`;
 }
 function wireAvatarPicker(root, st) {
-  const prev = $('[data-r=prev]', root), ein = $('[data-r=emoji-in]', root), hin = $('[data-r=harf-in]', root), cin = $('[data-r=color-in]', root);
+  const prev = $('[data-r=prev]', root), hin = $('[data-r=harf-in]', root), cin = $('[data-r=color-in]', root);
   function paint() {
     prev.innerHTML = avFace(st, 'xl' + avFx(st));
     applyWidths(root);
@@ -2248,8 +2337,7 @@ function wireAvatarPicker(root, st) {
     paint();
     if (st.avk === 'harf' && hin) { try { hin.focus(); } catch (e) { /* yok */ } }
   }));
-  $$('[data-emoji]', root).forEach(b => b.addEventListener('click', () => { st.avk = 'emoji'; st.emoji = b.dataset.emoji; if (ein) { ein.value = ''; ein.classList.remove('bad'); } paint(); }));
-  if (ein) ein.addEventListener('input', () => { const v = ein.value.trim(); ein.classList.toggle('bad', !!v && !okEmoji(v)); if (okEmoji(v)) { st.avk = 'emoji'; st.emoji = v; paint(); } });
+  $$('[data-emoji]', root).forEach(b => b.addEventListener('click', () => { st.avk = 'emoji'; st.emoji = b.dataset.emoji; paint(); }));
   if (hin) hin.addEventListener('input', () => { const v = hin.value.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2).toLocaleUpperCase('tr'); if (hin.value !== v) hin.value = v; st.harf = v; st.avk = 'harf'; paint(); });
   $$('[data-urun]', root).forEach(b => b.addEventListener('click', () => { st.avk = 'urun'; st.urun = b.dataset.urun; paint(); }));
   $$('[data-color]', root).forEach(b => b.addEventListener('click', () => { st.color = b.dataset.color; if (cin) cin.value = st.color.toLowerCase(); paint(); }));
@@ -2531,7 +2619,7 @@ function openAuth(opts = {}) {
     host.innerHTML = `<form novalidate>
       ${progHtml(2)}
       <h3 class="su-h">Bölümünü seç</h3>
-      <p class="help">Ders planın hazır gelsin: dönem dönem derslerin, aldıklarını ✓ ile işaretleyeceğin mezuniyet yolu ve bölümünün kubbe sıralaması.</p>
+      <p class="help">Ders planın hazır gelsin: dönem dönem derslerin, aldıklarını ${gl('check', 'gl-in gl-ok')} ile işaretleyeceğin mezuniyet yolu ve bölümünün kubbe sıralaması.</p>
       ${bolumPickHtml('au-bolum', st.bolum || '', { big: true })}
       <p class="err" role="alert"></p>
       <div class="modal-foot"><button type="button" class="btn btn-ghost" data-r="back">Geri</button><button class="btn btn-primary" type="submit">Hesabı oluştur</button></div>
@@ -2673,11 +2761,11 @@ function openUserCard(uid) {
   const m = openModal({ title: '@' + (u.username || 'öğrenci'), body: `<div class="ucard">
       ${avatarHtml(uid, { cls: 'xl' })}
       <div><p class="kh-name">${nameHtml(u, u.username || '')}${badgesHtml(u)}</p>${facts ? `<p class="muted">${facts}</p>` : ''}
-      <p class="kh-kubbe"><span class="k-dot">◍</span><b>${k.all}</b> kubbe</p></div></div>
+      <p class="kh-kubbe">${gl('coin', 'k-coin')}<b>${k.all}</b> kubbe</p></div></div>
     <dl class="prof-list"><div><dt>Sıralama</dt><dd>Tüm zamanlar ${rankOf(uid, 'all')}. sıra, ${esc(termLabel(currentTk()))} ${rankOf(uid, 'term')}. sıra</dd></div>
       <div><dt>Katkılar</dt><dd>${k.notes} not, ${k.comments} yorum${S.supa && uid !== S.me ? '' : `, ${k.ratings} hoca puanı`}</dd></div>
       ${(() => { const eb = earnedBadges(uid); return eb.length ? `<div><dt>Rozetler</dt><dd>${eb.map(b => `<span class="tag" title="${esc(b.d)}">${b.g} ${esc(b.ad)}</span>`).join(' ')}</dd></div>` : ''; })()}
-      ${items.length ? `<div><dt>Aldıkları</dt><dd>${items.map(id => `<span class="tag" title="${esc(MARKET_BY_ID[id].name)}">${MARKET_BY_ID[id].mini || '✦'} ${esc(MARKET_BY_ID[id].name)}</span>`).join(' ')}</dd></div>` : ''}</dl>
+      ${items.length ? `<div><dt>Aldıkları</dt><dd>${items.map(id => `<span class="tag" title="${esc(MARKET_BY_ID[id].name)}"><img class="tag-art" src="${itemAvSrc(id)}" alt="">${esc(MARKET_BY_ID[id].name)}</span>`).join(' ')}</dd></div>` : ''}</dl>
     <p class="fine">${S.supa ? 'Anonim paylaşımlar ve hoca puanları bu kartta görünmez.' : 'Anonim paylaşımlar bu kartta gösterilmez.'}</p>` });
   applyWidths(m.el);
 }
@@ -2699,7 +2787,7 @@ async function buyItem(id) {
   const card = document.querySelector(`[data-g=buy][data-id="${id}"]`), loot = card && card.closest('.loot'), stage = loot && loot.querySelector('.loot-stage');
   const [bx, by] = centerOf(stage || card);
   const done = await write(() => (S.supa ? S.db.rpc('buy_item', { p_item: id }, 'users/' + S.me) : S.db.doc('users/' + S.me).update({ spent: spentOf(S.me) + it.price, items: { [id]: Date.now() } })), it.name + ' alındı');
-  if (done) burst(bx, by, { glyphs: ['◍', '✦', '●'], n: 22, cls: 'coin', spread: 120 });
+  if (done) burst(bx, by, { glyphs: ['coin', 'spark', 'coin'], n: 22, cls: 'coin', spread: 120 });
 }
 
 /* ================= Liste parçaları ================= */
@@ -2739,7 +2827,7 @@ function commentsBlock(el, { tt, tid, ctx = '' }) {
         ${ctx === 'course' ? '<div data-r="ctxwrap" hidden><select class="select sm w100" data-r="ctx" aria-label="Hangi hocadan aldın"><option value="">Hoca seçilmedi</option></select></div>' : ''}
         ${ctx === 'hoca' ? '<div class="cb-wrap"><input class="input sm" data-r="ctx" maxlength="12" placeholder="Hangi ders? Örn. CSE 211" aria-label="Hangi ders"></div>' : ''}
         <div class="composer-foot">
-          <button type="button" class="chip" data-r="anon" aria-pressed="${anon}">Anonim</button>
+          <button type="button" class="chip" data-r="anon" aria-pressed="${anon}">${gl('spy')}Anonim</button>
           <span class="counter" data-r="cnt">0/1000</span>
           <button class="btn btn-primary btn-sm" type="submit">Gönder</button>
         </div>
@@ -3113,7 +3201,7 @@ function lootHtml(it, { u = null, bal = 0, buy = true } = {}) {
     <span class="loot-rar">${esc(R.ad)}<span>${esc(it.kind)}</span></span>
     <h3>${esc(it.name)}</h3>
     <p>${esc(it.desc)}</p>
-    <div class="loot-buy"><span class="dome-price"><span class="k-dot">◍</span>${it.price}</span>${btn}${avBtn}</div>
+    <div class="loot-buy"><span class="dome-price">${gl('coin', 'k-coin')}${it.price}</span>${btn}${avBtn}</div>
   </article>`;
 }
 function wireLoot(root) {
@@ -3154,11 +3242,11 @@ function reqItemHtml(r, { showCourse = false } = {}) {
   const acts = r.done
     ? (r.nid ? `<a class="btn btn-sm" href="#/not/${esc(r.nid)}">${icon('book')}Nota git</a>` : '')
     : `<button type="button" class="req-plus${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor"><span>Ben de</span><b>${n}</b></button><a class="btn btn-sm btn-primary" href="#/paylas?ders=${esc(r.cid)}&istek=${esc(r.id)}">${icon('up')}Ben paylaşırım</a>`;
-  return `<li class="req${r.done ? ' done' : ''}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span><span class="meta"><span>${esc(displayName(r.by, false, ''))}</span><span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${esc(r.doneBy ? displayName(r.doneBy, false, '') : 'Anonim')}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
+  return `<li class="req${r.done ? ' done' : ''}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span><span class="meta"><span>${whoHtml(r.by, false, '')}</span><span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${r.doneBy ? whoHtml(r.doneBy, false, '') : spyName()}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
 }
 function requestBoxHtml(cid) {
   const list = openRequests(cid), people = list.reduce((s, r) => s + demandOf(r), 0);
-  return `<div class="reqbox"><div class="reqbox-head"><span class="reqbox-ico" aria-hidden="true">📣</span><div><b>${list.length ? `${people} kişi bu dersten not bekliyor` : 'Aradığın notu bulamadın mı?'}</b><span>${list.length ? `Paylaşıp isteği karşılayan ${KUBBE.fill} kubbe kazanır.` : `İste; paylaşan arkadaşın ${KUBBE.fill} kubbe kazansın.`}</span></div><button type="button" class="btn btn-sm" data-g="req-new" data-id="${esc(cid)}">${icon('plus')}Not iste</button></div>${list.length ? `<ul class="reqs">${list.slice(0, 4).map(r => reqItemHtml(r)).join('')}</ul>` : ''}</div>`;
+  return `<div class="reqbox"><div class="reqbox-head"><span class="reqbox-ico" aria-hidden="true">${gl('megaphone')}</span><div><b>${list.length ? `${people} kişi bu dersten not bekliyor` : 'Aradığın notu bulamadın mı?'}</b><span>${list.length ? `Paylaşıp isteği karşılayan ${KUBBE.fill} kubbe kazanır.` : `İste; paylaşan arkadaşın ${KUBBE.fill} kubbe kazansın.`}</span></div><button type="button" class="btn btn-sm" data-g="req-new" data-id="${esc(cid)}">${icon('plus')}Not iste</button></div>${list.length ? `<ul class="reqs">${list.slice(0, 4).map(r => reqItemHtml(r)).join('')}</ul>` : ''}</div>`;
 }
 function openRequestModal(cid) {
   if (!needAcc()) return;
@@ -3202,7 +3290,7 @@ function renderReqBanner(root) {
   const r = S.shareReq ? S.requests.get(S.shareReq) : null;
   let b = $('.req-banner', root);
   if (!r || r.done) { if (b) b.remove(); return; }
-  const h = `<span aria-hidden="true">📣</span><span><b>${esc(displayName(r.by, false, ''))}</b> ${esc(codeOf(r.cid))} dersinden not istiyor${r.text ? `: “${esc(r.text)}”` : ''}. Paylaştığın not bu isteği karşılayacak${r.by === S.me ? '' : `, +${KUBBE.fill} kubbe`}.</span>`;
+  const h = `${gl('megaphone', 'req-banner-ico')}<span><b>${esc(displayName(r.by, false, ''))}</b> ${esc(codeOf(r.cid))} dersinden not istiyor${r.text ? `: “${esc(r.text)}”` : ''}. Paylaştığın not bu isteği karşılayacak${r.by === S.me ? '' : `, +${KUBBE.fill} kubbe`}.</span>`;
   if (!b) { b = document.createElement('div'); b.className = 'req-banner'; intro.appendChild(b); }
   if (b.dataset.h !== h) { b.dataset.h = h; b.innerHTML = h; }
 }
@@ -3326,7 +3414,7 @@ async function toggleDone(cid, btnEl) {
   if (!needAcc()) return;
   const cur = doneCourses(), has = cur.includes(cid), next = has ? cur.filter(x => x !== cid) : [...cur, cid].slice(-300);
   const btn = btnEl || document.querySelector(`[data-g=done][data-id="${cid}"]`);
-  if (!has && btn) { const [x, y] = centerOf(btn); burst(x, y, { glyphs: ['✓', '✦'], n: 8, cls: 'coin', spread: 40 }); }
+  if (!has && btn) { const [x, y] = centerOf(btn); burst(x, y, { glyphs: ['check', 'spark'], n: 8, cls: 'coin', spread: 40 }); }
   ls.set(lsk('done'), next);
   if (S.priv) S.priv = Object.assign({}, S.priv, { done: next });
   changed();
@@ -3352,7 +3440,7 @@ function gradHtml(P, bol, two) {
     const h = planProgress(two.P2, two.cap.b, dn, two.mainIds, two.hid), p2 = gradPct(h);
     second = `<div class="grad-2"><div class="grad-top"><b><span class="cap-tag">${capTag(two.cap)}</span>${esc(two.b2.ad || two.cap.b)}</b><span>${gradLine(h)}</span></div><div class="grad-bar cap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p2}" aria-label="${capTag(two.cap)} ilerlemesi"><span data-w="${p2}"></span></div></div>`;
   }
-  return `<div class="grad${pct >= 100 ? ' full' : ''}"><div class="grad-top"><b>🎓 Mezuniyet yolu</b><span>${gradLine(g)}</span></div><div class="grad-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Tamamlanan dersler"><span data-w="${pct}"></span></div><p class="grad-sub">${pct >= 100 ? 'Tüm dersler tamam, tebrikler!' : pct ? `%${pct} tamam. Aldığın dersleri ✓ ile işaretlemeye devam et.` : 'Aldığın dersleri ✓ ile işaretle, ilerlemen burada görünsün.'}</p>${second}</div>`;
+  return `<div class="grad${pct >= 100 ? ' full' : ''}"><div class="grad-top"><b>${gl('gradcap', 'gl-in')}Mezuniyet yolu</b><span>${gradLine(g)}</span></div><div class="grad-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Tamamlanan dersler"><span data-w="${pct}"></span></div><p class="grad-sub">${pct >= 100 ? 'Tüm dersler tamam, tebrikler!' : pct ? `%${pct} tamam. Aldığın dersleri ${gl('check', 'gl-in gl-ok')} ile işaretlemeye devam et.` : `Aldığın dersleri ${gl('check', 'gl-in gl-ok')} ile işaretle, ilerlemen burada görünsün.`}</p>${second}</div>`;
 }
 /* Son aramalar */
 function pushRecent(q, h) {
@@ -3463,7 +3551,8 @@ function gateOpen() {
 function tourSay(text) {
   const el = TOUR.el && TOUR.el.querySelector('[data-t=say]'); if (!el) return;
   let d = 0;
-  const words = s => s.split(/(\s+)/).map(w => !w || /^\s+$/.test(w) ? w : `<span class="tw" style="--d:${d++}">${esc(w)}</span>`).join('');
+  const TWG = { '▲': 'up', '▼': 'down', '✓': 'check' };
+  const words = s => s.split(/(\s+)/).map(w => !w || /^\s+$/.test(w) ? w : `<span class="tw" style="--d:${d++}">${TWG[w] ? gl(TWG[w], 'gl-in') : esc(w)}</span>`).join('');
   el.innerHTML = String(text || '').split(/(“[^”]*”|\+?\d+ kubbe)/).map(p => !p ? '' : p.startsWith('“') ? `<b class="tour-key">${words(p)}</b>` : /^\+?\d+ kubbe$/.test(p) ? `<b class="tour-num">${words(p)}</b>` : words(p)).join('');
   tourTalk(Math.min(3400, 700 + d * 60));
 }
@@ -3613,9 +3702,9 @@ function petDog(el, say) {
   if (bub) { bub.textContent = say || 'Hav!'; bub.classList.remove('on'); void bub.offsetWidth; bub.classList.add('on'); clearTimeout(bub._t); bub._t = setTimeout(() => bub.classList.remove('on'), 2600); }
   el.classList.remove('barking'); void el.offsetWidth; el.classList.add('barking');
   setTimeout(() => el.classList.remove('barking'), 1000);
-  const [x, y] = centerOf(el); burst(x, y - 10, { glyphs: ['♥', '🐾'], n: 5, cls: 'heart', spread: 36 });
+  const [x, y] = centerOf(el); burst(x, y - 10, { glyphs: ['heart', 'paw'], n: 5, cls: 'heart', spread: 36 });
   const n = (+ls.get('pets', 0) || 0) + 1; ls.set('pets', n);
-  if (n === 10) toast('Ayhan Abi seni çok sevdi 🐾');
+  if (n === 10) toast('Ayhan Abi seni çok sevdi', '', gl('paw'));
 }
 ROUTES[''] = function viewHome(root) {
   const lb = { kind: 'term', open: false, bolum: '', sig: '' };
@@ -3637,21 +3726,21 @@ ROUTES[''] = function viewHome(root) {
   <div class="wrap home-main" data-r="main">
     <div class="home-left">
       <section class="home-sec">
-        <div class="sec-head"><h2>Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn" data-ns="hot" aria-pressed="true">🔥 Revaçta</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
+        <div class="sec-head"><h2>${gl('note', 'h-gl')}Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn" data-ns="hot" aria-pressed="true">${gl('flame')}Revaçta</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
         <div data-r="notes"></div>
       </section>
-      <section class="home-sec" data-r="reqsec" hidden><div class="sec-head"><h2>📣 Not istekleri</h2><a class="sec-link" href="#/istekler">Tümü</a></div><div data-r="reqs"></div></section>
       <section class="home-sec">
-        <div class="sec-head"><h2>Son yorumlar</h2><a class="sec-link" href="#/hocaolcer">HocaÖlçer</a></div>
+        <div class="sec-head"><h2>${gl('bubble', 'h-gl')}Son yorumlar</h2><a class="sec-link" href="#/hocaolcer">HocaÖlçer</a></div>
         <div data-r="cms"></div>
       </section>
       <section class="home-sec">
-        <div class="sec-head"><h2>Gündemdeki dersler</h2><a class="sec-link" href="#/dersler">Tüm dersler</a></div>
+        <div class="sec-head"><h2>${gl('books', 'h-gl')}Gündemdeki dersler</h2><a class="sec-link" href="#/dersler">Tüm dersler</a></div>
         <div data-r="hot"></div>
       </section>
     </div>
+    <div class="home-right">
     <aside class="lead" data-r="lead" aria-label="Kubbe sıralaması">
-      <div class="lead-top"><h2>Kubbe sıralaması</h2><a class="sec-link" href="#/kubbe">Kubbe ve market</a></div>
+      <div class="lead-top"><h2>${gl('trophy', 'h-gl')}Kubbe sıralaması</h2><a class="sec-link" href="#/kubbe">Kubbe ve market</a></div>
       <div class="lead-ctl">
         <div class="seg" role="group" aria-label="Sıralama türü"><button type="button" class="seg-btn" data-lk="term" aria-pressed="true">Dönemin yıldızı</button><button type="button" class="seg-btn" data-lk="all" aria-pressed="false">Tüm zamanlar</button></div>
         <span data-r="bolwrap" hidden><select class="select sm" data-r="bolum" aria-label="Bölüm"></select></span>
@@ -3660,6 +3749,12 @@ ROUTES[''] = function viewHome(root) {
       <div data-r="board"></div>
       <button type="button" class="btn btn-sm lead-more" data-r="more" hidden>${icon('chart')}Tümünü gör</button>
     </aside>
+    <section class="req-card" data-r="reqsec" aria-labelledby="rq-h">
+      <div class="req-card-top"><span class="req-card-ico" aria-hidden="true">${gl('megaphone')}</span><div><h2 id="rq-h">Not istekleri</h2><p>Arkadaşların bu notları bekliyor. Paylaşıp karşılarsan +${KUBBE.fill} kubbe.</p></div></div>
+      <div data-r="reqs"></div>
+      <a class="btn btn-sm req-card-all" href="#/istekler">Tüm istekler</a>
+    </section>
+    </div>
   </div>`;
   const input = $('#home-q', root), form = $('[data-r=form]', root);
   combobox(input, { source: globalResults, onPick: goItem });
@@ -3724,7 +3819,7 @@ ROUTES[''] = function viewHome(root) {
       R('try').hidden = !tryList.length;
       R('try').innerHTML = tryList.length ? 'Hızlı erişim: ' + tryList.map(id => `<a class="code" href="#/ders/${esc(id)}">${esc(codeOf(id))}</a>`).join('') : '';
       { const rc = R('recent'), h = recentHtml(); rc.hidden = !h; if (rc.dataset.h !== h) { rc.dataset.h = h; rc.innerHTML = h; } }
-      { const list = openRequests().slice(0, 3), h = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>` : '', el2 = R('reqs'); R('reqsec').hidden = !h; if (el2.dataset.h !== h) { el2.dataset.h = h; el2.innerHTML = h; } }
+      { const list = openRequests().slice(0, 3), h = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>` : '<p class="req-empty">Şu an açık istek yok. Aradığın notu bulamazsan ders sayfasından iste; arkadaşların görsün.</p>', el2 = R('reqs'); if (el2.dataset.h !== h) { el2.dataset.h = h; el2.innerHTML = h; } }
       // Revaçta: oy ve tazelik (▼ alan aşağı iner, eksiye düşen burada görünmez); Yeni: son paylaşılanlar. Haftanın notu üstte, listede tekrar etmez.
       const shown = notesWhere(n => !isHidden(n)), wk = shown.length ? weekNote() : null;
       const notes = (ns === 'new' ? shown.sort((a, b) => b.at - a.at) : shown.filter(n => voteScore(n) >= 0).sort(byHot)).filter(n => !wk || n.id !== wk.n.id).slice(0, 6);
@@ -3808,7 +3903,7 @@ ROUTES['dersler'] = function viewCourses(root, r) {
       if (st === 'loading' || !allLoaded()) { el.innerHTML = loadingHtml(); return; }
       const facs = new Map();
       for (const [id, b] of S.bolumler) { const k = b.fakulte || 'Diğer'; if (!facs.has(k)) facs.set(k, []); facs.get(k).push([id, b]); }
-      const html = '<option value="">Tüm dersler</option>' + (myAcc() ? '<option value="__mine">★ Derslerim</option>' : '') + [...facs.entries()].sort((x, y) => x[0].localeCompare(y[0], 'tr')).map(([fk, list]) => `<optgroup label="${esc(fk)}">${list.sort((x, y) => (x[1].ad || '').localeCompare(y[1].ad || '', 'tr')).map(([id, b]) => `<option value="${esc(id)}">${esc(b.ad || id)}${planOf(id) ? '' : ' (plan yok)'}</option>`).join('')}</optgroup>`).join('');
+      const html = '<option value="">Tüm dersler</option>' + (myAcc() ? '<option value="__mine">Derslerim</option>' : '') + [...facs.entries()].sort((x, y) => x[0].localeCompare(y[0], 'tr')).map(([fk, list]) => `<optgroup label="${esc(fk)}">${list.sort((x, y) => (x[1].ad || '').localeCompare(y[1].ad || '', 'tr')).map(([id, b]) => `<option value="${esc(id)}">${esc(b.ad || id)}${planOf(id) ? '' : ' (plan yok)'}</option>`).join('')}</optgroup>`).join('');
       if (bSel.dataset.h !== html) { bSel.dataset.h = html; bSel.innerHTML = html; }
       if (!touched && !bol) { const mine = (userOf(S.me) || {}).bolum; if (mine && S.bolumler.has(mine)) bol = mine; }
       bSel.value = (S.bolumler.has(bol) || (bol === '__mine' && myAcc())) ? bol : ''; bol = bSel.value;
@@ -3829,7 +3924,7 @@ ROUTES['dersler'] = function viewCourses(root, r) {
         const mainIds = new Set(Object.values(plan).flat()), hid = new Set(cap ? cap.gz : []);
         const semsOf = X => Object.keys(X.plan).map(Number).filter(Boolean);
         const sems = [...new Set([...semsOf(P), ...(P2 ? semsOf(P2) : [])])].sort((x, y) => x - y);
-        const doneBtn = id => `<button type="button" class="done-btn" data-g="done" data-id="${esc(id)}" aria-pressed="${dn.has(id)}" aria-label="${esc(codeOf(id))} dersini tamamladım">✓</button>`;
+        const doneBtn = id => `<button type="button" class="done-btn" data-g="done" data-id="${esc(id)}" aria-pressed="${dn.has(id)}" aria-label="${esc(codeOf(id))} dersini tamamladım">${gl('check')}</button>`;
         const planRow = id => (accd ? courseRow(id).replace('<li>', `<li class="prow${dn.has(id) ? ' done' : ''}">${doneBtn(id)}`) : courseRow(id));
         const krSum = l => (l.every(v => v != null) ? l.reduce((s, v) => s + (+v || 0), 0) : null);   // biri bilinmiyorsa toplam yazılmaz
         const elShown = (X, xb, sn, els) => els.map((e, i) => i).filter(i => { if (!q) return true; const p = elPick(elKey(xb, sn, i, els[i])); return p && match(p); });
@@ -4298,7 +4393,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
         </div>
         <div class="form-sec">
           <fieldset class="field"><legend class="label">Tür</legend><div class="typepick">${NOTE_TYPES.map((t, i) => `<label><input type="radio" name="type" value="${t.k}"${i === 0 ? ' checked' : ''}><span>${esc(t.name)}</span></label>`).join('')}</div></fieldset>
-          <div class="field"><span class="label">Paylaşan adı</span><div class="chips"><button type="button" class="chip" data-anon="0" aria-pressed="true" data-r="asme"></button><button type="button" class="chip" data-anon="1" aria-pressed="false">Anonim</button></div><p class="help" data-r="who"></p></div>
+          <div class="field"><span class="label">Paylaşan adı</span><div class="chips"><button type="button" class="chip" data-anon="0" aria-pressed="true" data-r="asme"></button><button type="button" class="chip" data-anon="1" aria-pressed="false">${gl('spy')}Anonim</button></div><p class="help" data-r="who"></p></div>
           <label class="check"><input type="checkbox" data-r="rules"><span>Bu içerik kişisel bilgi, telifli kitap ya da devam eden bir sınavın sorularını içermiyor. <a href="#/hakkinda">Kurallar</a></span></label>
           <p class="err mt" role="alert" data-r="err"></p>
           <div class="modal-foot"><button class="btn btn-primary" type="submit" data-r="submit">${icon('up')}Notu paylaş</button></div>
@@ -4447,14 +4542,14 @@ ROUTES['hakkinda'] = function viewAbout(root) {
     <p><b>DersÖlçer’e bak.</b> Ders sayfasındaki DersÖlçer, öğrencilerin oylarıyla dersin zorluğunu ve iş yükünü gösterir. Puan 1 ile 5 arasındadır: 1 en zor ve en ağır, 5 en kolay ve en hafif demektir.</p>
     <p><b>Hoca adını ara.</b> HocaÖlçer’de hocalar dört kriterde, 5 yıldız üzerinden buçuklu puanlanır. 5 yıldız her kriterde öğrenci açısından en iyi durumdur: ödev yükünde “çok hafif”, not vermede “çok cömert”, devamsızlıkta “esnek” anlamına gelir.</p>
     <p><b>Not paylaş.</b> Notlar Google Drive’dan paylaşılır; dosyalar siteye yüklenmez, YediWiki yalnızca linki saklar. ${S.supa ? '“Drive’dan seç” ile dosyanı site içinden seçersin, paylaşım ayarını YediWiki yapar. ' : ''}El yazısı notları tarayıp PDF olarak Drive’a koyabilirsin.</p>
-    <p><b>Oy ver.</b> İşine yarayan nota yeşil ▲, yaramayana kırmızı ▼ ver. ▲ alan not öne çıkar ve paylaşana kubbe kazandırır; ▼ alan not sıralamada aşağı iner.</p>
-    <p><button type="button" class="btn btn-sm" data-g="welcome">🐾 Ayhan Abi’yle siteyi gez</button></p>
+    <p><b>Oy ver.</b> İşine yarayan nota yeşil ${gl('up', 'gl-in')}, yaramayana kırmızı ${gl('down', 'gl-in')} ver. ${gl('up', 'gl-in')} alan not öne çıkar ve paylaşana kubbe kazandırır; ${gl('down', 'gl-in')} alan not sıralamada aşağı iner.</p>
+    <p><button type="button" class="btn btn-sm" data-g="welcome">${gl('paw')}Ayhan Abi’yle siteyi gez</button></p>
     <h2>Hesap ve anonimlik</h2>
     <p>YediWiki’ye yalnızca okul e-postasıyla katılınır: adres <b>@std.yeditepe.edu.tr</b> ile bitmeli ve doğrulanmalıdır. Not paylaşmak, yorum yazmak ve hoca puanlamak için hesap gerekir; gezinmek için gerekmez.</p>
     <p>Her yorum ve notta “Anonim” seçeneği var. Anonim paylaşımda kullanıcı adın görünmez, kazandığın kubbe yine hesabına yazılır. HocaÖlçer yorumlarında anonim seçeneği varsayılan olarak açıktır.</p>
     ${S.supa ? '<p>HocaÖlçer puanların, oyların, beğenilerin ve anonim paylaşımların hesabına bağlanamaz: her kayıtta yalnızca o kayda özel bir takma ad tutulur, sitenin kendisi bile bunları herkese açık profilinle eşleştiremez. Bu yüzden puanların ve anonim paylaşımların kubbesi bakiyene eklenir ama sıralamaya sayılmaz.</p>' : ''}
     <h2>Kubbe</h2>
-    <p>Kubbe, paylaşımı teşvik eden puandır. Hesap açma ${KUBBE.signup}, not ${KUBBE.note}, yorum ${KUBBE.comment}, not isteği karşılamak ${KUBBE.fill}, HocaÖlçer puanı ${KUBBE.rating}, notuna gelen her ▲ ${KUBBE.up}, yorumuna gelen her beğeni ${KUBBE.like} kubbe kazandırır; ▼ kubbe düşürmez, notu sıralamada aşağı iter. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
+    <p>Kubbe, paylaşımı teşvik eden puandır. Hesap açma ${KUBBE.signup}, not ${KUBBE.note}, yorum ${KUBBE.comment}, not isteği karşılamak ${KUBBE.fill}, HocaÖlçer puanı ${KUBBE.rating}, notuna gelen her ${gl('up', 'gl-in')} ${KUBBE.up}, yorumuna gelen her beğeni ${KUBBE.like} kubbe kazandırır; ${gl('down', 'gl-in')} kubbe düşürmez, notu sıralamada aşağı iter. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
     <h2>Ders ve hoca listesi</h2>
     <p>Dersler ve akademik kadro okulun kataloğundan yüklenir; kullanıcılar yeni ders ya da hoca ekleyemez. Eksik bir kayıt görürsen site yönetimine bildir.</p>
     <h2>Topluluk kuralları</h2>
@@ -4548,7 +4643,7 @@ ROUTES['kubbe'] = function viewKubbe(root) {
         applyWidths(R('head')); countUp(R('head'));
       }
       renderBoards();
-      R('bal2').innerHTML = u ? `<span class="k-dot">◍</span> ${bal} kubbe bakiyen var` : '';
+      R('bal2').innerHTML = u ? `${gl('coin', 'k-coin')} ${bal} kubbe bakiyen var` : '';
       const shopSig = [bal, JSON.stringify((u && u.items) || {}), !!u, u ? avKind(u) + ':' + (u.urun || '') : ''].join('|');
       if (shopSig !== st.shopSig) {
         st.shopSig = shopSig;
@@ -4619,7 +4714,7 @@ ROUTES['profil'] = function viewProfile(root) {
             <ul class="pf-ledger">
               ${led('kubbe', 'Hesap açma', Math.max(0, +u.bonus || 0))}
               ${led('book', `${k.notes} not`, k.notes * KUBBE.note, k.notes ? 've üzeri' : '')}
-              ${led('vup', `Notlarına ${k.ups || 0} ▲ geldi`, (k.ups || 0) * KUBBE.up)}
+              ${led('vup', `Notlarına ${k.ups || 0} ${gl('up', 'gl-in')} geldi`, (k.ups || 0) * KUBBE.up)}
               ${led('comment', `${k.comments} yorum`, k.comments * KUBBE.comment)}
               ${led('heart', `Yorumların ${k.likes} beğeni aldı`, k.likes * KUBBE.like)}
               ${led('star', `${k.ratings} HocaÖlçer puanı`, k.ratings * KUBBE.rating)}
@@ -4642,6 +4737,7 @@ ROUTES['profil'] = function viewProfile(root) {
 /* ================= Açılış ================= */
 function boot() {
   const rep = { __HOME__: 'home', __BOOK__: 'book', __STAR__: 'star', __UP__: 'up', __DL__: 'dl', __X__: 'x', __CL__: 'cl', __CR__: 'cr', __KUB__: 'kubbe' };
+  $$('.k-dot').forEach(k => { k.outerHTML = gl('coin', 'k-coin'); });   // üst çubuktaki bakiye sikkesi
   for (const el of $$('.bnav a, #lightbox button')) {
     for (const [k, v] of Object.entries(rep)) if (el.innerHTML.indexOf(k) >= 0) el.innerHTML = el.innerHTML.replace(k, icon(v));
   }

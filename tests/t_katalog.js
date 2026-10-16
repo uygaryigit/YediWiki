@@ -913,7 +913,16 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     EP.getClientRects = gcr; EP.getBoundingClientRect = gbr;
     await t.go('#/not/yok');
     ok(t.$('#main .empty') && !t.$('#main .empty svg'), 'boş sayfada Ayhan Abi yok, yalnızca yazı');
-    await t.go('#/dersler'); await t.go('#/');
+    // sitede düz emoji yok: simgeler çizim (gl, avArt)
+    for (const h of ['#/', '#/kubbe', '#/hakkinda', '#/profil', '#/dersler', '#/ders/CSE211']) {
+      await t.go(h); await t.wait(80);
+      const txt = ['.topbar', '#main', '.bnav'].map(x => t.text(x) || '').join(' ');
+      ok(!/\p{Extended_Pictographic}/u.test(txt), 'emoji yok: ' + h + ' ' + (txt.match(/.{0,20}\p{Extended_Pictographic}/u) || [''])[0]);
+    }
+    await t.go('#/');
+    ok(t.$('.home-right .lead + .req-card [data-r=reqs]') && !t.$('.home-left [data-r=reqs]'), 'not istekleri sağda, sıralamanın altında ayrı kutuda');
+    ok(t.$('[data-ns=hot] svg.gl-flame') && t.$('[data-r=kubbechip] svg.k-coin') && t.$$('#main .avatar svg.av-art').length > 0, 'Revaçta alevi, kubbe sikkesi ve profil resimleri çizim');
+    ok(t.ev("spyName().includes('gl-spy') && whoHtml('yok', true, '').includes('gl-spy') && avatarHtml('', { anon: true }).includes('gl-spy')"), 'anonimde casus');
     noErr(t, 'Ayhan Abi');
     noErr(t, 'Ayhan Abi turu');
   }
@@ -1053,14 +1062,13 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(/deneme123@std\.yeditepe\.edu\.tr/.test(t.text('#main')) && t.$('[data-g=logout-shared]') && t.$$('#main .led-row').some(r => /Hediye/.test(r.textContent) && /10000/.test(r.textContent)), 'profilde e-posta, çıkış ve hediye');
     t.$('[data-g=profile-edit]').click(); await t.wait(60);
     ok(t.$('.modal #pe-user'), 'deneme hesabının profili düzenlenebilir');
-    typeIn(t, t.$('.modal [data-r=emoji-in]'), '🐸');
-    ok(/🐸/.test(t.text('.modal [data-r=prev]')), 'kendi emojisi ön izlemede');
-    typeIn(t, t.$('.modal [data-r=emoji-in]'), 'abc');
-    ok(t.$('.modal [data-r=emoji-in]').classList.contains('bad') && /🐸/.test(t.text('.modal [data-r=prev]')), 'emoji olmayan yazı kabul edilmez');
+    ok(!t.$('.modal [data-r=emoji-in]') && t.$$('.modal .emoji-btn svg.av-art').length === 24, 'profil resmi çizilmiş karakterlerden seçilir, emoji yazma kutusu yok');
+    t.$('.modal [data-emoji="🦊"]').click(); await t.wait(20);
+    ok(t.$('.modal [data-r=prev] svg.av-art') && !/\p{Extended_Pictographic}/u.test(t.text('.modal [data-r=prev]')), 'ön izlemede tilki çizimi, emoji yok');
     t.$('#pe-user').value = 'deneme.kurbagasi';
     await submit(t, 200);
     const du = t.store.get('users/deneme123');
-    ok(du.username === 'deneme.kurbagasi' && du.emoji === '🐸' && du.avk === 'emoji' && du.login && du.email === 'deneme123@std.yeditepe.edu.tr', 'deneme profili kaydedildi, giriş bilgisi korundu');
+    ok(du.username === 'deneme.kurbagasi' && du.emoji === '🦊' && du.avk === 'emoji' && du.login && du.email === 'deneme123@std.yeditepe.edu.tr', 'deneme profili kaydedildi, giriş bilgisi korundu');
     await t.go('#/kubbe');
     t.$('[data-g=buy][data-id="kartal-kanatlari"]').click(); await t.wait(60);
     t.$('.modal [data-ok]').click(); await t.wait(250);
