@@ -342,10 +342,12 @@ async function signup(t, be, local, prof) {
     console.log('6) not isteği: anonim notla karşılanır');
     await A.go('#/ders/MATH131'); await sleep(120);
     A.$('[data-g=req-new]').click(); await sleep(60);
+    A.$('#rq-why').value = 'Vizeye çalışıyorum';
     await A.submit('.modal form', 400);
     const rq = (await be.pool.query("select id, data from public.docs where col = 'requests'")).rows[0];
     ok(!!rq, 'istek kaydedildi');
     ok(rq && rq.data.text === '' && rq.data.kind === 'genel', 'türsüz istek: sunucu eski tür alanını genel yazar');
+    ok(rq && rq.data.why === 'Vizeye çalışıyorum', 'isteğin nedeni sunucuda kaldı');
     await B.go('#/istekler'); await sleep(200);
     await B.until(() => /MATH 131/.test(B.text('#main')), 'B istekleri görüyor');
     await B.go(`#/paylas?ders=MATH131&istek=${rq.id}`); await sleep(120);

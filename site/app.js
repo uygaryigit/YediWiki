@@ -107,7 +107,8 @@ const GL = (() => {
   const toe = (x, y, a) => `<ellipse cx="${x}" cy="${y}" rx="3.9" ry="4.9" transform="rotate(${a} ${x} ${y})" fill="#3B3B48" ${O}/>`;
   const ARROW = 'M24 5 41 23h-9v13a3 3 0 0 1-3 3H19a3 3 0 0 1-3-3V23H7z';
   return {
-    flame: `<path d="M24 3c2 8 13 11 13 24a13 13 0 0 1-26 0c0-5 2-9 5-12 1 4 3 6 5 6-1-6 0-12 3-18z" fill="#FF5A36" ${O}/><path d="M24 16c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 1 4 3 4-1-4 0-8 1-11z" fill="#FFA22E"/><path d="M24 27c1.5 3 4.5 4.6 4.5 8a4.5 4.5 0 0 1-9 0c0-3.4 3-5 4.5-8z" fill="#FFE14D"/><path d="M31.5 17.5c2.2 2.6 3.5 5.6 3.5 9" ${L}/>`,
+    // alev: her renk ayrı katman (fl1..fl4, ayrı ayrı titrer), tepeden duman püfler (smk1..smk3); hareketi CSS'te
+    flame: `<g class="smk"><circle class="smk1" cx="24" cy="8" r="2.6" fill="#B8C0D4"/><circle class="smk2" cx="24" cy="8" r="2.2" fill="#B8C0D4"/><circle class="smk3" cx="24" cy="8" r="3" fill="#B8C0D4"/></g><g class="fl fl1"><path d="M24 7c3 6.5 12.5 11 12.5 23.5a12.5 12.5 0 0 1-25 0c0-6.2 2.6-10.2 5.8-13 .5 3.6 2.2 5.8 4.6 6.4-.8-6.2.4-12 2.1-16.9z" fill="#F2542D" ${O}/><path d="M31.5 19.5c2 2.4 3.2 5.2 3.4 8.4" ${L}/></g><path class="fl fl2" d="M24 14.5c2.4 5 9.8 8.6 9.8 18.3a9.8 9.8 0 0 1-19.6 0c0-4.8 2-7.9 4.5-10.1.4 2.8 1.7 4.5 3.6 5-.6-4.8.3-9.3 1.7-13.2z" fill="#FF8A2A"/><path class="fl fl3" d="M24 22c1.8 3.6 7 6.2 7 13a7 7 0 0 1-14 0c0-3.4 1.4-5.6 3.2-7.2.3 2 1.2 3.2 2.6 3.6-.4-3.4.2-6.6 1.2-9.4z" fill="#FFC93C"/><path class="fl fl4" d="M24 29.5c1.2 2.2 4.2 3.8 4.2 7.8a4.2 4.2 0 0 1-8.4 0c0-3.4 2.6-5.2 4.2-7.8z" fill="#FFF1B8"/>`,
     megaphone: `<path d="M12 29.5 14 38h5l-1.2-8.5" fill="#2447D5" ${O}/><rect x="6" y="19" width="11" height="11" rx="3" fill="#FFB020" ${O}/><path d="M16 19.5 33 10v29l-17-9.5z" fill="#3D7BFF" ${O}/><ellipse cx="33" cy="24.5" rx="3.4" ry="14.5" fill="#FFE14D" ${O}/><path d="M19.5 20.5 29 15" ${L}/><path d="M39.5 18c1.8 1.8 2.8 4 2.8 6.5s-1 4.7-2.8 6.5M43.5 13.5c2.9 3 4.3 6.8 4.3 11s-1.4 8-4.3 11" fill="none" stroke="#FF4D6D" stroke-width="2.4" stroke-linecap="round"/>`,
     gradcap: `<path d="M12 21v9c0 3.5 5.4 6.5 12 6.5S36 33.5 36 30v-9l-12 5z" fill="#2B3C94" ${O}/><path d="M24 8 45 17 24 26 3 17z" fill="#3551C9" ${O}/><path d="M13.5 15.6 23 11.6" ${L}/><path d="M24 17l12.5 4.5V32" fill="none" stroke="#FFB020" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M34 31h5l1.2 7.5h-7.4z" fill="#FFB020" ${O}/><circle cx="24" cy="17" r="2.2" fill="#FFB020"/>`,
     paw: `<path d="M24 22.5c6 0 11.5 6.5 11.5 11.6 0 4-3 6.4-6.4 5.8-2.1-.4-3.4-1.6-5.1-1.6s-3 1.2-5.1 1.6c-3.4.6-6.4-1.8-6.4-5.8 0-5.1 5.5-11.6 11.5-11.6z" fill="#3B3B48" ${O}/>${toe(11.5, 20.5, -22)}${toe(19, 11.5, -8)}${toe(29, 11.5, 8)}${toe(36.5, 20.5, 22)}<path d="M19 29.4c1.4-1.6 3-2.4 5-2.4" fill="none" stroke="#7A7A88" stroke-width="2" stroke-linecap="round"/>`,
@@ -1297,7 +1298,7 @@ const G = {
   'bell': () => (nfPop() ? closeNotifs(true) : openNotifs()),
   'theme': () => cycleTheme(),
   'req-new': id => openRequestModal(id),
-  'req-plus': id => togglePlus(id),
+  'req-plus': (id, el) => togglePlus(id, false, el),
   'req-del': id => deleteRequest(id),
   'zor': id => openZorModal(id),
   'done': (id, el) => toggleDone(id, el),
@@ -3242,7 +3243,14 @@ function reqItemHtml(r, { showCourse = false } = {}) {
   const acts = r.done
     ? (r.nid ? `<a class="btn btn-sm" href="#/not/${esc(r.nid)}">${icon('book')}Nota git</a>` : '')
     : `<button type="button" class="req-plus${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor"><span>Ben de</span><b>${n}</b></button><a class="btn btn-sm btn-primary" href="#/paylas?ders=${esc(r.cid)}&istek=${esc(r.id)}">${icon('up')}Ben paylaşırım</a>`;
-  return `<li class="req${r.done ? ' done' : ''}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span><span class="meta"><span>${whoHtml(r.by, false, '')}</span><span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${r.doneBy ? whoHtml(r.doneBy, false, '') : spyName()}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
+  const cn = showCourse ? (S.courses.get(r.cid) || {}).name : '';
+  return `<li class="req${r.done ? ' done' : ''}" id="rq-${esc(r.id)}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${!r.done && n >= REQ_HOT ? gl('flame', 'rq-fire') : ''}${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span>${cn ? `<span class="req-cname">${esc(cn)}</span>` : ''}${r.why ? `<p class="req-why">${esc(r.why)}</p>` : ''}<span class="meta"><span>${whoHtml(r.by, false, '')}</span><span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${r.doneBy ? whoHtml(r.doneBy, false, '') : spyName()}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
+}
+/* Ana sayfada istek tek satır: ders kodu, istek, (popülerse alev), + ve kaç kişinin istediği. Ayrıntı istekler sayfasında */
+const REQ_HOT = 3;
+function reqLineHtml(r) {
+  const mine = r.by === S.me, n = demandOf(r), on = plusedByMe(r) || mine, hot = n >= REQ_HOT;
+  return `<li class="rq-line${hot ? ' hot' : ''}" data-id="${esc(r.id)}" data-n="${n}"><a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a><a class="rq-t" href="#/istekler?r=${esc(r.id)}">${esc(reqTitle(r))}</a>${hot ? gl('flame', 'rq-fire') : ''}<button type="button" class="rq-up${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled title="Senin isteğin"' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor">+</button><b class="rq-n" aria-hidden="true">${n}</b></li>`;
 }
 function requestBoxHtml(cid) {
   const list = openRequests(cid), people = list.reduce((s, r) => s + demandOf(r), 0);
@@ -3253,26 +3261,29 @@ function openRequestModal(cid) {
   if (openRequests(cid).filter(r => r.by === S.me).length >= 3) { toast('Bu ders için en fazla 3 açık isteğin olabilir.', 'err'); return; }
   const m = openModal({ title: codeOf(cid) + ' için not iste', body: `<form novalidate>
       <div class="field"><label for="rq-text">Ne lazım? <span class="opt">isteğe bağlı</span></label><input id="rq-text" class="input" maxlength="140" autocomplete="off" placeholder="Örn. 3. hafta, bağlı listeler"><p class="help">Boş bırakırsan bu dersten herhangi bir not istemiş olursun.</p></div>
+      <div class="field"><label for="rq-why">Neden lazım? <span class="opt">isteğe bağlı</span></label><textarea id="rq-why" class="input" rows="2" maxlength="300" placeholder="Örn. vizeye çalışıyorum, katılamadığım haftalar eksik"></textarea><p class="help">İstekler sayfasında görünür; ana sayfada yalnızca kısa hali yazar.</p></div>
       <p class="help">İsteğin ders sayfasında ve ana sayfada görünür. Notu paylaşıp isteği karşılayan kişi ${KUBBE.fill} kubbe kazanır.</p>
       <p class="err" role="alert"></p>
       <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">İste</button></div></form>` });
   $('form', m.el).addEventListener('submit', async e => {
     e.preventDefault();
-    const text = $('#rq-text', m.el).value.trim().replace(/\s+/g, ' ').slice(0, 140);
+    const text = $('#rq-text', m.el).value.trim().replace(/\s+/g, ' ').slice(0, 140), why = $('#rq-why', m.el).value.trim().replace(/\s+/g, ' ').slice(0, 300);
     // aynı ders için aynı istek (boş istek de) zaten açıksa yenisi açılmaz: başkasınınsa ona katılınır
     const dup = openRequests(cid).find(r => reqNorm(r.text) === reqNorm(text));
     if (dup && dup.by !== S.me) { m.close(); await togglePlus(dup.id, true); return; }
     if (dup) { $('.err', m.el).textContent = 'Bu ders için aynı isteğin zaten açık.'; return; }
     const ref = S.db.collection('requests').doc();
-    if (await write(() => ref.set({ cid, text, by: S.me, at: Date.now(), plus: {}, done: false, nid: '', doneBy: '', doneAt: 0 }), 'İsteğin yayınlandı')) m.close();
+    if (await write(() => ref.set({ cid, text, why, by: S.me, at: Date.now(), plus: {}, done: false, nid: '', doneBy: '', doneAt: 0 }), 'İsteğin yayınlandı')) m.close();
   });
 }
-async function togglePlus(id, join) {
+async function togglePlus(id, join, el) {
   if (!needAcc()) return;
   const r = S.requests.get(id); if (!r || r.done || r.by === S.me) return;
   if (join && plusedByMe(r)) { toast('Bu isteğe zaten katılmıştın.'); return; }
   const on = join ? true : !plusedByMe(r);
-  await write(() => S.db.doc('requests/' + id).update({ plus: { [pk('requests', id)]: on ? true : null } }), join ? 'Aynı istek vardı, sen de katıldın' : on ? 'İsteğe katıldın' : 'Katılımın geri alındı');
+  const at = el && on ? centerOf(el) : null;
+  const ok = await write(() => S.db.doc('requests/' + id).update({ plus: { [pk('requests', id)]: on ? true : null } }), join ? 'Aynı istek vardı, sen de katıldın' : on ? 'İsteğe katıldın' : 'Katılımın geri alındı');
+  if (ok && at) burst(at[0], at[1], { glyphs: ['+1', 'up'], n: 5, cls: 'up', spread: 34 });
 }
 async function deleteRequest(id) {
   const r = S.requests.get(id); if (!r || !canManage(r)) return;
@@ -3295,7 +3306,7 @@ function renderReqBanner(root) {
   if (b.dataset.h !== h) { b.dataset.h = h; b.innerHTML = h; }
 }
 ROUTES['istekler'] = function viewRequests(root) {
-  let only = 'all';
+  let only = 'all', want = parseHash().q.get('r') || '';
   root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Not istekleri</h1><p>Öğrencilerin aradığı notlar. Elinde varsa paylaş, isteği karşıla, ${KUBBE.fill} kubbe kazan. Yeni istek için ders sayfasındaki “Not iste” düğmesini kullan.</p></div>
     <div class="toolbar"><div class="chips" role="group" aria-label="Göster"><button type="button" class="chip" data-f="all" aria-pressed="true">Açık istekler</button><button type="button" class="chip" data-f="mine" aria-pressed="false">Derslerim</button><button type="button" class="chip" data-f="done" aria-pressed="false">Karşılananlar</button></div></div>
     <div class="panel pt0" data-r="list"></div></div>`;
@@ -3308,6 +3319,7 @@ ROUTES['istekler'] = function viewRequests(root) {
     const list = only === 'done' ? requestsWhere(r => r.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 30) : openRequests().filter(r => only !== 'mine' || mine.has(r.cid));
     el.innerHTML = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>`
       : emptyHtml(only === 'done' ? 'Henüz karşılanan istek yok' : only === 'mine' ? 'Derslerinde açık istek yok' : 'Şu an açık istek yok', only === 'mine' && !mine.size ? 'Önce ders sayfalarından Derslerim’e ders ekle.' : 'Bir ders sayfasından “Not iste” diyerek ilk isteği sen aç.');
+    if (want) { const li = document.getElementById('rq-' + want); if (li) { want = ''; li.classList.add('flash'); try { li.scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); } catch (e) { /* yok */ } } }
   } };
   return api;
 };
@@ -3726,21 +3738,21 @@ ROUTES[''] = function viewHome(root) {
   <div class="wrap home-main" data-r="main">
     <div class="home-left">
       <section class="home-sec">
-        <div class="sec-head"><h2>${gl('note', 'h-gl')}Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn" data-ns="hot" aria-pressed="true">${gl('flame')}Revaçta</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
+        <div class="sec-head"><h2>Notlar</h2><div class="seg ns-seg" role="group" aria-label="Notları sırala"><button type="button" class="seg-btn" data-ns="hot" aria-pressed="true">${gl('flame')}Revaçta</button><button type="button" class="seg-btn" data-ns="new" aria-pressed="false">Yeni</button></div><a class="sec-link" href="#/paylas">Not paylaş</a></div>
         <div data-r="notes"></div>
       </section>
       <section class="home-sec">
-        <div class="sec-head"><h2>${gl('bubble', 'h-gl')}Son yorumlar</h2><a class="sec-link" href="#/hocaolcer">HocaÖlçer</a></div>
+        <div class="sec-head"><h2>Son yorumlar</h2><a class="sec-link" href="#/hocaolcer">HocaÖlçer</a></div>
         <div data-r="cms"></div>
       </section>
       <section class="home-sec">
-        <div class="sec-head"><h2>${gl('books', 'h-gl')}Gündemdeki dersler</h2><a class="sec-link" href="#/dersler">Tüm dersler</a></div>
+        <div class="sec-head"><h2>Gündemdeki dersler</h2><a class="sec-link" href="#/dersler">Tüm dersler</a></div>
         <div data-r="hot"></div>
       </section>
     </div>
     <div class="home-right">
     <aside class="lead" data-r="lead" aria-label="Kubbe sıralaması">
-      <div class="lead-top"><h2>${gl('trophy', 'h-gl')}Kubbe sıralaması</h2><a class="sec-link" href="#/kubbe">Kubbe ve market</a></div>
+      <div class="lead-top"><h2>Kubbe sıralaması</h2><a class="sec-link" href="#/kubbe">Kubbe ve market</a></div>
       <div class="lead-ctl">
         <div class="seg" role="group" aria-label="Sıralama türü"><button type="button" class="seg-btn" data-lk="term" aria-pressed="true">Dönemin yıldızı</button><button type="button" class="seg-btn" data-lk="all" aria-pressed="false">Tüm zamanlar</button></div>
         <span data-r="bolwrap" hidden><select class="select sm" data-r="bolum" aria-label="Bölüm"></select></span>
@@ -3819,7 +3831,12 @@ ROUTES[''] = function viewHome(root) {
       R('try').hidden = !tryList.length;
       R('try').innerHTML = tryList.length ? 'Hızlı erişim: ' + tryList.map(id => `<a class="code" href="#/ders/${esc(id)}">${esc(codeOf(id))}</a>`).join('') : '';
       { const rc = R('recent'), h = recentHtml(); rc.hidden = !h; if (rc.dataset.h !== h) { rc.dataset.h = h; rc.innerHTML = h; } }
-      { const list = openRequests().slice(0, 3), h = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>` : '<p class="req-empty">Şu an açık istek yok. Aradığın notu bulamazsan ders sayfasından iste; arkadaşların görsün.</p>', el2 = R('reqs'); if (el2.dataset.h !== h) { el2.dataset.h = h; el2.innerHTML = h; } }
+      { const list = openRequests().slice(0, 5), h = list.length ? `<ul class="rq-lines">${list.map(reqLineHtml).join('')}</ul>` : '<p class="req-empty">Şu an açık istek yok. Aradığın notu bulamazsan ders sayfasından iste; arkadaşların görsün.</p>', el2 = R('reqs');
+        if (el2.dataset.h !== h) {   // sayı artınca küçük bir sıçrama
+          const prev = el2._n || {}, now = {}; el2.dataset.h = h; el2.innerHTML = h;
+          $$('.rq-line', el2).forEach(li => { const n = +li.dataset.n; now[li.dataset.id] = n; if (prev[li.dataset.id] != null && n > prev[li.dataset.id]) { const b = $('.rq-n', li); if (b) b.classList.add('bump'); } });
+          el2._n = now;
+        } }
       // Revaçta: oy ve tazelik (▼ alan aşağı iner, eksiye düşen burada görünmez); Yeni: son paylaşılanlar. Haftanın notu üstte, listede tekrar etmez.
       const shown = notesWhere(n => !isHidden(n)), wk = shown.length ? weekNote() : null;
       const notes = (ns === 'new' ? shown.sort((a, b) => b.at - a.at) : shown.filter(n => voteScore(n) >= 0).sort(byHot)).filter(n => !wk || n.id !== wk.n.id).slice(0, 6);
