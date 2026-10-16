@@ -2606,10 +2606,12 @@ function openAuth(opts = {}) {
       <div class="field"><div class="lbl-row"><span class="label">Ad soyad</span>${eyeToggle('showName', st.showName, 'Ad soyad')}</div>
         <div class="two"><input id="au-first" class="input" maxlength="40" autocomplete="given-name" placeholder="Ad" aria-label="Ad" value="${esc(st.first || '')}"><input id="au-last" class="input" maxlength="40" autocomplete="family-name" placeholder="Soyad" aria-label="Soyad" value="${esc(st.last || '')}"></div></div>
       <div class="field"><div class="lbl-row"><label class="label" for="au-year">Giriş yılı</label>${eyeToggle('showYil', st.showYil, 'Giriş yılı')}</div><select id="au-year" class="select">${yearOptions(st.yil || new Date().getFullYear())}</select></div>
+      ${govdePickHtml(st, 'au')}
       <p class="err" role="alert"></p>
       <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Sonra</button><button class="btn btn-primary" type="submit">${twoSteps ? 'Devam' : 'Hesabı oluştur'}</button></div></form>`;
     wireAvatarPicker(host, st);
     wireToggles(host, st);
+    wireGovdePick(host, st);
     const err = $('.err', host);
     $('form', host).addEventListener('submit', async e => {
       e.preventDefault();
@@ -2620,6 +2622,7 @@ function openAuth(opts = {}) {
       if (first.length < 2 || last.length < 2) { err.textContent = 'Adını ve soyadını yaz.'; return; }
       if (!USER_RE.test(username)) { err.textContent = 'Kullanıcı adı 3-20 karakter olmalı; küçük harf, rakam ve nokta kullan.'; return; }
       if (userTaken(username)) { err.textContent = 'Bu kullanıcı adı alınmış.'; return; }
+      if (!GOVDE.some(g => g.k === st.govde)) { err.textContent = 'Cinsiyetini seç: erkek, kadın ya da diğer.'; return; }
       { const ae = avError(st, first + ' ' + last); if (ae) { err.textContent = ae; return; } }
       if (twoSteps) step4(); else await createAcc(err, $('[type=submit]', host));
     });
@@ -2650,7 +2653,7 @@ function openAuth(opts = {}) {
     const { first, last, username } = st, yil = +st.yil || 0, bolum = st.bolum && S.bolumler.has(st.bolum) ? st.bolum : '';
     if (btn) btn.disabled = true;
     const mk = S.supa ? '' : await mailKey(st.email);
-    const prof = { first: niceName(first).slice(0, 40), last: niceName(last).slice(0, 40), showName: !!st.showName, username, yil, showYil: !!st.showYil, bolum, ...avPayload(st) };
+    const prof = { first: niceName(first).slice(0, 40), last: niceName(last).slice(0, 40), showName: !!st.showName, username, yil, showYil: !!st.showYil, bolum, ...govdePatch(st), ...avPayload(st) };
     const ok = await write(async () => {
       if (S.supa) {
         if (!S.session) throw { code: 'unauthenticated' };
@@ -2718,19 +2721,21 @@ function openProfileEdit() {
   if (!needAcc()) return;
   const u = myAcc();
   const pv = S.priv || {};
-  const st = { avk: avKind(u), emoji: avEmoji(u), harf: u.harf || '', urun: u.urun || '', color: avColor(u), pic: u.pic || '', items: u.items || {}, showName: !!u.showName, showYil: u.showYil !== false };
+  const st = { avk: avKind(u), emoji: avEmoji(u), harf: u.harf || '', urun: u.urun || '', color: avColor(u), pic: u.pic || '', items: u.items || {}, showName: !!u.showName, showYil: u.showYil !== false, govde: GOVDE.some(g => g.k === u.govde) ? u.govde : '' };
   const m = openModal({ title: 'Profilini düzenle', sub: pv.email || u.email || S.email || '', body: `<form novalidate class="pe-form">
     ${avatarPickerHtml(st)}
     <div class="field"><label for="pe-user">Kullanıcı adı</label><input id="pe-user" class="input" maxlength="20" autocapitalize="none" autocorrect="off" spellcheck="false" value="${esc(u.username || '')}"><p class="help">Yorumlarda ve sıralamada bu ad görünür.</p></div>
     <div class="field"><div class="lbl-row"><span class="label">Ad soyad</span>${eyeToggle('showName', st.showName, 'Ad soyad')}</div>
       <div class="two"><input id="pe-first" class="input" maxlength="40" value="${esc(u.first || pv.first || '')}" aria-label="Ad"><input id="pe-last" class="input" maxlength="40" value="${esc(u.last || pv.last || '')}" aria-label="Soyad"></div></div>
     <div class="field"><div class="lbl-row"><label class="label" for="pe-year">Giriş yılı</label>${eyeToggle('showYil', st.showYil, 'Giriş yılı')}</div><select id="pe-year" class="select">${yearOptions(u.yil || pv.yil)}</select></div>
+    ${govdePickHtml(st, 'pe')}
     ${S.bolumler.size ? `<div class="field"><span class="label">Bölüm</span>${bolumPickHtml('pe-bolum', u.bolum || '')}</div>` : ''}
     <div class="field"><div class="lbl-row"><label class="label" for="pe-no">Telefon numarası <span class="opt">isteğe bağlı</span></label><span class="vis-note">${icon('lock')}Yalnızca sen görürsün</span></div><input id="pe-no" class="input" type="tel" inputmode="tel" maxlength="16" placeholder="05xx xxx xx xx" value="${esc(pv.phone || '')}"></div>
     <p class="err" role="alert"></p>
     <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">${icon('check')}Kaydet</button></div></form>` });
   wireAvatarPicker(m.el, st);
   wireToggles(m.el, st);
+  wireGovdePick(m.el, st);
   wireBolumPick(m.el);
   const err = $('.err', m.el);
   $('form', m.el).addEventListener('submit', async e => {
@@ -2746,12 +2751,17 @@ function openProfileEdit() {
     const ok = await write(async () => {
       await S.db.doc('users/' + S.me).update({
         first: niceName(first).slice(0, 40), last: niceName(last).slice(0, 40), showName: !!st.showName, username,
-        yil: +$('#pe-year', m.el).value || 0, showYil: !!st.showYil, bolum: ($('#pe-bolum', m.el) || { value: u.bolum || '' }).value, ...avPayload(st)
+        yil: +$('#pe-year', m.el).value || 0, showYil: !!st.showYil, bolum: ($('#pe-bolum', m.el) || { value: u.bolum || '' }).value, ...govdePatch(st), ...avPayload(st)
       });
       if (phone !== (pv.phone || '') && privPath()) { if (S.supa) await (S.priv ? S.db.doc(privPath()).update({ phone }) : S.db.doc(privPath()).set({ phone })); else await S.db.doc(privPath()).set(Object.assign({}, pv, { phone })); }
     }, 'Profilin güncellendi');
     if (ok) m.close();
   });
+}
+async function setFit(k) {
+  const f = KIYAFET.find(x => x.k === k), u = myAcc();
+  if (!f || !needAcc() || fitOf(u) === k) return;
+  await write(() => S.db.doc('users/' + S.me).update({ kiyafet: k }), 'Karakterin artık ' + f.ad.toLocaleLowerCase('tr') + ' giyiyor');
 }
 /* Profil sayfasındaki göz: adın ya da giriş yılın profilde görünsün mü (sunucu gizlenenleri özel kayda taşır, bu yüzden değer de gönderilir) */
 function toggleVis(k) {
@@ -2762,19 +2772,23 @@ function toggleVis(k) {
   const patch = k === 'showName' ? { showName: on, first: u.first || pv.first || '', last: u.last || pv.last || '' } : { showYil: on, yil: u.yil || +pv.yil || 0 };
   write(() => S.db.doc('users/' + S.me).update(patch), (k === 'showName' ? 'Adın' : 'Giriş yılın') + (on ? ' artık profilinde görünüyor' : ' gizlendi'));
 }
+/* Birinin profiline basınca açılan kart: profil resmi, adı ve yanında karakteri; sıralamadaki yeri büyük rakamlarla
+   (ilk üçte madalyasıyla), katkıları ve rozetleri. Marketten aldıkları ayrıca yazılmaz: adının yanında ve karakterinde görünür */
 function openUserCard(uid) {
   const u = userOf(uid);
   if (!u) return;
-  const k = kubbeOf(uid), items = Object.keys(u.items || {}).filter(id => MARKET_BY_ID[id]);
+  const k = kubbeOf(uid), eb = earnedBadges(uid);
   const facts = [u.showName && fullName(u) ? esc(fullName(u)) : '', u.showYil !== false && u.yil ? u.yil + ' girişli' : ''].filter(Boolean).join(', ');
-  const m = openModal({ title: '@' + (u.username || 'öğrenci'), body: `<div class="ucard">
+  const rank = (r, label) => `<div class="uc-rank${r && r <= 3 ? ' m' + r : ''}">${r && r <= 3 ? mtMedalIcon(r) : ''}<span class="uc-rl">${esc(label)}</span><b class="uc-rv">${r ? r + '.' : '–'}</b><span class="uc-rs">${r ? 'sırada' : 'sıralamada yok'}</span></div>`;
+  const stat = (n, label, g) => `<span class="uc-stat">${gl(g, 'uc-sg')}<b>${n}</b>${label}</span>`;
+  const m = openModal({ title: '@' + (u.username || 'öğrenci'), body: `<div class="uc-head">
       ${avatarHtml(uid, { cls: 'xl' })}
-      <div><p class="kh-name">${nameHtml(u, u.username || '')}${badgesHtml(u)}</p>${facts ? `<p class="muted">${facts}</p>` : ''}
-      <p class="kh-kubbe">${gl('coin', 'k-coin')}<b>${k.all}</b> kubbe</p></div></div>
-    <dl class="prof-list"><div><dt>Sıralama</dt><dd>Tüm zamanlar ${rankOf(uid, 'all')}. sıra, ${esc(termLabel(currentTk()))} ${rankOf(uid, 'term')}. sıra</dd></div>
-      <div><dt>Katkılar</dt><dd>${k.notes} not, ${k.comments} yorum${S.supa && uid !== S.me ? '' : `, ${k.ratings} hoca puanı`}</dd></div>
-      ${(() => { const eb = earnedBadges(uid); return eb.length ? `<div><dt>Rozetler</dt><dd>${eb.map(b => `<span class="tag" title="${esc(b.d)}">${b.g} ${esc(b.ad)}</span>`).join(' ')}</dd></div>` : ''; })()}
-      ${items.length ? `<div><dt>Aldıkları</dt><dd>${items.map(id => `<span class="tag" title="${esc(MARKET_BY_ID[id].name)}"><img class="tag-art" src="${itemAvSrc(id)}" alt="">${esc(MARKET_BY_ID[id].name)}</span>`).join(' ')}</dd></div>` : ''}</dl>
+      <div class="uc-id"><p class="kh-name">${nameHtml(u, u.username || '')}${badgesHtml(u)}</p>${facts ? `<p class="muted">${facts}</p>` : ''}
+        <p class="uc-kubbe">${gl('coin', 'k-coin')}<b>${k.all}</b><span>kubbe</span></p></div>
+      ${figSvg(uid, u, { cls: 'uc-fig' })}</div>
+    <div class="uc-ranks">${rank(rankOf(uid, 'all'), 'Tüm zamanlar')}${rank(rankOf(uid, 'term'), termLabel(currentTk()))}</div>
+    <div class="uc-stats">${stat(k.notes, 'not', 'note')}${stat(k.comments, 'yorum', 'bubble')}${S.supa && uid !== S.me ? '' : stat(k.ratings, 'hoca puanı', 'star')}</div>
+    ${eb.length ? `<div class="uc-bdgs"><h3>Rozetler <span class="count">${eb.length}</span></h3><ul>${eb.map(b => `<li title="${esc(b.d)}"><span class="bdg-medal"><span class="bdg-g">${gl(b.g)}</span></span><b>${esc(b.ad)}</b></li>`).join('')}</ul></div>` : ''}
     <p class="fine">${S.supa ? 'Anonim paylaşımlar ve hoca puanları bu kartta görünmez.' : 'Anonim paylaşımlar bu kartta gösterilmez.'}</p>` });
   applyWidths(m.el);
 }
@@ -3075,11 +3089,20 @@ const MT_HAND = ['son-sosisli', 'ikinci-ev', 'karsi-durum'];
 const MT_SKIN = '#F4C29A', MT_SKIN_HI = '#FFE3CB', MT_PANTS = '#3550A8', MT_PANTS2 = '#2A4190', MT_PANTS_HI = '#6E8AE0';
 const mtN = v => String(Math.round(v * 10) / 10);
 const mtPl = pts => 'M' + pts.map(q => mtN(q[0]) + ' ' + mtN(q[1])).join('L');
+const mtAt = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 function mtMix(a, b, t) {
   const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
   const c = s => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t);
   return '#' + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
 }
+/* Karakter: vücut (govde) kayıtta seçilir: e erkek, k kadın, d diğer (ikisinin arası); kıyafet (kiyafet) profilde karakterin altından.
+   Saç rengi kullanıcıya göre sabit (mtHairOf); gömlek profil rengi. Seçmeyen eski hesaplar "diğer" ve tişörtle çizilir. */
+const GOVDE = [{ k: 'e', ad: 'Erkek' }, { k: 'k', ad: 'Kadın' }, { k: 'd', ad: 'Diğer' }];
+const KIYAFET = [{ k: 'tisort', ad: 'Tişört' }, { k: 'kapusonlu', ad: 'Kapüşonlu' }, { k: 'mont', ad: 'Mont' }];
+const govdeOf = u => (u && GOVDE.some(g => g.k === u.govde) ? u.govde : 'd');
+const fitOf = u => (u && KIYAFET.some(f => f.k === u.kiyafet) ? u.kiyafet : 'tisort');
+const MT_HAIR = ['#3B2416', '#1E1A24', '#6E3B1E', '#A8702E'];
+function mtHairOf(uid) { let h = 0; for (const ch of String(uid || '')) h = (h * 31 + ch.codePointAt(0)) >>> 0; return MT_HAIR[h % MT_HAIR.length]; }
 function mtGear(u) {
   const o = id => ownsItem(u, id);
   return { wings: o('kartal-kanatlari'), dog: o('gece-eskortu'), ticket: o('altin-ring'), aura: o('gunes-aurasi'), scarf: o('selcuklu-kapi'), pack: o('yokus-canavari'), hand: MT_HAND.find(o) || '' };
@@ -3088,15 +3111,29 @@ function mtCapsule(a, b, r) {
   const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * r, ny = dx / l * r;
   return `M${mtN(a[0] + nx)} ${mtN(a[1] + ny)}L${mtN(b[0] + nx)} ${mtN(b[1] + ny)}A${r} ${r} 0 0 0 ${mtN(b[0] - nx)} ${mtN(b[1] - ny)}L${mtN(a[0] - nx)} ${mtN(a[1] - ny)}A${r} ${r} 0 0 0 ${mtN(a[0] + nx)} ${mtN(a[1] + ny)}Z`;
 }
-// kol: kısa kollu tişört (kol üst kolun yarısına kadar), sonra ten ve yumruk
-function mtArm(s, e, h, shirt) {
-  const fa = [e[0] + (h[0] - e[0]) * .3, e[1] + (h[1] - e[1]) * .3], sl = [s[0] + (e[0] - s[0]) * .58, s[1] + (e[1] - s[1]) * .58];
-  return `<path d="${mtPl([s, e, h])}" stroke="${MT_K}" stroke-width="9.8" ${MT_J}/>`
-    + `<path d="${mtPl([s, e, h])}" stroke="${MT_SKIN}" stroke-width="6.4" ${MT_J}/>`
-    + `<path d="${mtPl([[fa[0] - 1.2, fa[1] - 1], [h[0] - 1.2, h[1] - 1]])}" stroke="${MT_SKIN_HI}" stroke-width="1.6" opacity=".8" ${MT_J}/>`
-    + `<path d="${mtPl([s, sl])}" stroke="${MT_K}" stroke-width="10.4" ${MT_J}/><path d="${mtPl([s, sl])}" stroke="${shirt}" stroke-width="7.6" ${MT_J}/>`
-    + `<path d="${mtPl([[s[0] - 1.2, s[1] - 1.2], [sl[0] - 1.2, sl[1] - 1.2]])}" stroke="#fff" stroke-width="1.5" opacity=".4" ${MT_J}/>`
-    + `<circle cx="${mtN(h[0])}" cy="${mtN(h[1])}" r="4.5" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.7"/>`
+// iki nokta arasındaki parçanın ortasından ona dik kısa çizgi (mont dikişi)
+function mtCross(a, b, w) {
+  const m = mtAt(a, b, .5), dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w / 2, ny = dx / l * w / 2;
+  return mtPl([[m[0] - nx, m[1] - ny], [m[0] + nx, m[1] + ny]]);
+}
+// kol: tişörtte kısa kol (üst kolun yarısına kadar), kapüşonlu ve montta bileğe kadar manşetli (mont kabarık, dikişli); sonra yumruk
+function mtArm(s, e, h, shirt, fit = 'tisort') {
+  const long = fit !== 'tisort', puff = fit === 'mont', w = puff ? 7.8 : 6.6, fa = mtAt(e, h, .3);
+  let o = `<path d="${mtPl([s, e, h])}" stroke="${MT_K}" stroke-width="${mtN((long ? w : 6.4) + 3.4)}" ${MT_J}/>`
+    + `<path d="${mtPl([s, e, h])}" stroke="${MT_SKIN}" stroke-width="6.4" ${MT_J}/>`;
+  if (!long) {
+    const sl = mtAt(s, e, .58);
+    o += `<path d="${mtPl([[fa[0] - 1.2, fa[1] - 1], [h[0] - 1.2, h[1] - 1]])}" stroke="${MT_SKIN_HI}" stroke-width="1.6" opacity=".8" ${MT_J}/>`
+      + `<path d="${mtPl([s, sl])}" stroke="${MT_K}" stroke-width="10.4" ${MT_J}/><path d="${mtPl([s, sl])}" stroke="${shirt}" stroke-width="7.6" ${MT_J}/>`
+      + `<path d="${mtPl([[s[0] - 1.2, s[1] - 1.2], [sl[0] - 1.2, sl[1] - 1.2]])}" stroke="#fff" stroke-width="1.5" opacity=".4" ${MT_J}/>`;
+  } else {
+    const cf = mtAt(e, h, .68), cs = mtAt(e, h, .5);
+    o += `<path d="${mtPl([s, e, cf])}" stroke="${shirt}" stroke-width="${w}" ${MT_J}/>`
+      + `<path d="${mtPl([cs, cf])}" stroke="${mtMix(shirt, '#000000', .2)}" stroke-width="${mtN(w + .2)}"/>`
+      + `<path d="${mtPl([[s[0] - 1.3, s[1] - 1.3], [e[0] - 1.3, e[1] - 1.3], [cs[0] - 1.1, cs[1] - 1.1]])}" stroke="#fff" stroke-width="1.5" opacity=".38" ${MT_J}/>`
+      + (puff ? `<path d="${mtCross(s, e, w)}${mtCross(e, cs, w)}" stroke="${MT_K}" stroke-width="1.1" opacity=".35"/>` : '');
+  }
+  return o + `<circle cx="${mtN(h[0])}" cy="${mtN(h[1])}" r="4.5" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.7"/>`
     + `<path d="M${mtN(h[0] - 2.7)} ${mtN(h[1] - .8)}a2.9 2.9 0 0 1 2.4-2.3" stroke="#fff" stroke-width="1.1" opacity=".75" ${MT_J}/>`;
 }
 const mtShoe = (x, y, rot) => `<g transform="translate(${mtN(x)} ${mtN(y)}) rotate(${rot})"><ellipse rx="6.8" ry="3.9" fill="#2E2A44" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.2 1.6Q0 4.4 6.2 1.6" stroke="#E9ECF5" stroke-width="1.6" ${MT_J}/><path d="M-3.6 -2Q-.4 -3.4 2.8 -2.8" stroke="#77739C" stroke-width="1.2" ${MT_J}/></g>`;
@@ -3129,69 +3166,104 @@ function mtMedal(p, r, a, b, ctr, R, flip) {
     + `<text x="${mtN(cx)}" y="${mtN(cy + R * .4)}" text-anchor="middle" font-size="${mtN(R * 1.15)}" fill="${m[3]}"${flip ? ` transform="matrix(-1 0 0 1 ${mtN(2 * cx)} 0)"` : ''}>${r}</text>`
     + `<path d="M${mtN(cx - R * .62)} ${mtN(cy - R * .16)}A${mtN(R * .64)} ${mtN(R * .64)} 0 0 1 ${mtN(cx - R * .12)} ${mtN(cy - R * .62)}" stroke="#fff" stroke-width="${mtN(R * .17)}" opacity=".8" ${MT_J}/></g>`;
 }
-// 1.: zirvede, önden; güneş gözlüklü, bereli, sol eliyle bayrak direğini tutar, sağ eli belinde (ya da elindeki yiyecek / kupa)
-function mtTop(p, o) {
-  const g = o.g, dk = mtMix(o.c, '#000000', .38);
-  const L = [[-6, -21], [-8.8, -11.5], [-11, -4.6]], R = [[6, -21], [8.8, -11.5], [11, -4.6]];
-  const T = 'M-13 -40C-14 -33 -12.5 -26 -11.5 -21L11.5 -21C12.5 -26 14 -33 13 -40C8.5 -45.5 -8.5 -45.5 -13 -40Z';
+// önden vücut ölçüleri: gövde, omuz (kol kökü), kalça (bacak kökü), ayak aralığı, pantolon beli. k: dar omuz, ince bel, geniş kalça; d: ikisinin arası
+const MT_BODY = {
+  e: { T: 'M-13 -40C-14 -33 -12.5 -26 -11.5 -21L11.5 -21C12.5 -26 14 -33 13 -40C8.5 -45.5 -8.5 -45.5 -13 -40Z', sh: 11.4, hip: 6, ft: 11, W: 'M-11.6 -25.8H11.6L12.4 -18.6H-12.4Z' },
+  k: { T: 'M-11.2 -40.4C-11.8 -35.4 -9.4 -31.4 -9.6 -28.4C-9.8 -25.4 -12 -23 -12.4 -21L12.4 -21C12 -23 9.8 -25.4 9.6 -28.4C9.4 -31.4 11.8 -35.4 11.2 -40.4C7.6 -45.2 -7.6 -45.2 -11.2 -40.4Z', sh: 9.8, hip: 6.4, ft: 9.8, W: 'M-10.4 -25.2H10.4L12.8 -18.6H-12.8Z' },
+  d: { T: 'M-12.2 -40.2C-13 -34 -11 -28.6 -11.2 -25.6C-11.4 -23.6 -11.8 -22 -12 -21L12 -21C11.8 -22 11.4 -23.6 11.2 -25.6C11 -28.6 13 -34 12.2 -40.2C8 -45.4 -8 -45.4 -12.2 -40.2Z', sh: 10.6, hip: 6.2, ft: 10.4, W: 'M-11 -25.6H11L12.6 -18.6H-12.6Z' }
+};
+// önden saç: arka (başın arkasında) ve ön (perçem). e kısa, k uzun ve yandan perçemli, d küt (çene hizası)
+const MT_HAIR_F = {
+  e: { back: '', front: 'M-16.8 -63C-17.8 -74.4 -10 -81 0 -81C9.8 -81 17.6 -74.8 16.9 -64.2C15 -68.4 11.6 -71.2 7.2 -72.2C3.6 -69.4 -2.4 -68.4 -7.6 -69.4C-11 -68.6 -14.6 -66.2 -16.8 -63ZM-2.6 -80.4C.2 -85 6.2 -85.4 8.8 -82C5.8 -82.2 3.2 -81.2 1.6 -79.4Z' },
+  k: { back: 'M-18.4 -64C-20 -78 -11 -82.6 0 -82.6C11 -82.6 20 -78 18.4 -64C19.8 -54 21 -45.6 17.6 -38.2C13.4 -35.4 8.4 -37 6.2 -39.8H-6.2C-8.4 -37 -13.4 -35.4 -17.6 -38.2C-21 -45.6 -19.8 -54 -18.4 -64Z', front: 'M-16.9 -62.6C-17.8 -74.6 -9.8 -81.2 0 -81.2C9.8 -81.2 17.8 -74.8 16.9 -63.4C14.2 -69.8 8 -73 1.4 -72.8C-2 -68.6 -9 -66 -16.9 -62.6Z' },
+  d: { back: 'M-18 -64C-19.4 -77.4 -10.8 -82.2 0 -82.2C10.8 -82.2 19.4 -77.4 18 -64C18.8 -57 18.2 -50.6 15.8 -47H-15.8C-18.2 -50.6 -18.8 -57 -18 -64Z', front: 'M-16.8 -64.2C-17.4 -75 -9.6 -81 0 -81C9.6 -81 17.4 -75 16.8 -64.2C12.2 -67.6 6.2 -68.8 0 -68.8C-6.2 -68.8 -12.2 -67.6 -16.8 -64.2Z' }
+};
+// kıyafetin gövde ayrıntısı (önden): tişörtte yaka; kapüşonluda boyunda başlık, ipler ve kanguru cebi; montta dikişler, fermuar ve dik yaka
+function mtFitFront(c, fit) {
+  const dk = mtMix(c, '#000000', .2), dd = mtMix(c, '#000000', .38);
+  if (fit === 'kapusonlu') return `<path d="M-12.8 -42.4C-10.6 -48.8 10.6 -48.8 12.8 -42.4C8.8 -38.2 -8.8 -38.2 -12.8 -42.4Z" fill="${dk}" stroke="${MT_K}" stroke-width="1.6" stroke-linejoin="round"/>`
+    + `<path d="M-3 -39.8V-33.6M3 -39.8V-33.6" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/><circle cx="-3" cy="-33" r="1" fill="#fff"/><circle cx="3" cy="-33" r="1" fill="#fff"/>`
+    + `<path d="M-8.4 -31.4H8.4L10 -24.2H-10Z" fill="${dk}" stroke="${dd}" stroke-width="1.2" stroke-linejoin="round"/><path d="M-7.6 -30.4H7.6" stroke="#fff" stroke-width="1" opacity=".35"/>`;
+  if (fit === 'mont') return `<path d="M-13 -35.4Q0 -32.6 13 -35.4M-12.6 -29.4Q0 -26.6 12.6 -29.4" stroke="${MT_K}" stroke-width="1.3" opacity=".35" ${MT_J}/>`
+    + `<path d="M0 -42.4V-21.6" stroke="${dd}" stroke-width="1.3"/><rect x="-1.2" y="-39.6" width="2.4" height="3.4" rx=".8" fill="#E9ECF5" stroke="${MT_K}" stroke-width=".8"/>`
+    + `<path d="M-8 -45.6Q0 -41.8 8 -45.6L7.4 -41.6Q0 -38.4 -7.4 -41.6Z" fill="${mtMix(c, '#ffffff', .25)}" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  return `<path d="M-6.2 -44.2Q0 -39.6 6.2 -44.2" stroke="${dd}" stroke-width="1.6" ${MT_J}/>`;
+}
+/* Önden karakter. pose 'flag': zirvede (güneş gözlüklü, bayrak direğini tutar, eli belinde ya da elinde yiyecek / kupa);
+   pose 'wave': profilde el sallar. o.r varsa boynunda o sıranın madalyası */
+function mtFront(p, o) {
+  const g = o.g || {}, B = MT_BODY[o.body] || MT_BODY.d, HR = MT_HAIR_F[o.body] || MT_HAIR_F.d, fit = o.fit || 'tisort', c = o.c, flag = o.pose === 'flag';
+  const sh = B.sh, hip = B.hip, ft = flag ? B.ft : B.ft - 1.8;
+  const L = [[-hip, -21], [-(hip + 2.8), -11.5], [-ft, -4.6]], R = [[hip, -21], [hip + 2.8, -11.5], [ft, -4.6]];
+  const T = B.T, tf = fit === 'mont' ? ' transform="scale(1.07 1)"' : '', hs = `stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"`;
   const SC = 'M-12.6 -45.6Q0 -38.8 12.6 -45.6L13 -40.8Q0 -34 -13 -40.8Z', TL = 'M-9.4 -42.6C-17 -44 -24 -40 -32 -42.6L-33.4 -38.2L-31 -37.2L-32.6 -34.2C-24.4 -33 -17 -36.4 -9.8 -37.6Z';
-  const qy = (x, y0, yc) => { const t = (x / 19.4 + 1) / 2, k = 2 * t * (1 - t); return y0 * (1 - k) + yc * k; };
-  const ticks = [-15, -10, -5, 0, 5, 10, 15].map(x => `M${x} ${mtN(qy(x, -72.6, -77.4) + 1.4)}V${mtN(qy(x, -65.2, -70) - 1.4)}`).join('');
-  let s = '<ellipse cx="0" cy=".6" rx="24" ry="3.6" fill="#0B1030" opacity=".25"/>';
+  let s = `<ellipse cx="0" cy=".6" rx="${flag ? 24 : 19}" ry="3.6" fill="#0B1030" opacity=".22"/>`;
   if (g.aura) s += mtAura(p, 0, -60, 25);
   if (g.wings) s += mtWing(p, -5, -40, 0, .62, .62) + mtWing(p, 5, -40, 0, -.62, .62);
   if (g.scarf) s += `<path d="${TL}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.6" stroke-linejoin="round"/><path d="${TL}" fill="url(#${p}pt)"/>`;
+  if (g.ticket) s += mtTicket(17.6, -66, 28);   // kulağının arkasına sıkıştırılmış bilet
+  if (HR.back) s += `<path d="${HR.back}" fill="${o.hair}" ${hs}/>`;
   // gövde: önce tek parça koyu kontur, sonra dolgular (parçaların arasında çizgi kalmaz)
   s += `<path d="${mtPl(L)}" stroke="${MT_K}" stroke-width="12.6" ${MT_J}/><path d="${mtPl(R)}" stroke="${MT_K}" stroke-width="12.6" ${MT_J}/>`
-    + `<path d="${T}" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>`
-    + `<circle cx="-16.6" cy="-59.6" r="4.2" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/><circle cx="16.6" cy="-59.6" r="4.2" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
+    + `<path d="${T}"${tf} fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>`
+    + (o.body === 'e' ? `<circle cx="-16.6" cy="-59.6" r="4.2" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/><circle cx="16.6" cy="-59.6" r="4.2" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>` : '')
     + `<circle cx="0" cy="-62" r="17" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
     + `<path d="${mtPl(L)}" stroke="${MT_PANTS2}" stroke-width="9" ${MT_J}/><path d="${mtPl(R)}" stroke="${MT_PANTS}" stroke-width="9" ${MT_J}/>`
     + `<path d="${mtPl(L.map(q => [q[0] - 1.8, q[1] - .6]))}" stroke="${MT_PANTS_HI}" stroke-width="2.2" opacity=".6" ${MT_J}/><path d="${mtPl(R.map(q => [q[0] - 1.8, q[1] - .6]))}" stroke="${MT_PANTS_HI}" stroke-width="2.2" opacity=".7" ${MT_J}/>`
-    + mtShoe(-12.6, -3, -6) + mtShoe(12.6, -3, 6)
-    + `<path d="${T}" fill="url(#${p}s${o.r})"/>`
-    + `<path d="M-11.6 -25.8H11.6L12.4 -18.6H-12.4Z" fill="${MT_PANTS}"/><path d="M-11.6 -25H11.6" stroke="#22357A" stroke-width="1.5"/>`
-    + `<path d="M-6.2 -44.2Q0 -39.6 6.2 -44.2" stroke="${dk}" stroke-width="1.6" ${MT_J}/><path d="M-11.2 -38.2C-12 -33 -11.2 -28.4 -10.4 -26.4" stroke="#fff" stroke-width="1.6" opacity=".45" ${MT_J}/>`
+    + mtShoe(-ft - 1.6, -3, -6) + mtShoe(ft + 1.6, -3, 6)
+    + `<path d="${T}"${tf} fill="url(#${p}${o.sid})"/>`
+    + `<path d="${B.W}" fill="${MT_PANTS}"/><path d="${B.W.split('L')[0]}" stroke="#22357A" stroke-width="1.5"/>`
+    + mtFitFront(c, fit)
+    + `<path d="M${mtN(-sh + .2)} -38.2C${mtN(-sh - .6)} -33 ${mtN(-sh + .2)} -28.4 ${mtN(-sh + 1)} -26.4" stroke="#fff" stroke-width="1.6" opacity=".4" ${MT_J}/>`
     + `<ellipse cx="0" cy="-44.4" rx="9.6" ry="3" fill="#000" opacity=".16"/>`
-    + `<circle cx="-16.6" cy="-59.6" r="4.2" fill="${MT_SKIN}"/><circle cx="16.6" cy="-59.6" r="4.2" fill="${MT_SKIN}"/><path d="M-17.6 -61.4Q-15.6 -59.6 -17.2 -57.6M17.6 -61.4Q15.6 -59.6 17.2 -57.6" stroke="#CF8A5C" stroke-width="1.2" ${MT_J}/>`
-    + `<circle cx="0" cy="-62" r="17" fill="url(#${p}sk)"/>`;
+    + (o.body === 'e' ? `<circle cx="-16.6" cy="-59.6" r="4.2" fill="${MT_SKIN}"/><circle cx="16.6" cy="-59.6" r="4.2" fill="${MT_SKIN}"/><path d="M-17.6 -61.4Q-15.6 -59.6 -17.2 -57.6M17.6 -61.4Q15.6 -59.6 17.2 -57.6" stroke="#CF8A5C" stroke-width="1.2" ${MT_J}/>` : '')
+    + `<circle cx="0" cy="-62" r="17" fill="url(#${p}sk)"/>`
+    + `<path d="${HR.front}" fill="${o.hair}" ${hs}/><path d="M-9.4 -77.2C-5.6 -79.8 .4 -80.4 4.6 -79.4" stroke="#fff" stroke-width="1.6" opacity=".3" ${MT_J}/>`;
   if (g.pack) s += `<path d="M-8.8 -43.6Q-9.8 -33 -8.6 -24.8M8.8 -43.6Q9.8 -33 8.6 -24.8" stroke="${MT_K}" stroke-width="4.6" ${MT_J}/><path d="M-8.8 -43.6Q-9.8 -33 -8.6 -24.8M8.8 -43.6Q9.8 -33 8.6 -24.8" stroke="#2FA36B" stroke-width="2.8" ${MT_J}/><path d="M-8.6 -34H8.6" stroke="${MT_K}" stroke-width="3.2"/><path d="M-8.6 -34H8.6" stroke="#5CD49A" stroke-width="1.6"/>`;
   if (g.scarf) s += `<path d="${SC}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.6" stroke-linejoin="round"/><path d="${SC}" fill="url(#${p}pt)"/>`;
-  s += mtMedal(p, o.r, [-6.6, -43.8], [6.6, -43.8], [0, -29.4], 7.8, false)
-    // yüz: yanak, burun, sırıtış, güneş gözlüğü ve gözlükte bir pırıltı
-    + `<ellipse cx="-11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/><ellipse cx="11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/>`
-    + `<path d="M-1 -55.4Q.4 -54 1.8 -55.2" stroke="#C97E54" stroke-width="1.2" ${MT_J}/>`
-    + `<path d="M-6.6 -51.4Q-.2 -48.8 6.8 -52Q5.8 -45.2 .2 -45.2Q-5.4 -45.4 -6.6 -51.4Z" fill="#fff" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/>`
-    + `<path d="M-15.6 -62L-17.8 -60.6M15.6 -62L17.8 -60.6M-3.2 -63.4Q0 -64.8 3.2 -63.4" stroke="#15131F" stroke-width="1.7" ${MT_J}/>`
-    + `<path d="M-15.6 -64.8H-3.4Q-2.6 -64.8 -2.8 -63.8L-3.6 -59.6Q-4.2 -57 -7 -57H-11.6Q-14.4 -57 -15 -59.6L-16 -63.6Q-16.2 -64.8 -15.6 -64.8ZM15.6 -64.8H3.4Q2.6 -64.8 2.8 -63.8L3.6 -59.6Q4.2 -57 7 -57H11.6Q14.4 -57 15 -59.6L16 -63.6Q16.2 -64.8 15.6 -64.8Z" fill="url(#${p}gl)" stroke="#15131F" stroke-width="1.6" stroke-linejoin="round"/>`
-    + `<path d="M-12.6 -63.4L-10.2 -58.6M-9.4 -63.6L-8.4 -61.8M5.8 -63.4L8.2 -58.6M9 -63.6L10 -61.8" stroke="#fff" stroke-width="1.2" opacity=".75" ${MT_J}/>`
-    + `<path class="mt-glint" d="M17.4 -68.4l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z" fill="#fff"/>`
-    // ponponlu bere (bilet varsa kıvrımın arkasına sıkışmış)
-    + `<path d="M-17.8 -65.6C-18.8 -79.6 -10 -87 0 -87C10 -87 18.8 -79.6 17.8 -65.6Z" fill="url(#${p}be)" stroke="${MT_K}" stroke-width="2.2" stroke-linejoin="round"/>`
-    + `<path d="M-10 -84.4C-12 -78 -12.6 -72 -12.4 -68M-4.8 -86.4C-5.8 -80 -6 -74 -6 -69M4.8 -86.4C5.8 -80 6 -74 6 -69M10 -84.4C12 -78 12.6 -72 12.4 -68" stroke="#A11D27" stroke-width="1" opacity=".55" ${MT_J}/>`
-    + `<path d="M-12.6 -76.4C-11.2 -81.2 -7.4 -84.4 -2.6 -85.2" stroke="#fff" stroke-width="1.8" opacity=".5" ${MT_J}/>`
-    + (g.ticket ? mtTicket(14, -69.6, 24) : '')
-    + `<path d="M-19.4 -72.6Q0 -77.4 19.4 -72.6L19.6 -65.2Q0 -70 -19.6 -65.2Z" fill="#C62532" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/>`
-    + `<path d="${ticks}" stroke="#8E1520" stroke-width="1" opacity=".55"/><path d="M-15 -72.4Q0 -76 15 -72.4" stroke="#fff" stroke-width="1.2" opacity=".35" ${MT_J}/>`
-    + `<circle cx="0" cy="-88.6" r="5.6" fill="#F4F6FB" stroke="${MT_K}" stroke-width="2"/><path d="M-3.4 -88.4A3.6 3.6 0 0 0 2.4 -85.6" stroke="#C9D0E2" stroke-width="1.8" ${MT_J}/><circle cx="-1.8" cy="-90.6" r="1.3" fill="#fff"/>`
-    // bayrak (kubbe amblemli) ve direk
-    + `<g class="mt-flag"><path d="M-22.4 -110C-30 -113.4 -38.4 -106.6 -46.4 -109.6S-58.4 -113 -63.4 -110V-86.4C-58.4 -89.4 -53.2 -83.2 -46.2 -86.2S-30 -89.2 -22.4 -86.2Z" fill="url(#${p}fl)" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/>`
-    + `<path d="M-31 -108.6C-34 -101 -34 -94 -31.2 -87.6" stroke="#000" stroke-width="3" opacity=".12" ${MT_J}/><path d="M-25.6 -107.8C-30 -110 -34.4 -108.6 -38.6 -107.4" stroke="#fff" stroke-width="1.5" opacity=".5" ${MT_J}/>`
-    + `<path d="M-51.6 -94.2A8.2 7.6 0 0 1 -35.2 -94.2Z" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/><rect x="-53.4" y="-94.6" width="20" height="3" rx="1" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.3"/><path d="M-43.4 -101.6V-104.8" stroke="${MT_K}" stroke-width="1.4"/><circle cx="-43.4" cy="-105.8" r="1.5" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.1"/><path d="M-48.4 -96.6A5 4.6 0 0 1 -44 -100.4" stroke="#fff" stroke-width="1.1" opacity=".7" ${MT_J}/></g>`
-    + `<path d="M-22.4 5V-111" stroke="${MT_K}" stroke-width="5.6" stroke-linecap="round"/><path d="M-22.4 5V-111" stroke="#B9773A" stroke-width="3" stroke-linecap="round"/><path d="M-23.2 2V-109" stroke="#E7B07A" stroke-width="1" opacity=".8"/>`
-    + `<circle cx="-22.4" cy="-112.6" r="2.8" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.6"/>`
-    + mtArm([-11.4, -38.6], [-19.6, -47.4], [-22.4, -61], o.c);
-  s += g.hand ? `<g transform="translate(26 -45)">${MT_ITEM[g.hand]}</g>` + mtArm([11.4, -38.6], [20.6, -31.4], [24.6, -41.6], o.c) : mtArm([11.4, -38.6], [20.4, -30.8], [12.8, -23.6], o.c);
+  if (o.r) s += mtMedal(p, o.r, [-6.6, -43.8], [6.6, -43.8], [0, -29.4], 7.8, false);
+  // yüz: yanaklar ve burun; zirvede güneş gözlüğü ve sırıtış, profilde gözler, kaşlar ve gülümseme
+  s += `<ellipse cx="-11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/><ellipse cx="11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/>`
+    + `<path d="M-1 -55.4Q.4 -54 1.8 -55.2" stroke="#C97E54" stroke-width="1.2" ${MT_J}/>`;
+  if (flag) {
+    s += `<path d="M-6.6 -51.4Q-.2 -48.8 6.8 -52Q5.8 -45.2 .2 -45.2Q-5.4 -45.4 -6.6 -51.4Z" fill="#fff" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/>`
+      + `<path d="M-15.6 -62L-17.8 -60.6M15.6 -62L17.8 -60.6M-3.2 -63.4Q0 -64.8 3.2 -63.4" stroke="#15131F" stroke-width="1.7" ${MT_J}/>`
+      + `<path d="M-15.6 -64.8H-3.4Q-2.6 -64.8 -2.8 -63.8L-3.6 -59.6Q-4.2 -57 -7 -57H-11.6Q-14.4 -57 -15 -59.6L-16 -63.6Q-16.2 -64.8 -15.6 -64.8ZM15.6 -64.8H3.4Q2.6 -64.8 2.8 -63.8L3.6 -59.6Q4.2 -57 7 -57H11.6Q14.4 -57 15 -59.6L16 -63.6Q16.2 -64.8 15.6 -64.8Z" fill="url(#${p}gl)" stroke="#15131F" stroke-width="1.6" stroke-linejoin="round"/>`
+      + `<path d="M-12.6 -63.4L-10.2 -58.6M-9.4 -63.6L-8.4 -61.8M5.8 -63.4L8.2 -58.6M9 -63.6L10 -61.8" stroke="#fff" stroke-width="1.2" opacity=".75" ${MT_J}/>`
+      + `<path class="mt-glint" d="M17.4 -68.4l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z" fill="#fff"/>`;
+  } else {
+    s += `<ellipse cx="-6.4" cy="-58.6" rx="2.4" ry="3" fill="${MT_K}"/><ellipse cx="6.4" cy="-58.6" rx="2.4" ry="3" fill="${MT_K}"/><circle cx="-5.6" cy="-59.8" r=".95" fill="#fff"/><circle cx="7.2" cy="-59.8" r=".95" fill="#fff"/>`
+      + (o.body === 'k' ? `<path d="M-9.4 -64.4Q-6.6 -66.4 -3.8 -65M3.8 -65Q6.6 -66.4 9.4 -64.4" stroke="${o.hair}" stroke-width="1.4" ${MT_J}/><path d="M-8.6 -60.6L-10.4 -61.8M8.6 -60.6L10.4 -61.8M-8.2 -61.8L-9.4 -63.4M8.2 -61.8L9.4 -63.4" stroke="${MT_K}" stroke-width="1.1" ${MT_J}/>`
+        : `<path d="M-9.8 -64.8L-3.6 -65.6M3.6 -65.6L9.8 -64.8" stroke="${o.hair}" stroke-width="${o.body === 'e' ? 2.1 : 1.7}" ${MT_J}/>`)
+      + `<path d="M-4.8 -51.8Q0 -51 4.8 -51.8Q4 -46.6 0 -46.6Q-4 -46.6 -4.8 -51.8Z" fill="#5B1A24" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><path d="M-2.4 -48.2Q0 -49.6 2.4 -48.2Q1.6 -46.8 0 -46.8Q-1.6 -46.8 -2.4 -48.2Z" fill="#E46A7B"/>`;
+  }
+  if (flag) {
+    s += `<g class="mt-flag"><path d="M-22.4 -110C-30 -113.4 -38.4 -106.6 -46.4 -109.6S-58.4 -113 -63.4 -110V-86.4C-58.4 -89.4 -53.2 -83.2 -46.2 -86.2S-30 -89.2 -22.4 -86.2Z" fill="url(#${p}fl)" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/>`
+      + `<path d="M-31 -108.6C-34 -101 -34 -94 -31.2 -87.6" stroke="#000" stroke-width="3" opacity=".12" ${MT_J}/><path d="M-25.6 -107.8C-30 -110 -34.4 -108.6 -38.6 -107.4" stroke="#fff" stroke-width="1.5" opacity=".5" ${MT_J}/>`
+      + `<path d="M-51.6 -94.2A8.2 7.6 0 0 1 -35.2 -94.2Z" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/><rect x="-53.4" y="-94.6" width="20" height="3" rx="1" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.3"/><path d="M-43.4 -101.6V-104.8" stroke="${MT_K}" stroke-width="1.4"/><circle cx="-43.4" cy="-105.8" r="1.5" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.1"/><path d="M-48.4 -96.6A5 4.6 0 0 1 -44 -100.4" stroke="#fff" stroke-width="1.1" opacity=".7" ${MT_J}/></g>`
+      + `<path d="M-22.4 5V-111" stroke="${MT_K}" stroke-width="5.6" stroke-linecap="round"/><path d="M-22.4 5V-111" stroke="#B9773A" stroke-width="3" stroke-linecap="round"/><path d="M-23.2 2V-109" stroke="#E7B07A" stroke-width="1" opacity=".8"/>`
+      + `<circle cx="-22.4" cy="-112.6" r="2.8" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.6"/>`
+      + mtArm([-sh, -38.6], [-(sh + 8.2), -47.4], [-22.4, -61], c, fit);
+  } else s += `<g class="mt-wave">${mtArm([-sh, -38.6], [-(sh + 8.8), -46.4], [-(sh + 11.4), -60.4], c, fit)}</g>`;
+  if (g.hand) s += `<g transform="translate(${mtN(sh + 14.6)} -45)">${MT_ITEM[g.hand]}</g>` + mtArm([sh, -38.6], [sh + 9.2, -31.4], [sh + 13.2, -41.6], c, fit);
+  else s += flag ? mtArm([sh, -38.6], [sh + 9, -30.8], [sh + 1.4, -23.6], c, fit) : mtArm([sh, -38.6], [sh + 3.4, -30.2], [sh + 3.8, -21.4], c, fit);
   if (g.dog) s += mtDogSit('translate(17.4 -33.6) scale(.27)');
-  if (o.me) s += mtMe(0, -101);
+  if (o.me) s += mtMe(0, -94);
   return s;
 }
+// tırmanırken (yandan) torso kalınlığı ve kaskın altından görünen saç: e kısa ense, k at kuyruğu, d küt
+const MT_TR = { e: 9.4, k: 8.6, d: 9 };
+const MT_HAIR_S = {
+  e: 'M-15.6 4.4C-15.8 8.2 -14 11 -11 12.4C-12 9.2 -11.2 6.6 -9.2 5Z',
+  k: 'M-14.4 2.2C-21.6 1 -27.4 6 -27.6 14.2C-26 11.2 -23 9.6 -19.6 9.6C-22 13.2 -21.6 18 -18.6 20.6C-19.2 15.4 -16.6 11 -12 8.6ZM-15.6 4.4C-15.4 7.4 -13.8 9.4 -11.6 10.2L-9.4 5.2Z',
+  d: 'M-15.6 4.4C-16.8 9.6 -15 14 -10.6 15.8C-9.4 12.6 -8.8 9 -9.4 5.4Z'
+};
 // 2. ve 3.: yandan, sırta tutunarak tırmanır (sağa bakar; 3. aynalanır). reach: uzak kol zirveye uzanır, yoksa iki eli de yamaçta, ter döker
 function mtClimb(p, o) {
-  const g = o.g, reach = !!(o.reach || g.hand);
+  const g = o.g || {}, reach = !!(o.reach || g.hand), fit = o.fit || 'tisort', body = MT_TR[o.body] ? o.body : 'd';
   const H = reach ? [21.4, -53] : [20.6, -51.4], tilt = reach ? -14 : -3;
   const BL = [[3, -21], [1.4, -11], [.4, -3.2]], FL = [[3, -21], [15.4, -27.2], [20.6, -19.4]];
-  const TA = [6.2, -27.4], TB = [12.6, -38.2], T = mtCapsule(TA, TB, 9.4), PA = mtCapsule([2.8, -20.6], [6.4, -27.2], 7.4);
+  const TA = [6.2, -27.4], TB = [12.6, -38.2], T = mtCapsule(TA, TB, MT_TR[body]), PA = mtCapsule([2.8, -20.6], [6.4, -27.2], 7.4);
   const near = [[13.6, -36], [24.6, -38], [32.6, -27.6]];
   const far = reach ? [[11.2, -37.8], [27, -43.4], [40, -57.8]] : [[11.2, -37.8], [25, -37.6], [36.8, -31]];
   const SC = 'M7.6 -43.4Q13.6 -38.8 19.4 -39.8L19.8 -35.4Q13.2 -33.8 7.2 -38.8Z', TL = 'M8.6 -41.8C2 -44 -4.6 -40.2 -11.6 -42.8L-13.2 -38.6L-10.8 -37.8L-12.4 -34.8C-4.4 -33.8 2 -36.8 8.2 -37.4Z';
@@ -3200,27 +3272,31 @@ function mtClimb(p, o) {
   if (g.dog) s += mtDog('translate(-24 20) rotate(-34) scale(.27) translate(-60 -57)', 'walk');
   if (g.aura) s += mtAura(p, H[0], H[1], 21);
   if (g.wings) s += mtWing(p, 8.4, -39, 14, .5, .5) + mtWing(p, 5.4, -37, -10, .56, .56);
-  s += `<g${reach ? ' class="mt-reach"' : ''}>${reach && g.hand ? `<g transform="translate(${mtN(far[2][0] + 2)} ${mtN(far[2][1] - 4)})">${MT_ITEM[g.hand]}</g>` : ''}${mtArm(far[0], far[1], far[2], mtMix(o.c, '#000000', .14))}</g>`;
+  s += `<g${reach ? ' class="mt-reach"' : ''}>${reach && g.hand ? `<g transform="translate(${mtN(far[2][0] + 2)} ${mtN(far[2][1] - 4)})">${MT_ITEM[g.hand]}</g>` : ''}${mtArm(far[0], far[1], far[2], mtMix(o.c, '#000000', .14), fit)}</g>`;
   if (g.pack) s += `<g transform="translate(-1.4 -35.2) rotate(30)"><rect x="-7" y="-9.6" width="13.4" height="18.6" rx="4" fill="url(#${p}pk)" stroke="${MT_K}" stroke-width="2"/><path d="M-7 -4.4Q-.3 -.8 6.4 -4.4V-6.2Q6.4 -9.6 3 -9.6H-3.6Q-7 -9.6 -7 -6.2Z" fill="#1A7A50" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="M-3.2 5L-.3 .8L2.6 5Z" fill="#fff" opacity=".85"/><path d="M-5 -2V6" stroke="#fff" stroke-width="1.2" opacity=".4" stroke-linecap="round"/></g>`;
   s += `<path d="${mtPl(BL)}" stroke="${MT_K}" stroke-width="12.4" ${MT_J}/><path d="${mtPl(FL)}" stroke="${MT_K}" stroke-width="12.4" ${MT_J}/>`
     + `<path d="${T}" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>`
     + `<circle cx="${H[0]}" cy="${H[1]}" r="15.4" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
     + `<path d="${mtPl(BL)}" stroke="${MT_PANTS2}" stroke-width="8.8" ${MT_J}/>` + mtShoe(2.6, -1.8, -38)
-    + `<path d="${T}" fill="url(#${p}s${o.r})"/><path d="${PA}" fill="${MT_PANTS}"/>`
+    + `<path d="${T}" fill="url(#${p}${o.sid})"/><path d="${PA}" fill="${MT_PANTS}"/>`
     + `<path d="${mtPl(FL)}" stroke="${MT_PANTS}" stroke-width="8.8" ${MT_J}/><path d="${mtPl(FL.map(q => [q[0] - 1, q[1] - 1.8]))}" stroke="${MT_PANTS_HI}" stroke-width="2.2" opacity=".7" ${MT_J}/>` + mtShoe(22.6, -18.8, -38)
-    + `<path d="${mtPl([[TA[0] - 6.4, TA[1] - 2.4], [TB[0] - 7.4, TB[1] - 2.6]])}" stroke="#fff" stroke-width="1.8" opacity=".4" ${MT_J}/>`
-    + `<ellipse cx="${mtN(H[0] - 5)}" cy="${mtN(H[1] + 13.6)}" rx="7.4" ry="2.6" transform="rotate(-30 ${mtN(H[0] - 5)} ${mtN(H[1] + 13.6)})" fill="#000" opacity=".16"/>`
+    + `<path d="${mtPl([[TA[0] - 6.4, TA[1] - 2.4], [TB[0] - 7.4, TB[1] - 2.6]])}" stroke="#fff" stroke-width="1.8" opacity=".4" ${MT_J}/>`;
+  if (fit === 'mont') s += `<path d="${mtCross(mtAt(TA, TB, .1), mtAt(TA, TB, .6), MT_TR[body] * 2)}${mtCross(mtAt(TA, TB, .45), mtAt(TA, TB, 1.05), MT_TR[body] * 2)}" stroke="${MT_K}" stroke-width="1.3" opacity=".35"/>`
+    + `<path d="M8.4 -43C10.6 -45 16 -44.6 18.2 -41.6L17.4 -38.2C14.8 -40.4 10.6 -40.6 8 -39.4Z" fill="${mtMix(o.c, '#ffffff', .25)}" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  if (fit === 'kapusonlu') s += `<path d="M3.6 -38.4C.2 -42.8 1.6 -49.6 7 -50.8C9.6 -47.6 10.8 -43.6 11 -39.4Z" fill="${mtMix(o.c, '#000000', .2)}" stroke="${MT_K}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  s += `<ellipse cx="${mtN(H[0] - 5)}" cy="${mtN(H[1] + 13.6)}" rx="7.4" ry="2.6" transform="rotate(-30 ${mtN(H[0] - 5)} ${mtN(H[1] + 13.6)})" fill="#000" opacity=".16"/>`
     + `<circle cx="${H[0]}" cy="${H[1]}" r="15.4" fill="url(#${p}sk)"/>`;
   if (g.pack) s += `<path d="M9.4 -41Q6.4 -34.4 3.8 -27.6" stroke="${MT_K}" stroke-width="4.4" ${MT_J}/><path d="M9.4 -41Q6.4 -34.4 3.8 -27.6" stroke="#2FA36B" stroke-width="2.6" ${MT_J}/>`;
   if (g.scarf) s += `<path d="${TL}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="${TL}" fill="url(#${p}pt)"/><path d="${SC}" fill="#E9CFA0" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="${SC}" fill="url(#${p}pt)"/>`;
   s += mtMedal(p, o.r, [10.6, -41.6], [16.6, -40.6], [17, -27], 6.6, o.flip)
-    // yüz (başla birlikte yukarı bakar): kulak, ense saçı, kararlı kaşlar, kask ve kafa lambası
+    // yüz (başla birlikte yukarı bakar): kulak, kaskın altından saç, kararlı kaşlar, kask ve kafa lambası
     + `<g transform="translate(${H[0]} ${H[1]}) rotate(${tilt})">`
+    + `<path d="${MT_HAIR_S[body]}" fill="${o.hair}" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/>` + (body === 'k' ? '<circle cx="-14.6" cy="4.4" r="2" fill="#FF6B8B" stroke="#1B1330" stroke-width="1"/>' : '')
     + `<ellipse cx="-6.4" cy="2.6" rx="3" ry="3.8" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.4"/><path d="M-7 1Q-5.4 2.6 -6.6 4.4" stroke="#CF8A5C" stroke-width="1.1" ${MT_J}/>`
-    + `<path d="M-15.6 4.4C-15.8 8.2 -14 11 -11 12.4C-12 9.2 -11.2 6.6 -9.2 5Z" fill="#4A2E1D" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/>`
     + `<ellipse cx="1.4" cy="4.8" rx="3" ry="1.8" fill="#FF8FA8" opacity=".55"/>`
     + `<ellipse cx="3.4" cy="-.6" rx="2.2" ry="2.8" fill="${MT_K}"/><circle cx="4.1" cy="-1.6" r=".9" fill="#fff"/><ellipse cx="10.2" cy="-1" rx="1.5" ry="2.5" fill="${MT_K}"/><circle cx="10.6" cy="-1.9" r=".6" fill="#fff"/>`
-    + `<path d="M.4 -5.4L6 -4M8.6 -4.4L12.2 -5.4" stroke="#3A2416" stroke-width="1.7" ${MT_J}/>`
+    + (body === 'k' ? `<path d="M1.6 -2.8L.4 -4.2M2.8 -3.2L2.2 -4.8" stroke="${MT_K}" stroke-width="1" ${MT_J}/>` : '')
+    + `<path d="M.4 -5.4L6 -4M8.6 -4.4L12.2 -5.4" stroke="#3A2416" stroke-width="${body === 'k' ? 1.3 : 1.7}" ${MT_J}/>`
     + `<path d="M13.8 .2Q18.6 2.2 14.6 5.4" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/>`
     + (reach ? `<ellipse cx="9.2" cy="8.4" rx="2.2" ry="1.8" fill="#5B1A24" stroke="${MT_K}" stroke-width="1.1"/>` : `<path d="M5.6 7.2H12.4Q12.8 9.8 10.6 10.4H7.2Q5.2 9.8 5.6 7.2Z" fill="#fff" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 8.8H12.2" stroke="${MT_K}" stroke-width=".8"/>`)
     + `<path d="M-4.2 -3.4Q-3.6 6 3.2 12.6" stroke="#2E2A44" stroke-width="1.3" ${MT_J}/>`
@@ -3229,11 +3305,48 @@ function mtClimb(p, o) {
     + `<path d="M-12.6 -5.8C-8.6 -13.4 .4 -16.6 9.6 -14.4" stroke="#C76A00" stroke-width="1.2" opacity=".7" ${MT_J}/><path d="M-9.4 -11.6C-6 -15.2 -.6 -16.4 4.4 -15.6" stroke="#fff" stroke-width="1.8" opacity=".6" ${MT_J}/>`
     + `<path class="mt-beam" d="M14 -13.6L50 -28L52 -2L14 -9.4Z" fill="url(#${p}bm)"/>`
     + `<rect x="8.4" y="-14.4" width="6.4" height="5.6" rx="1.8" fill="#2E2A44" stroke="${MT_K}" stroke-width="1.1"/><circle cx="13.2" cy="-11.6" r="2" fill="#FFF6C8"/></g>`
-    + mtArm(near[0], near[1], near[2], o.c);
+    + mtArm(near[0], near[1], near[2], o.c, fit);
   if (!reach) s += drop(H[0] - 18, H[1] - 6, 0) + drop(H[0] - 20.4, H[1] + 4, 1);
   if (o.me) s += mtMe(H[0], H[1] - 27);
   return s;
 }
+// karakter çizimlerinin ortak boyaları (her SVG'de ayrı önekle): madalyalar, gömlekler (o.sid), ten, kask, kanat, bayrak, çanta, ışık, aura, atkı deseni
+function mtDefs(p, figs) {
+  const grad = (id, st, more = 'x1="0" y1="0" x2="0" y2="1"') => `<linearGradient id="${p}${id}" ${more}>${st.map((c, i) => `<stop offset="${mtN(i / (st.length - 1))}" stop-color="${c}"/>`).join('')}</linearGradient>`;
+  return [1, 2, 3].map(r => { const m = MT_MED[r]; return `<radialGradient id="${p}m${r}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="${m[0]}"/><stop offset=".5" stop-color="${m[1]}"/><stop offset="1" stop-color="${m[2]}"/></radialGradient>`; }).join('')
+    + figs.map(o => grad(o.sid, [mtMix(o.c, '#ffffff', .5), o.c, mtMix(o.c, '#000000', .3)], 'x1="0" y1="0" x2="1" y2=".35"')).join('')
+    + grad('wg', ['#FFF1B8', '#FFC43D', '#D9820B']) + grad('fl', ['#FF7C7E', '#E5383B', '#A61E2A'])
+    + grad('gl', ['#4A62C9', '#0B1030'], 'x1="0" y1="0" x2=".4" y2="1"') + grad('pk', ['#6FD39C', '#2FA36B', '#1A7A50'], 'x1="0" y1="0" x2="1" y2="0"')
+    + `<linearGradient id="${p}bm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".55"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></linearGradient>`
+    + `<radialGradient id="${p}sk" cx="38%" cy="32%" r="72%"><stop offset="0" stop-color="#FFE8D2"/><stop offset=".55" stop-color="${MT_SKIN}"/><stop offset="1" stop-color="#DA9364"/></radialGradient>`
+    + `<radialGradient id="${p}he" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="#FFDA8C"/><stop offset=".55" stop-color="#FF9F1C"/><stop offset="1" stop-color="#C76A00"/></radialGradient>`
+    + `<radialGradient id="${p}au"><stop offset="0" stop-color="#FFE27A" stop-opacity=".75"/><stop offset=".55" stop-color="#FFB020" stop-opacity=".25"/><stop offset="1" stop-color="#FFB020" stop-opacity="0"/></radialGradient>`
+    + `<pattern id="${p}pt" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M3 .6l.9 1.5 1.5.9-1.5.9-.9 1.5-.9-1.5-1.5-.9 1.5-.9z" fill="#9C6A32" opacity=".7"/></pattern>`;
+}
+/* Tek karakter (profilde, kullanıcı kartında, cinsiyet seçiminde): önden, el sallar. bare: ürünsüz; still: kıpırdamaz */
+function figSvg(uid, u, opt = {}) {
+  const p = 'fg' + (++artSeq) + '-';
+  const o = { r: 0, sid: 's0', c: avColor(u), g: opt.bare ? {} : mtGear(u), body: govdeOf(u), fit: fitOf(u), hair: mtHairOf(uid), pose: 'wave' };
+  const vb = opt.bare ? '-30 -92 60 96' : '-52 -110 108 116';
+  return `<svg class="fig${opt.cls ? ' ' + opt.cls : ''}" viewBox="${vb}" aria-hidden="true"><defs>${mtDefs(p, [o])}</defs><g${opt.still ? '' : ' class="mt-hero"'}>${mtFront(p, o)}</g></svg>`;
+}
+// kıyafet seçicinin simgeleri: [gövde, ayrıntı çizgileri]; profil renginde
+const FIT_IC = {
+  tisort: ['M11.6 5.4L4.4 9.2l2.8 6.2 3-1.4V27h11.6V14l3 1.4 2.8-6.2-7.2-3.8C19.8 7.8 18 9 16 9s-3.8-1.2-4.4-3.6z', 'M13.4 6.4Q16 8.6 18.6 6.4'],
+  kapusonlu: ['M11.4 6.2C11.6 3.8 13.6 2.4 16 2.4s4.4 1.4 4.6 3.8l6.6 3.8-1.4 14.4h-3.4L21.8 14v13H10.2V14L9.6 24h-3.4L4.8 10z', 'M12.6 6.6c.6 2.6 1.8 4 3.4 4s2.8-1.4 3.4-4M11.6 19.6h8.8l.8 4.4H10.8zM14.6 10.6v4M17.4 10.6v4'],
+  mont: ['M10.4 5.2h11.2l6 4.2-1.4 14.6h-3.4L22 13.8V27H10V13.8L9.2 24H5.8L4.4 9.4z', 'M10 12.6h12M10 17.8h12M10 22.8h12M16 5.2V27']
+};
+const fitIcon = (k, color) => `<svg class="fit-ic" viewBox="0 0 32 32" aria-hidden="true"><path d="${FIT_IC[k][0]}" fill="${esc(color)}" stroke="#1B1330" stroke-width="1.9" stroke-linejoin="round"/><path d="${FIT_IC[k][1]}" fill="none" stroke="#1B1330" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>`;
+// cinsiyet seçimi (kayıtta ve profili düzenlerken): her seçenekte o vücutla küçük karakter
+function govdePickHtml(st, idp) {
+  return `<div class="field"><span class="label" id="${idp}-gv">Cinsiyet</span><div class="gv-pick" role="radiogroup" aria-labelledby="${idp}-gv">`
+    + GOVDE.map(g => `<button type="button" class="gv-opt" role="radio" data-gv="${g.k}" aria-checked="${st.govde === g.k}">${figSvg('gv', { color: st.color, govde: g.k }, { bare: true, still: true, cls: 'gv-fig' })}<span>${g.ad}</span></button>`).join('')
+    + '</div><p class="help">Sıralamada ve profilinde senin yerine duran küçük karakter buna göre çizilir.</p></div>';
+}
+function wireGovdePick(root, st) {
+  $$('[data-gv]', root).forEach(b => b.addEventListener('click', () => { st.govde = b.dataset.gv; $$('[data-gv]', root).forEach(x => x.setAttribute('aria-checked', String(x === b))); }));
+}
+const govdePatch = st => (GOVDE.some(g => g.k === st.govde) ? { govde: st.govde } : {});
 function mtMedalIcon(r) {
   const p = 'mi' + (++artSeq) + '-', m = MT_MED[r];
   return `<svg class="mt-medal" viewBox="0 0 40 52" aria-hidden="true"><defs><radialGradient id="${p}d" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="${m[0]}"/><stop offset=".5" stop-color="${m[1]}"/><stop offset="1" stop-color="${m[2]}"/></radialGradient><clipPath id="${p}c"><circle cx="20" cy="34" r="13"/></clipPath></defs>`
@@ -3254,23 +3367,14 @@ function mtTag(x, r) {
 function summitHtml(top) {
   if (!top.length) return '';
   const p = 'mt' + (++artSeq) + '-', [A, B, C] = top;
-  const spec = (x, more) => Object.assign({ r: x.rank, c: avColor(x.u), g: mtGear(x.u), me: x.uid === S.me }, more);
+  const spec = (x, more) => Object.assign({ r: x.rank, sid: 's' + x.rank, c: avColor(x.u), g: mtGear(x.u), me: x.uid === S.me, body: govdeOf(x.u), fit: fitOf(x.u), hair: mtHairOf(x.uid) }, more);
   const who = (x, tf, cls, inner) => `<g class="mt-who" data-g="user" data-id="${esc(x.uid)}"><g transform="${tf}"><g class="${cls}">${inner}</g></g></g>`;
-  const grad = (id, st, more = 'x1="0" y1="0" x2="0" y2="1"') => `<linearGradient id="${p}${id}" ${more}>${st.map((c, i) => `<stop offset="${mtN(i / (st.length - 1))}" stop-color="${c}"/>`).join('')}</linearGradient>`;
-  const defs = '<defs>'
-    + [1, 2, 3].map(r => { const m = MT_MED[r]; return `<radialGradient id="${p}m${r}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="${m[0]}"/><stop offset=".5" stop-color="${m[1]}"/><stop offset="1" stop-color="${m[2]}"/></radialGradient>`; }).join('')
-    + top.map(x => { const c = avColor(x.u); return grad('s' + x.rank, [mtMix(c, '#ffffff', .5), c, mtMix(c, '#000000', .3)], 'x1="0" y1="0" x2="1" y2=".35"'); }).join('')
-    + grad('mL', ['#8BE8BA', '#3FB67E', '#1D8452']) + grad('mR', ['#46AE7B', '#1A7A50', '#0F5638']) + grad('sn', ['#FFFFFF', '#DFE8F7']) + grad('sR', ['#CBD7F1', '#A7B7DF'])
-    + grad('bk', ['#3B54B2', '#1C2860']) + grad('be', ['#FF7C7E', '#E5383B', '#B01F2B']) + grad('wg', ['#FFF1B8', '#FFC43D', '#D9820B']) + grad('fl', ['#FF7C7E', '#E5383B', '#A61E2A'])
-    + grad('gl', ['#4A62C9', '#0B1030'], 'x1="0" y1="0" x2=".4" y2="1"') + grad('pk', ['#6FD39C', '#2FA36B', '#1A7A50'], 'x1="0" y1="0" x2="1" y2="0"')
-    + `<linearGradient id="${p}bm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".55"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></linearGradient>`
+  const grad = (id, st) => `<linearGradient id="${p}${id}" x1="0" y1="0" x2="0" y2="1">${st.map((c, i) => `<stop offset="${mtN(i / (st.length - 1))}" stop-color="${c}"/>`).join('')}</linearGradient>`;
+  const defs = '<defs>' + mtDefs(p, top.map(x => spec(x)))
+    + grad('mL', ['#8BE8BA', '#3FB67E', '#1D8452']) + grad('mR', ['#46AE7B', '#1A7A50', '#0F5638']) + grad('sn', ['#FFFFFF', '#DFE8F7']) + grad('sR', ['#CBD7F1', '#A7B7DF']) + grad('bk', ['#3B54B2', '#1C2860'])
     + `<linearGradient id="${p}fd" gradientUnits="userSpaceOnUse" x1="0" y1="198" x2="0" y2="240"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>`
     + `<mask id="${p}fade" maskUnits="userSpaceOnUse" x="-20" y="-10" width="400" height="280"><rect x="-20" y="-10" width="400" height="280" fill="url(#${p}fd)"/></mask>`
-    + `<radialGradient id="${p}gw"><stop offset="0" stop-color="#FFD23F" stop-opacity=".42"/><stop offset=".5" stop-color="#FFB020" stop-opacity=".13"/><stop offset="1" stop-color="#FFB020" stop-opacity="0"/></radialGradient>`
-    + `<radialGradient id="${p}sk" cx="38%" cy="32%" r="72%"><stop offset="0" stop-color="#FFE8D2"/><stop offset=".55" stop-color="${MT_SKIN}"/><stop offset="1" stop-color="#DA9364"/></radialGradient>`
-    + `<radialGradient id="${p}he" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="#FFDA8C"/><stop offset=".55" stop-color="#FF9F1C"/><stop offset="1" stop-color="#C76A00"/></radialGradient>`
-    + `<radialGradient id="${p}au"><stop offset="0" stop-color="#FFE27A" stop-opacity=".75"/><stop offset=".55" stop-color="#FFB020" stop-opacity=".25"/><stop offset="1" stop-color="#FFB020" stop-opacity="0"/></radialGradient>`
-    + `<pattern id="${p}pt" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M3 .6l.9 1.5 1.5.9-1.5.9-.9 1.5-.9-1.5-1.5-.9 1.5-.9z" fill="#9C6A32" opacity=".7"/></pattern></defs>`;
+    + `<radialGradient id="${p}gw"><stop offset="0" stop-color="#FFD23F" stop-opacity=".42"/><stop offset=".5" stop-color="#FFB020" stop-opacity=".13"/><stop offset="1" stop-color="#FFB020" stop-opacity="0"/></radialGradient></defs>`;
   // gökyüzü: zirvenin arkasında altın ışık ve parıldayan yıldızlar
   const ST = [[22, 24, 2.4, 0], [58, 60, 1.6, 1], [96, 14, 2, 2], [140, 58, 1.3, 0], [250, 16, 2.2, 1], [282, 56, 1.6, 2], [328, 24, 2.6, 0], [348, 86, 1.6, 1], [14, 108, 1.8, 2], [306, 110, 1.4, 0], [236, 76, 1.2, 2], [116, 94, 1.2, 1]];
   const sky = `<circle cx="184" cy="74" r="100" fill="url(#${p}gw)"/><g fill="#FFF6D6">`
@@ -3299,7 +3403,7 @@ function summitHtml(top) {
     + '</g>';
   const figs = (C ? who(C, 'translate(318 193) scale(-.97 .97)', 'mt-climb d2', mtClimb(p, spec(C, { flip: true }))) : '')
     + (B ? who(B, 'translate(92 181) scale(1.02)', 'mt-climb', mtClimb(p, spec(B, { reach: true }))) : '')
-    + (A ? who(A, 'translate(184 117.6)', 'mt-hero', mtTop(p, spec(A))) : '');
+    + (A ? who(A, 'translate(184 117.6)', 'mt-hero', mtFront(p, spec(A, { pose: 'flag' }))) : '');
   return `<div class="mt"><svg class="mt-art" viewBox="0 0 360 240" aria-hidden="true">${defs}${sky}${land}${figs}</svg>`
     + `<div class="mt-tags">${mtTag(B, 2)}${mtTag(A, 1)}${mtTag(C, 3)}</div></div>`;
 }
@@ -4078,12 +4182,13 @@ ROUTES[''] = function viewHome(root) {
         : emptyHtml(ns === 'new' || !shown.length ? 'Henüz not paylaşılmadı' : 'Revaçta not yok', 'Notunu Google Drive’dan seç, ilk notu sen paylaş.', '<a class="btn btn-primary" href="#/paylas">Not paylaş</a>');
       lazyPhotos(R('notes'));
       const cms = commentsWhere(c => !isHidden(c)).sort((a, b) => b.at - a.at).slice(0, 3);
-      R('cms').innerHTML = cms.length ? `<ul class="list">${cms.map(c => {
-        const where = c.tt === 'course' ? { href: '#/ders/' + c.tid + '?tab=yorumlar', label: codeOf(c.tid) }
-          : c.tt === 'hoca' ? { href: '#/hoca/' + c.tid, label: hocaName(c.tid) || 'Hoca' }
-          : { href: '#/not/' + c.tid, label: ((S.notes.get(c.tid) || {}).title || 'Not') };
+      R('cms').innerHTML = cms.length ? `<ul class="list cm-list">${cms.map(c => {
+        const where = c.tt === 'course' ? { href: '#/ders/' + c.tid + '?tab=yorumlar', label: codeOf(c.tid), k: 'ders' }
+          : c.tt === 'hoca' ? { href: '#/hoca/' + c.tid, label: hocaFull(S.hocas.get(c.tid)) || 'Hoca', k: 'hoca' }
+          : { href: '#/not/' + c.tid, label: ((S.notes.get(c.tid) || {}).title || 'Not'), k: 'not' };
         const avg = c.r && CRIT.every(k => typeof c.r[k.k] === 'number') ? CRIT.reduce((s, k) => s + c.r[k.k], 0) / CRIT.length : null;
-        return `<li><a class="row-link" href="${esc(where.href)}">${avatarHtml(c.by, { anon: !!c.anon })}<span class="row-main"><span class="row-title">${esc(displayName(c.by, c.anon, c.nick))}<span class="row-where"> ${esc(where.label)}</span></span><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end">${avg != null ? `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>` : `<span>${esc(ago(c.at))}</span>`}</span></a></li>`;
+        const to = where.k === 'ders' ? `<span class="code">${esc(where.label)}</span>` : `<span class="cm-to cm-${where.k}">${gl(where.k === 'hoca' ? 'gradcap' : 'note', 'cm-g')}<span>${esc(where.label)}</span></span>`;
+        return `<li><a class="row-link" href="${esc(where.href)}">${avatarHtml(c.by, { anon: !!c.anon })}<span class="row-main"><span class="row-title cm-line"><span class="cm-by">${whoHtml(c.by, c.anon, c.nick)}</span><svg class="cm-arrow" viewBox="0 0 24 12" role="img" aria-label="yorumladı"><path d="M1.5 6H20M15.5 1.8 20.6 6l-5.1 4.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>${to}</span><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end">${avg != null ? `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>` : `<span>${esc(ago(c.at))}</span>`}</span></a></li>`;
       }).join('')}</ul>` : emptyHtml('Henüz yorum yok', 'Bir dersi ya da hocayı ilk yorumlayan sen ol.');
       applyWidths(R('cms'));
       renderLead();
@@ -4832,7 +4937,8 @@ Object.assign(G, {
   'profile-edit': () => openProfileEdit(),
   'vis-toggle': (id, el) => toggleVis(el.dataset.k),
   buy: (id) => buyItem(id),
-  'av-urun': id => setAvatarItem(id)
+  'av-urun': id => setAvatarItem(id),
+  fit: id => setFit(id)
 });
 ROUTES['kubbe'] = function viewKubbe(root) {
   const st = { more: { term: false, all: false }, bolum: '', sig: { term: '', all: '' }, headSig: '', shopSig: '' };
@@ -4933,6 +5039,8 @@ ROUTES['profil'] = function viewProfile(root) {
       el.innerHTML = `<section class="pf-cover" style="--pf-c:${color}" aria-label="Profilin">
           <div class="pf-in">
             <div class="pf-sticker">${avatarHtml(S.me, { cls: 'hero' })}</div>
+            <div class="pf-me">${figSvg(S.me, u, { cls: 'pf-fig' })}
+              <div class="pf-fits" role="radiogroup" aria-label="Karakterinin kıyafeti">${KIYAFET.map(f => `<button type="button" class="pf-fit" role="radio" aria-checked="${fitOf(u) === f.k}" data-g="fit" data-id="${f.k}" title="${f.ad}">${fitIcon(f.k, color)}<span>${f.ad}</span></button>`).join('')}</div></div>
             <div class="pf-id">
               <h1 class="pf-user"><span class="pf-at" aria-hidden="true">@</span>${nameHtml(u, u.username || '')}${badgesHtml(u)}</h1>
               ${myName ? `<p class="pf-real">${esc(myName)}${visIc(!!u.showName, 'Adın')}</p>` : ''}

@@ -50,6 +50,10 @@ step('B hesap açar (adını gösterir)', B,
      'ok', f"{U(B,'first')} = 'Bora'")
 step('B başkasının kullanıcı adını alamaz', B, f"select public.doc_update('users', '$B', '{{\"username\":\"testa\"}}'::jsonb)", 'fail')
 step('Geçersiz kullanıcı adı reddedilir', B, f"select public.doc_update('users', '$B', '{{\"username\":\"B!\"}}'::jsonb)", 'fail')
+step('A karakterinin vücudunu ve kıyafetini seçer', A, f"select public.doc_update('users', '$A', {j({'govde':'k','kiyafet':'mont'})})",
+     'ok', f"{U(A,'govde')} = 'k' and {U(A,'kiyafet')} = 'mont'")
+step('Listede olmayan vücut ya da kıyafet reddedilir', A, f"select public.doc_update('users', '$A', {j({'govde':'x','kiyafet':'frak'})})",
+     'fail', f"{U(A,'govde')} = 'k' and {U(A,'kiyafet')} = 'mont'")
 
 # ---- notlar
 step('A adıyla not paylaşır; yazar, zaman ve oylar sunucudan', A,

@@ -10,9 +10,11 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - 0002 SQL Editor'den uygulandığı için göç geçmişinde görünmeyebilir.
   - 0003 (`not_oylari`, notlara ▲/▼ oy) 14 Ekim'de bağlayıcıyla uygulandı; canlıdaki işlevler yereldekiyle aynı (md5 denetlendi).
   - 0004 (`istek_nedeni`, istekte isteğe bağlı `why`, en çok 300) 16 Ekim'de bağlayıcıyla uygulandı; canlıda denendi.
+  - 0005 (`karakter_govde_kiyafet`, users'ta `govde` e/k/d ve `kiyafet` tisort/kapusonlu/mont; başka değer reddedilir) 17 Ekim'de bağlayıcıyla uygulandı (öncesinde canlı `users_norm` 0002 ile aynıydı, md5).
 - **Hesaplar:**
   - `yonetici@yediwiki.com`: yönetici, şifreyle girer.
   - `deneme123@std.yeditepe.edu.tr`: ortak deneme hesabı, şifreyle girer.
+  - Karakter vücutları (17 Ekim, kullanıcının isteğiyle elle): `deneme123` erkek; `azrock` (Azra) ve `dilara.bahtiyar` kadın. Seçmeyen eski hesaplar "diğer" çizilir.
   - Öğrenciler okul e-postasına gelen kodla girer.
 - **Yayın:** Cloudflare Workers, yalnızca statik dosya (`wrangler.jsonc`, `dist/`). GitHub `main`'den otomatik derlenir; dağıtım çalışıyor.
   - `yediwiki.uygaryigit.workers.dev` Türkiye'den açılmıyor (erişim sorunu); site yediwiki.com üzerinden kullanılacak.
@@ -62,8 +64,13 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - Anonim: profil resmi casus, profil resmi olmayan yerlerde adın yanında casus (`spyName`, `whoHtml`); Anonim seçeneklerinde de casus.
   - Pazar küçük rozetleri ve "Aldıkları" ürün çiziminden (`itemAvSrc`); parçacıklar (`burst`) çizim anahtarı alır; `toast(yazı, tür, simge)`.
 - **Kubbe sıralaması: Kayışdağı zirvesi (17 Ekim):** Ana sayfada ve Kubbe sayfasında podyumun yerine ilk üç dağda (`summitHtml`): Yokuş Canavarı'ndaki Kayışdağı (yeşil dağ, karlı zirve, yokuş, %18 tabelası), lacivert gökte yıldızlar; etek panele kaybolur.
-  - 1. zirvede önden (`mtTop`): bereli, güneş gözlüklü, kubbe amblemli bayrağın direğini tutar, eli belinde. 2. sol sırttan zirveye uzanır, 3. sağ sırttan tırmanır ve terler (`mtClimb`, kasklı, kafa lambalı; 3. aynalı). Gömlek profil rengi; çizim dili koyu kontur + gölgeli dolgu (2.5B).
-  - Ürün eşlemesi (`mtGear`, kullanıcı "sonra ayarlayacağız" dedi): kanat sırtta, Gece Eskortu yanında Ayhan Abi (1.'de önden oturur), Altın Ring beresinde / kaskında bilet, Güneş Aurası arkasında güneş, Selçuklu Kapısı desenli atkı, Yokuş Canavarı sırt çantası, sosisli / kupa / dürüm elinde (biri, fiyat sırasıyla).
+  - 1. zirvede önden (`mtFront`, pose `flag`): beresiz (saçı görünür), güneş gözlüklü, kubbe amblemli bayrağın direğini tutar, eli belinde. 2. sol sırttan zirveye uzanır, 3. sağ sırttan tırmanır ve terler (`mtClimb`, kasklı, kafa lambalı; 3. aynalı). Gömlek profil rengi; çizim dili koyu kontur + gölgeli dolgu (2.5B).
+  - Bayrakta Yeditepe logosu yok: kullanıcı istedi, üniversitenin tescilli logosu olduğu ve site resmî olmadığı için çizilmedi; sitenin kubbe amblemi kaldı.
+  - Ürün eşlemesi (`mtGear`, kullanıcı "sonra ayarlayacağız" dedi): kanat sırtta, Gece Eskortu yanında Ayhan Abi (1.'de önden oturur), Altın Ring kulağının arkasında / kaskında bilet, Güneş Aurası arkasında güneş, Selçuklu Kapısı desenli atkı, Yokuş Canavarı sırt çantası, sosisli / kupa / dürüm elinde (biri, fiyat sırasıyla).
+- **Karakter (17 Ekim):** Kayıtta cinsiyet zorunlu (Erkek / Kadın / Diğer, her seçenekte küçük karakter: `govdePickHtml`); profili düzenlerken de değişir. Vücut `MT_BODY` (k: dar omuz, ince bel, geniş kalça, uzun saç, kirpik; d: arası, küt saç; e: kısa saç), tırmanırken `MT_TR` / `MT_HAIR_S` (k at kuyruklu). Saç rengi kullanıcıya göre sabit (`mtHairOf`).
+  - Profil kapağında profil resminin sağında el sallayan karakter (`figSvg`, `.pf-me`), altında üç kıyafet: Tişört, Kapüşonlu, Mont (`KIYAFET`, `setFit`). Market ürünleri ileride buraya gelecek.
+  - Kullanıcı kartı (`openUserCard`): profil resmi, ad, sağda karakter; tüm zamanlar ve dönem sırası büyük rakamlı renkli kutularda (ilk üçte madalya), not / yorum / puan çipleri, rozetler çizimle. "Aldıkları" kaldırıldı (kullanıcı istemiyor).
+- **Ana sayfa (17 Ekim):** Asılı notlar sarı not defteri kağıdı (`--np`, mavi satırlar, solda çift kırmızı çizgi). Son yorumlarda yorumu yapan → yorumlanan (ders kodu, unvanıyla hoca ya da not; `hocaFull`). Not isteklerinde + turuncu, verilmişse kırmızı (`.rq-up`); "Ben de" de turuncu.
   - Altın, gümüş, bronz madalya karakterin boynunda ve altındaki künyede (`mtTag`, 2-1-3 sırasıyla; dar kutuda künyede profil resmi gizlenir).
 - **Kartal Kanatları (17 Ekim):** Kanat profil resminin ve çerçevesinin arkasından çıkar, her yanda çapın üçte biri kadar. `::before` kanat, `::after` resmin zemini ve çerçevesini (box-shadow) kanadın üstüne yeniden çizer; büyük resimde parlaklık `--avbg` ile.
 - **Düğmeler (16 Ekim):** Parlama yok (kullanıcı fazla buldu). `.btn` sade, altta koyu bir kenar (`--edge`): üzerine gelince hafif kalkar, basınca iner.
@@ -98,4 +105,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1511/1511, `npm run test:site` 117/117, `npm run test:db` 95/95.
+- **Beklenen sonuçlar:** `npm test` 1523/1523, `npm run test:site` 118/118, `npm run test:db` 97/97.

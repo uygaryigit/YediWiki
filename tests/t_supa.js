@@ -104,6 +104,7 @@ async function signup(t, be, local, prof) {
   eq(t.$('#au-user').value, local.replace(/[^a-z0-9._]+/g, '.'), 'kullanıcı adı e-postadan geldi: ' + local);
   t.$('#au-user').value = prof.username; t.$('#au-first').value = prof.first; t.$('#au-last').value = prof.last;
   if (prof.showName) t.$('.modal [data-vis=showName]').click();
+  t.$(`.modal [data-gv="${prof.govde || 'e'}"]`).click();
   await t.submit('.modal form', 200);
   await t.until(() => t.$('.modal [data-bpick]'), 'bölüm adımı ' + local);
   if (prof.bolum) { t.$(`.modal .bp-opt[data-bid="${prof.bolum}"]`).click(); await t.submit('.modal form', 300); }
@@ -145,7 +146,8 @@ async function signup(t, be, local, prof) {
     ok(A.ev('S.sec.length') === 64, 'kişisel gizli alındı');
     { const u = await doc(be, 'users', aid), p = await doc(be, 'private', aid);
       ok(u && u.username === 'aliveli' && u.first === '' && u.last === '' && u.bonus === 50 && u.kb && u.kb.all === 50, 'açık profil (ad gizli): ' + JSON.stringify(u && { f: u.first, kb: u.kb }));
-      ok(p && p.first === 'Ali' && p.last === 'Veli' && p.kb && p.kb.all === 50, 'ad ve tam kubbe özel kayıtta'); }
+      ok(p && p.first === 'Ali' && p.last === 'Veli' && p.kb && p.kb.all === 50, 'ad ve tam kubbe özel kayıtta');
+      eq(u && u.govde, 'e', 'karakter vücudu sunucuda'); }
     await A.until(() => A.text('[data-r=acc] .acc-name') === 'aliveli', 'üst çubukta kullanıcı adı');
     await A.until(() => A.text('[data-r=kubbechip] b') === '50', 'kubbe 50');
     await A.go('#/profil');
