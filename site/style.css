@@ -665,6 +665,9 @@ button.rank-row:hover{background:var(--surface-2)}
 .mt-steam{animation:mtSteam 2s ease-in-out infinite}
 .mt-tw{animation:mtTw 2.8s ease-in-out infinite}.mt-tw.d1{animation-delay:.9s}.mt-tw.d2{animation-delay:1.8s}
 .mt-sh{animation:mtSh 3.6s ease-in-out infinite}
+.mt-glint.g2{animation-delay:2.6s}
+.mt-gloss{animation:mtGloss 4.2s ease-in-out infinite}
+@keyframes mtGloss{0%,55%{transform:translateX(0);opacity:0}62%{opacity:.6}85%,100%{transform:translateX(56px);opacity:0}}
 @keyframes mtBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.012,1.022)}}
 @keyframes mtClimb{0%,100%{transform:translate(0,0)}50%{transform:translate(1.4px,-1.2px)}}
 @keyframes mtReach{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg)}}
@@ -748,6 +751,15 @@ button.rank-row:hover{background:var(--surface-2)}
 .shop-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 .shop-head h2{font-size:clamp(1.7rem,3.6vw,2.3rem);font-stretch:76%;font-weight:800}
 .shop-bal{font-weight:700;color:var(--ink-2)}
+/* market türleri: Tümü, Üst, Alt, Elbise, Elde, Takı, Yoldaş, Saç */
+.mk-turs{display:flex;gap:6px;margin:16px 0 0;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
+.mk-turs::-webkit-scrollbar{display:none}
+.mk-tur{appearance:none;flex:none;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-2);font:800 .86rem/1 var(--f-body);cursor:pointer;transition:background .15s,border-color .15s}
+.mk-tur span{font:800 .72rem/1 var(--f-display);color:var(--ink-3)}
+.mk-tur:hover{border-color:var(--ink-3)}
+.mk-tur[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.mk-tur[aria-selected="true"] span{color:var(--marker)}
+.loot-new{position:absolute;top:4%;right:0;z-index:5;background:#FF4D5E;color:#fff;font-weight:800;font-size:.72rem;padding:4px 10px;border-radius:999px;transform:rotate(8deg);box-shadow:0 6px 12px -6px rgba(0,0,0,.45)}
 .shop-bal .k-dot{color:#E0A800}
 .shop{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:36px 22px;margin-top:24px}
 @media (max-width:1040px){.shop{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -1710,20 +1722,55 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 @keyframes reqFlash{0%,35%{box-shadow:0 0 0 3px var(--marker);background:color-mix(in srgb,var(--marker) 22%,var(--surface))}}
 @media (prefers-reduced-motion:reduce){.req-card-ico .gl,.rq-n.bump,.req.flash,.rq-spark i,.rq-up.go .up-arr,.req-card::after{animation:none}}
 
-/* Karakter: profilde profil resminin sağında el sallar, altında kıyafet seçici; kullanıcı kartında ve cinsiyet seçiminde de */
+/* Karakter: profilde profil resminin sağında el sallar, altında Düzenle (karakter düzenleyici); kullanıcı kartında ve cinsiyet seçiminde de */
 .fig{display:block;overflow:visible}
 .mt-wave{transform-box:fill-box;transform-origin:100% 100%;animation:mtWave 1.6s ease-in-out infinite}
 @keyframes mtWave{0%,100%{transform:rotate(0)}50%{transform:rotate(14deg)}}
 .pf-me{display:grid;justify-items:center;gap:6px}
 .pf-fig{width:138px;height:auto;filter:drop-shadow(0 10px 8px rgba(17,28,78,.18))}
 .pf-sticker:has(.fx-wings){margin-left:18px}
-.pf-fits{display:flex;gap:4px;padding:4px;border-radius:14px;background:color-mix(in srgb,var(--surface) 82%,transparent);border:1.5px solid var(--ink);box-shadow:3px 3px 0 color-mix(in srgb,var(--pf-c) 60%,var(--ink) 30%)}
-.pf-fit{appearance:none;display:grid;justify-items:center;gap:1px;width:60px;padding:4px 2px 3px;border:0;border-radius:10px;background:transparent;color:var(--ink-2);font:700 .64rem/1.1 var(--f-body);cursor:pointer;transition:background .15s,transform .15s}
-.pf-fit:hover{background:var(--surface-2);transform:translateY(-1px)}
-.pf-fit[aria-checked="true"]{background:var(--ink);color:#fff}
+.pf-fig-btn{appearance:none;border:0;background:none;padding:0;cursor:pointer;border-radius:16px}
+.pf-fig-btn:hover .pf-fig{transform:translateY(-2px)}
+.pf-fig{transition:transform .2s}
+.pf-char-edit{appearance:none;display:inline-flex;align-items:center;gap:6px;padding:7px 14px 7px 11px;border-radius:999px;border:1.5px solid var(--ink);background:color-mix(in srgb,var(--surface) 88%,transparent);color:var(--ink);font:800 .82rem/1 var(--f-body);cursor:pointer;box-shadow:3px 3px 0 color-mix(in srgb,var(--pf-c) 60%,var(--ink) 30%);transition:transform .15s,box-shadow .15s}
+.pf-char-edit:hover{transform:translateY(-1px);box-shadow:4px 4px 0 color-mix(in srgb,var(--pf-c) 60%,var(--ink) 30%)}
+.pf-char-edit:active{transform:translateY(1px);box-shadow:1px 1px 0 color-mix(in srgb,var(--pf-c) 60%,var(--ink) 30%)}
+.pf-char-edit svg{width:15px;height:15px}
 .fit-ic{width:24px;height:24px}
-.pf-fit[aria-checked="true"] .fit-ic path{stroke:#fff}
-@media (prefers-reduced-motion:reduce){.pf-fit{transition:none}}
+/* karakter düzenleyici: solda (telefonda üstte) önizleme, yanda sekmeler: Saç, Kıyafet, Eşyalar */
+.modal.ce-modal{width:min(760px,100%)}
+.ce{display:grid;grid-template-columns:210px minmax(0,1fr);gap:18px;align-items:start}
+.ce-stage{position:sticky;top:0;display:grid;place-items:center;min-height:250px;border-radius:20px;border:1.5px solid var(--ink);background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--pf-c) 50%,var(--surface)) 0%,var(--surface) 72%);box-shadow:4px 4px 0 color-mix(in srgb,var(--pf-c) 60%,var(--ink) 30%)}
+.ce-fig{width:184px;height:auto;filter:drop-shadow(0 10px 8px rgba(17,28,78,.18))}
+.ce-tabs{display:flex;gap:6px;margin-bottom:4px}
+.ce-tab{appearance:none;flex:1 1 0;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-2);font:800 .88rem/1 var(--f-body);padding:10px 8px;border-radius:999px;cursor:pointer;transition:background .15s,color .15s}
+.ce-tab:hover{border-color:var(--ink-3)}
+.ce-tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.ce-h{font:800 .78rem/1 var(--f-body);color:var(--ink-3);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 7px}
+.ce-row{display:flex;flex-wrap:wrap;gap:6px}
+.ce-opt{appearance:none;position:relative;display:grid;justify-items:center;align-content:start;gap:3px;width:72px;padding:6px 3px 6px;border-radius:13px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:700 .66rem/1.15 var(--f-body);text-align:center;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}
+.ce-opt:hover{transform:translateY(-1px);border-color:var(--ink-3)}
+.ce-opt[aria-pressed="true"]{border-color:var(--pen);background:var(--pen-soft);box-shadow:inset 0 0 0 1px var(--pen)}
+.ce-opt.lock{border-style:dashed;color:var(--ink-3)}
+.ce-opt.lock > svg{opacity:.5;filter:grayscale(.6)}
+.ce-opt.lock .ce-sw{opacity:.8}
+.ce-opt.lock:hover > svg,.ce-opt.lock:hover .ce-sw{opacity:.9;filter:none}
+.ce-art,.ce-opt .fit-ic{width:44px;height:44px}
+.ce-head{width:52px;height:52px;margin:-4px 0}
+.ce-sw{width:36px;height:36px;margin:4px;border-radius:50%;border:1.5px solid var(--ink);background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--sw) 45%,#fff) 0%,var(--sw) 52%,color-mix(in srgb,var(--sw) 70%,#000) 100%)}
+.ce-sw.ys{box-shadow:0 0 12px color-mix(in srgb,var(--sw) 70%,transparent)}
+.ce-none{width:32px;height:32px;margin:6px;border-radius:50%;border:2px dashed var(--ink-3)}
+.ce-lk{display:inline-flex;align-items:center;gap:2px;font:800 .66rem/1 var(--f-display);color:var(--ink-2)}
+.ce-lk .k-coin{width:11px;height:11px}
+.ce-pane .help{margin-top:10px}
+.ce-modal .modal-foot{position:sticky;bottom:-22px;z-index:3;margin:14px -22px -22px;padding:12px 22px 16px;background:var(--surface);border-top:1.5px solid var(--line)}
+@media (max-width:640px){
+  .ce{grid-template-columns:1fr;gap:12px}
+  .ce-stage{position:relative;min-height:0;padding:6px 0}
+  .ce-fig{width:122px}
+  .ce-opt{width:66px}
+}
+@media (prefers-reduced-motion:reduce){.ce-opt,.ce-tab,.pf-char-edit,.pf-fig{transition:none}}
 .gv-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .gv-opt{appearance:none;display:grid;justify-items:center;gap:4px;padding:8px 6px 9px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:700 .9rem/1.1 var(--f-body);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
 .gv-opt:hover{transform:translateY(-1px);border-color:var(--ink-3)}

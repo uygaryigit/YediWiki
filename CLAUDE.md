@@ -2,7 +2,7 @@
 
 Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma kurallarını tutar.
 
-## Durum (17 Ekim 2026)
+## Durum (18 Ekim 2026)
 
 - **Kod:** bu depo, `main` dalı.
 - **Supabase (canlı):** proje `efyrrbqdiilpqnqzsphk`.
@@ -12,6 +12,7 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - 0004 (`istek_nedeni`, istekte isteğe bağlı `why`, en çok 300) 16 Ekim'de bağlayıcıyla uygulandı; canlıda denendi.
   - 0005 (`karakter_govde_kiyafet`, users'ta `govde` e/k/d ve `kiyafet` tisort/kapusonlu/mont; başka değer reddedilir) 17 Ekim'de bağlayıcıyla uygulandı (öncesinde canlı `users_norm` 0002 ile aynıydı, md5).
   - 0006 (`yorum_siniri`, `public.docs` üzerinde tetikleyici `yw_private.comment_limit`) 17 Ekim'de bağlayıcıyla uygulandı; canlıdaki işlev yereldekiyle aynı (md5). doc_set / doc_update değişmedi.
+  - 0007 (`karakter_market`: `yw_private.market`'e `slot` (tür) ve 14 yeni ürün, toplam 23; users'ta `sac`, `sacr`, `giy`) 17 Ekim'de bağlayıcıyla uygulandı. Öncesinde canlı `users_norm` 0005 ile aynıydı, sonrası yereldekiyle aynı (md5); canlıdaki 5 hesabın kaydı yeni kuralla değişmiyor (denendi, geri alındı).
 - **Hesaplar:**
   - `yonetici@yediwiki.com`: yönetici, şifreyle girer.
   - `deneme123@std.yeditepe.edu.tr`: ortak deneme hesabı, şifreyle girer.
@@ -70,10 +71,18 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - Bayrakta Yeditepe logosu yok: kullanıcı dört kez istedi (17 Ekim'de logoyu da gönderdi, ısrarla; dördüncüsünde rica ederek); üniversitenin logosu çizilmez ve kopyalanıp çizime konmaz, sitenin kubbe amblemi kaldı. Üniversitenin adını yazmak serbest: ringin yanında YEDİTEPE ÜNİVERSİTESİ yazıyor.
   - Ürün eşlemesi (`mtGear`, kullanıcı "sonra ayarlayacağız" dedi): kanat sırtta, Gece Eskortu yanında Ayhan Abi (1.'de önden oturur), Altın Ring kulağının arkasında / kaskında bilet, Güneş Aurası arkasında güneş, Selçuklu Kapısı desenli atkı, Yokuş Canavarı sırt çantası, sosisli / kupa / dürüm elinde (biri, fiyat sırasıyla).
   - Altın, gümüş, bronz madalya karakterin boynunda ve altındaki künyede (`mtTag`, 2-1-3 sırasıyla; dar kutuda künyede profil resmi gizlenir).
-- **Karakter (17 Ekim):** Kayıtta cinsiyet zorunlu (Erkek / Kadın / Diğer, her seçenekte küçük karakter: `govdePickHtml`); profili düzenlerken de değişir. Vücut `MT_BODY` (k: dar omuz, ince bel, geniş kalça, uzun saç, kirpik; d: arası, küt saç; e: kısa saç), tırmanırken `MT_TR` / `MT_HAIR_S` (k at kuyruklu). Saç rengi kullanıcıya göre sabit (`mtHairOf`).
-  - Profil kapağında profil resminin sağında el sallayan karakter (`figSvg`, `.pf-me`), altında üç kıyafet: Tişört, Kapüşonlu, Mont (`KIYAFET`, `setFit`). Market ürünleri ileride buraya gelecek.
+- **Karakter (17 Ekim):** Kayıtta cinsiyet zorunlu (Erkek / Kadın / Diğer, her seçenekte küçük karakter: `govdePickHtml`); profili düzenlerken de değişir. Vücut `MT_BODY` (k: dar omuz, ince bel, geniş kalça, kirpik). Çizimin özeti `charSpec` (profil, kart, sıralama, düzenleyici aynı).
+  - Profil kapağında profil resminin sağında el sallayan karakter (`figSvg`, `.pf-me`), altında **Düzenle** (`.pf-char-edit`, `openCharEdit`; karaktere basınca da açılır). Eski üç kıyafet düğmesi kalktı.
+  - Düzenleyici (`.ce-modal`): solda (telefonda üstte) canlı önizleme, sekmeler Saç / Kıyafet / Eşyalar, Kaydet'le yazılır (telefonda Kaydet altta yapışık). Sahip olunmayan market ürünleri kesik çizgili ve fiyatlı durur, basınca market o türle açılır (`#/kubbe?tur=`).
+  - Saç modeli `sac` (`SAC`, `HAIR_F` önden, `HAIR_S` kaskın altından): erkek Kazınmış, Kısa, Orta, Uzun; kadın Kıvırcık, Dalgalı, Uzun düz, Topuz (kullanıcı "4. ne olursa" dedi, topuz seçildi); diğer sekizinden. Varsayılan e kısa, k uzun düz, d orta. Kazınmış, kısa ve topuzda kulak görünür.
+  - Saç rengi `sacr` (`SACR`): siyah, kahve, kumral + erkekte sarı, kadında ve diğerde kızıl. Kadında sarı yok (kullanıcı istedi): parlak sarısı markette Yeditepe Sarısı (herkese; saçta iki ışıltı). Seçmemişin rengi ilk üçünden, kullanıcıya göre sabit (`sacrOf`).
+  - Takılanlar `giy` (`giyOf`, `mtGear`): yuvalar Üst, Alt, Elbise, Elde, Takı, Yoldaş; her yuvada bir ürün. Takı tek: kanat, bilet, atkı, aura ya da çanta (kullanıcı "bunlardan bir tane takabilecek" dedi). Elbise üst ve altı kaplar (seçince ikisi çıkar, üst ya da alt seçince elbise çıkar). Temel üst `kiyafet` (profil renginde Tişört / Kapüşonlu / Mont) market üstü yokken görünür; temel alt kot. Hiç kaydetmemiş eski hesapta takı, elde ve yoldaşta sahip olduğu en değerli ürün.
+  - Giyilenin çizimi `CLOTH` (renk, kol biçimi: tisort / atlet / ped / mont / cubbe, kol bandı; alt: renkler, yan şerit, şort; elbise eteği kisa / uzun), göğüs ayrıntısı `mtWearFront` (YEDİTEPE yazısı, forma numarası hep 7 = yedi tepe, omuz pedi, parlak montun kayan ışığı `.mt-gloss`, elbisenin çiçekleri `fw`, cübbenin şeridi ve kepi `MT_CAP`). Bacaklar `mtLegs`. Elde tutulanlar `MT_ITEM`. Tırmanırken formada numara yok (yandan).
   - Kullanıcı kartı (`openUserCard`): profil resmi, ad, sağda karakter; tüm zamanlar ve dönem sırası büyük rakamlı renkli kutularda (ilk üçte madalya), not / yorum / puan çipleri, rozetler çizimle. "Aldıkları" kaldırıldı (kullanıcı istemiyor).
 - **Ana sayfa (17 Ekim):** Asılı notlar sarı kareli not kağıdı (`--np`, 13 piksellik mavi kareler; önceki çizgili defter kağıdı kalktı). Son yorumlarda yorumu yapan → yorumlanan (ders kodu, unvanıyla hoca ya da not; `hocaFull`). Not isteklerinde + turuncu, verilmişse kırmızı (`.rq-up`); "Ben de" de turuncu.
+- **Market güncellemesi (17 Ekim):** Ürünlerin türü `tur` (`TUR`: Üst, Alt, Elbise, Elde, Takı, Yoldaş, Saç); Kubbe sayfasında tür sekmeleri (`.mk-turs`, adreste `?tur=`), kartta tür adı, yeni ürünlerde kırmızı "Yeni". Alınan ürün hemen karaktere giyilir (`wearPatch`, `buyItem`), sahip olunanda "Karakterine giy" / "Karakterinde" (Yeditepe Sarısı'nda "Saçını boya" / "Saçında", `wearItem`).
+  - Yeni ürünler (14, `yeni: 1`): Mezuniyet Cübbesi 1100, Parlak Mont 950, Eagles Forması 700, Yeditepe Sarısı 600, Bahar Şenliği Elbisesi 480, Futbol Forması 450, Basketbol Forması 450, Amerikan Futbolu Topu 320, Yeditepe Tişörtü 250, Futbol Topu 220, Basketbol Topu 220, Kampüs Eşofmanı 200, Nevada Muhabbeti 180 (elde kahve; kampüsün yanındaki Nevada Coffee'deki ders arası muhabbet), Eagles Şortu 160. Eski dokuz ürüne de tür verildi (kanat, bilet, atkı, aura, çanta Takı; yiyecekler Elde; Ayhan Abi Yoldaş).
+  - Araştırma: Yeditepe'nin takımlarının adı Yeditepe Eagles (maskot kartal; adı mühendislikteki çift başlı Selçuklu kartalından). Amerikan futbolu takımı 2001'den beri ligde, 2020 TKFL şampiyonu. Formalarda yalnızca yazı (YEDİTEPE, EAGLES) ve renkler (lacivert, sarı); çift başlı kartal üniversitenin simgesi olduğu için çizilmedi.
 - **Kartal Kanatları (17 Ekim):** Kanat profil resminin ve çerçevesinin arkasından çıkar, her yanda çapın üçte biri kadar. `::before` kanat, `::after` resmin zemini ve çerçevesini (box-shadow) kanadın üstüne yeniden çizer; büyük resimde parlaklık `--avbg` ile.
 - **Düğmeler (16 Ekim):** Parlama yok (kullanıcı fazla buldu). `.btn` sade, altta koyu bir kenar (`--edge`): üzerine gelince hafif kalkar, basınca iner.
 - **Yenilikler bölümü kaldırıldı (14 Ekim):** Kullanıcı istemiyor; yenilik penceresi ve test listesi geri eklenmesin. Ayhan Abi turu Hakkında sayfasındaki düğmeyle de başlar.
@@ -111,7 +120,7 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
 2. **Hız sınırı:** Supabase Auth → Rate Limits'te e-posta sınırını kullanıma göre ayarla (Resend ücretsiz planı günde 100).
 3. **Deneme:** Yönetici ve deneme hesabıyla şifreli giriş; yeni öğrenci hesabında Ayhan Abi turu; Supabase advisors.
 
-Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market ürünleri.
+Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları.
 
 ## Çalışma kuralları
 
@@ -134,4 +143,4 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları; market �
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1585/1585, `npm run test:site` 142/142, `npm run test:db` 118/118.
+- **Beklenen sonuçlar:** `npm test` 1603/1603, `npm run test:site` 145/145, `npm run test:db` 132/132.

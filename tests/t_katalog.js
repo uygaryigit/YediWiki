@@ -439,6 +439,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
   {
     const t = await boot({ html: HTML, seed: clone(SEED), owner: true, userId: 'owner-x' });
     await t.wait(200);
+    for (let i = 0; i < 30 && t.ev('gateState()') !== 'open'; i++) await t.wait(50);   // yavaş makinede kapı biraz geç açılır
     ok(t.ev('S.owner') === true && t.ev('gateState()') === 'open', 'yönetici hesabı hazır');
     await t.go('#/ders/DENT115');
     ok(!t.$('[data-r=edit]').hidden, 'yöneticiye Düzenle açık');
@@ -1128,6 +1129,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     t.$('[data-g=buy][data-id="kartal-kanatlari"]').click(); await t.wait(60);
     t.$('.modal [data-ok]').click(); await t.wait(250);
     ok(t.store.get('users/deneme123').items['kartal-kanatlari'], 'ürün hediye kubbeyle alındı');
+    eq((t.store.get('users/deneme123').giy || {}).taki, 'kartal-kanatlari', 'alınan kanat karaktere takıldı');
     const avb = t.$('[data-g=av-urun][data-id="kartal-kanatlari"]'); ok(!!avb, 'alınan üründe Profil resmi yap');
     avb.click(); await t.wait(250);
     const du2 = t.store.get('users/deneme123');
@@ -1147,12 +1149,37 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     await submit(t, 200);
     eq(t.store.get('users/deneme123').avk, 'emoji', 'emojiye geri dönüldü');
     ok(t.$('[data-r=acc] .avatar.fx-wings') && !t.$('[data-r=acc] .avatar.art'), 'kanat efekti emojide de sürüyor');
-    // profilde karakter ve kıyafet seçici; kart: rozet çizimleri, büyük sıra rakamları, Aldıkları yok
+    // profilde karakter ve Düzenle: saç modeli ve rengi, kıyafet, eşyalar; kart: rozet çizimleri, büyük sıra rakamları, Aldıkları yok
     await t.go('#/profil');
-    ok(t.$('.pf-me svg.fig') && t.$$('.pf-fits [data-g=fit]').length === 3 && t.$('.pf-fits [data-id=tisort]').getAttribute('aria-checked') === 'true', 'profilde karakter, üç kıyafet, tişört seçili');
-    t.$('.pf-fits [data-id=mont]').click(); await t.wait(250);
-    eq(t.store.get('users/deneme123').kiyafet, 'mont', 'kıyafet kaydedildi');
-    ok(t.$('.pf-fits [data-id=mont]').getAttribute('aria-checked') === 'true', 'mont seçili görünüyor');
+    ok(t.$('.pf-me svg.fig') && t.$('.pf-me .pf-char-edit[data-g=char-edit]') && !t.$('.pf-fits'), 'profilde karakter ve Düzenle düğmesi');
+    t.$('.pf-me .pf-char-edit').click(); await t.wait(80);
+    ok(t.$('.modal.ce-modal .ce-fig') && t.$$('.modal [data-tab]').length === 3 && !t.$('.modal [data-pane=sac]').hidden && t.$('.modal [data-pane=giy]').hidden, 'düzenleyici: önizleme, üç sekme, Saç açık');
+    eq(t.$$('.modal [data-grp=sac]').length, 8, 'diğerde sekiz saç modeli');
+    ok(t.$$('.modal [data-grp=sac] .ce-head').length === 8 && !t.$('.modal [data-grp=sacr][data-v=sari]') && t.$('.modal [data-grp=sacr][data-v=kizil]') && t.$('.modal [data-shop=sac]'), 'saç modelleri küçük başlarla; diğerde sarı yok, kızıl var, Yeditepe Sarısı kilitli');
+    t.$('.modal [data-grp=sac][data-v=kivircik]').click(); await t.wait(20);
+    t.$('.modal [data-grp=sacr][data-v=kizil]').click(); await t.wait(20);
+    ok(t.$('.modal [data-grp=sac][data-v=kivircik]').getAttribute('aria-pressed') === 'true' && /#B4452B/.test(t.$('.modal [data-r=ce-fig]').innerHTML), 'önizleme kıvırcık ve kızıl');
+    t.$('.modal [data-tab=giy]').click(); await t.wait(20);
+    ok(!t.$('.modal [data-pane=giy]').hidden && t.$$('.modal [data-pane=giy] [data-shop=ust]').length === 5 && t.$$('.modal [data-pane=giy] [data-grp=ust]').length === 3, 'Kıyafet: üç temel üst, marketteki beş üst kilitli');
+    t.$('.modal [data-grp=ust][data-v=mont]').click(); await t.wait(20);
+    ok(t.$('.modal [data-grp=ust][data-v=mont]').getAttribute('aria-pressed') === 'true', 'mont seçili');
+    t.$('.modal [data-tab=esya]').click(); await t.wait(20);
+    ok(t.$('.modal [data-grp=taki][data-v="kartal-kanatlari"]').getAttribute('aria-pressed') === 'true', 'alınan kanat takılı görünür');
+    t.$('.modal [data-grp=taki][data-v=""]').click(); await t.wait(20);
+    t.$('.modal [data-ok]').click(); await t.wait(250);
+    { const u = t.store.get('users/deneme123'); ok(u.sac === 'kivircik' && u.sacr === 'kizil' && u.kiyafet === 'mont' && u.giy && u.giy.taki === null, 'saç, renk ve kıyafet kaydedildi, kanat çıkarıldı: ' + JSON.stringify([u.sac, u.sacr, u.kiyafet, u.giy])); }
+    ok(!t.$('.modal') && !/class="mt-wl"/.test(t.$('.pf-me').innerHTML), 'pencere kapandı, karakterde kanat yok');
+    // market türleri: Üst seçilince yalnızca üstler; forma alınca karaktere giyilir, kartta Karakterinde
+    await t.go('#/kubbe?tur=ust');
+    ok(t.$('[data-r=turs] [data-tur=ust]').getAttribute('aria-selected') === 'true' && t.$$('[data-r=market] .loot').length === 5, 'adresten Üst türü, beş ürün');
+    t.$('[data-g=buy][data-id="futbol-forma"]').click(); await t.wait(60);
+    t.$('.modal [data-ok]').click(); await t.wait(300);
+    eq((t.store.get('users/deneme123').giy || {}).ust, 'futbol-forma', 'alınan forma karaktere giyildi');
+    ok(/Karakterinde/.test(t.text('[data-r=market]')), 'markette Karakterinde yazıyor');
+    t.$('[data-r=turs] [data-tur=""]').click(); await t.wait(80);
+    eq(t.$$('[data-r=market] .loot').length, t.ev('MARKET.length'), 'Tümü: bütün ürünler');
+    t.$('[data-g=wear][data-id="kartal-kanatlari"]').click(); await t.wait(250);
+    { const g = t.store.get('users/deneme123').giy || {}; ok(g.taki === 'kartal-kanatlari' && g.ust === 'futbol-forma', 'markette Karakterine giy: kanat geri takıldı, forma yerinde'); }
     t.ev("openUserCard('deneme123')"); await t.wait(40);
     ok(t.$('.modal .uc-fig') && t.$$('.modal .uc-rank').length === 2 && !/Aldıkları/.test(t.text('.modal')), 'kartta karakter ve iki sıra kutusu, Aldıkları yok');
     t.$('.modal [data-close]').click(); await t.wait(30);
@@ -1174,7 +1201,15 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       ok(!/mt-wl|mt-dog|mt-reach/.test(bare) && /mt-sweat/.test(bare) && /matrix\(-1/.test(bare), 'ürünsüz üçüncü yamaçta terler, aynalanmış madalya sayısı düz');
       ok(/#FF6B8B/.test(bare), 'kadın tırmanıcıda kaskın altından at kuyruğu');
       const k = t.ev(`mtFront('x-', { r: 0, sid: 's0', c: '#FFE14D', body: 'k', fit: 'kapusonlu', hair: '#3B2416', pose: 'wave', g: {} })`), e = t.ev(`mtFront('x-', { r: 0, sid: 's0', c: '#FFE14D', body: 'e', fit: 'tisort', hair: '#3B2416', pose: 'wave', g: {} })`);
-      ok(k !== e && /mt-wave/.test(k) && !/mt-swing/.test(k), 'profil karakteri el sallar, madalyasız; kadın ve erkek vücudu farklı'); }
+      ok(k !== e && /mt-wave/.test(k) && !/mt-swing/.test(k), 'profil karakteri el sallar, madalyasız; kadın ve erkek vücudu farklı');
+      // saç modeli ve rengi: kızda sarı yok (Yeditepe Sarısı alınmadıkça), seçilmemişse ilk üç renkten; vücuda uymayan model varsayılana döner
+      eq(t.ev(`[sacrOf('a', { govde: 'k', sacr: 'sari' }), sacrOf('a', { govde: 'e', sacr: 'sari' }), sacrOf('a', { govde: 'e', sacr: 'ysari' }), sacrOf('a', { govde: 'k', sacr: 'ysari', items: { 'yeditepe-sarisi': 1 } })].map(x => ['siyah', 'kahve', 'kumral'].includes(x) ? 'ilk3' : x).join()`), 'ilk3,sari,ilk3,ysari', 'saç rengi kuralları');
+      eq(t.ev(`[sacOf({ govde: 'k', sac: 'kel' }), sacOf({ govde: 'e', sac: 'kel' }), sacOf({ govde: 'd', sac: 'topuz' }), sacOf({})].join()`), 'duz,kel,topuz,orta', 'saç modeli kuralları');
+      eq(t.ev(`JSON.stringify(giyOf({ items: { 'futbol-forma': 1, 'bahar-elbisesi': 1, 'futbol-topu': 1 }, giy: { ust: 'futbol-forma', elbise: 'bahar-elbisesi', el: 'basket-topu', taki: 'futbol-topu' } }))`), '{"elbise":"bahar-elbisesi"}', 'takılanlar: elbise üstü çıkarır, sahip olunmayan ve türü tutmayan düşer');
+      const j = t.ev(`(() => { const o = charSpec('x', { govde: 'e', sac: 'kel', sacr: 'sari', items: { 'eagles-forma': 1, 'kampus-esofman': 1, 'amerikan-topu': 1 }, giy: { ust: 'eagles-forma', alt: 'kampus-esofman', el: 'amerikan-topu' } }, { r: 0, sid: 's0', pose: 'wave' }); return [o.c, o.fit, o.hair, o.stripe, o.g.hand, mtFront('x-', o)].join('|'); })()`).split('|');
+      ok(j[0] === '#1F2E78' && j[1] === 'ped' && j[2] === '#E3B44A' && j[3] === '#FFC928' && j[4] === 'amerikan-topu' && /paint-order="stroke"[^>]*>7</.test(j[5]) && /url\(#x-stb\)/.test(j[5]), 'Eagles forması, eşofman, elde top, kazınmış sarı saç');
+      const dr = t.ev(`(() => { const o = charSpec('x', { govde: 'k', sac: 'topuz', items: { 'mezuniyet-cubbesi': 1 }, giy: { elbise: 'mezuniyet-cubbesi' } }, { r: 2, sid: 's2' }); return mtFront('x-', Object.assign({}, o, { pose: 'flag' })) + '¦' + mtClimb('x-', o); })()`).split('¦');
+      ok(/mt-tassel/.test(dr[0]) && /#FF6B8B/.test(dr[0]) && !/#3550A8/.test(dr[0]) && /#FFC928/.test(dr[1]), 'cübbe: kep, topuzun tokası, pantolon yok; tırmanırken şerit'); }
     t.ev("G['logout-shared']()"); await t.wait(150);
     eq(t.ev('privPath()'), 'data/users/viewer-e/private', 'çıkınca kendi özel kaydı');
     eq(JSON.stringify(t.ev('myCourses()')), '["MATH131"]', 'kendi Derslerim’i geri geldi');

@@ -54,6 +54,15 @@ step('A karakterinin vücudunu ve kıyafetini seçer', A, f"select public.doc_up
      'ok', f"{U(A,'govde')} = 'k' and {U(A,'kiyafet')} = 'mont'")
 step('Listede olmayan vücut ya da kıyafet reddedilir', A, f"select public.doc_update('users', '$A', {j({'govde':'x','kiyafet':'frak'})})",
      'fail', f"{U(A,'govde')} = 'k' and {U(A,'kiyafet')} = 'mont'")
+step('A saç modelini ve rengini seçer', A, f"select public.doc_update('users', '$A', {j({'sac':'kivircik','sacr':'kizil'})})",
+     'ok', f"{U(A,'sac')} = 'kivircik' and {U(A,'sacr')} = 'kizil'")
+step('Listede olmayan saç modeli reddedilir', A, f"select public.doc_update('users', '$A', {j({'sac':'mohikan'})})", 'fail', f"{U(A,'sac')} = 'kivircik'")
+step('Listede olmayan saç rengi reddedilir', A, f"select public.doc_update('users', '$A', {j({'sacr':'mor'})})", 'fail', f"{U(A,'sacr')} = 'kizil'")
+step('Kadın karakterde ücretsiz sarı saç düşer (sarısı markette)', A, f"select public.doc_update('users', '$A', {j({'sacr':'sari'})})", 'ok', f"{U(A,'sacr')} is null")
+step('Erkek karakterde sarı saç kalır', A, f"select public.doc_update('users', '$A', {j({'govde':'e','sacr':'sari'})})", 'ok', f"{U(A,'sacr')} = 'sari' and {U(A,'govde')} = 'e'")
+step('Kadına dönünce sarı düşer', A, f"select public.doc_update('users', '$A', {j({'govde':'k'})})", 'ok', f"{U(A,'sacr')} is null and {U(A,'sac')} = 'kivircik'")
+step('Yeditepe Sarısı alınmadan seçilemez; alınmamış ürün takılamaz', A, f"select public.doc_update('users', '$A', {j({'sacr':'ysari','giy':{'ust':'parlak-mont','taki':'kartal-kanatlari'}})})",
+     'ok', f"{U(A,'sacr')} is null and {U(A,'giy')} = '{{}}'")
 
 # ---- notlar
 step('A adıyla not paylaşır; yazar, zaman ve oylar sunucudan', A,
@@ -159,6 +168,18 @@ step('Yönetici hediye kubbe verir', C, f"select public.doc_update('users', '$A'
 step('A ürünü alır (bakiye tam hesaptan)', A, "select public.buy_item('kartal-kanatlari')",
      'ok', f"{U(A,'spent')}::int = 1500 and (select data->'items' ? 'kartal-kanatlari' from public.docs where col = 'users' and id = '$A')")
 step('Aynı ürün iki kez alınamaz', A, "select public.buy_item('kartal-kanatlari')", 'fail')
+step('Yeni ürünler markette türleriyle', A, "select 1",
+     'ok', "(select count(*) from yw_private.market where slot in ('ust','alt','elbise','el','taki','yoldas','sac')) = 23 and (select slot from yw_private.market where id = 'futbol-forma') = 'ust'")
+step('Sahip olunan ürün karaktere takılır; türü tutmayan, olmayan ve boş yuva düşer', A,
+     f"select public.doc_update('users', '$A', {j({'giy':{'taki':'kartal-kanatlari','el':'kartal-kanatlari','ust':'parlak-mont','alt':None,'uydurma':'kartal-kanatlari'}})})",
+     'ok', f"{U(A,'giy')} = '{{\"taki\": \"kartal-kanatlari\"}}'")
+step('Yönetici hediye kubbeyi artırır', C, f"select public.doc_update('users', '$A', '{{\"gift\":6000}}'::jsonb)", 'ok', f"{U(A,'gift')}::int = 6000")
+step('A forma alır', A, "select public.buy_item('futbol-forma')", 'ok', f"{U(A,'spent')}::int = 1950")
+step('A saç boyası alır', A, "select public.buy_item('yeditepe-sarisi')", 'ok', f"{U(A,'spent')}::int = 2550")
+step('A elbise alır', A, "select public.buy_item('bahar-elbisesi')", 'ok', f"{U(A,'spent')}::int = 3030")
+step('Elbise varken üst ve alt düşer; Yeditepe Sarısı alındıysa kalır', A,
+     f"select public.doc_update('users', '$A', {j({'sacr':'ysari','giy':{'ust':'futbol-forma','elbise':'bahar-elbisesi'}})})",
+     'ok', f"{U(A,'sacr')} = 'ysari' and {U(A,'giy,elbise')} = 'bahar-elbisesi' and {U(A,'giy,ust')} is null and {U(A,'giy,taki')} = 'kartal-kanatlari'")
 step('Sahip olunmayan ürün profil resmi olamaz', A, f"select public.doc_update('users', '$A', '{{\"avk\":\"urun\",\"urun\":\"gece-eskortu\"}}'::jsonb)",
      'ok', f"{U(A,'avk')} = 'emoji'")
 step('Sahip olunan ürün profil resmi olur', A, f"select public.doc_update('users', '$A', '{{\"avk\":\"urun\",\"urun\":\"kartal-kanatlari\"}}'::jsonb)",
