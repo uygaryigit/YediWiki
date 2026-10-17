@@ -1383,6 +1383,52 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     noErr(t, 'form, DersÖlçer ve istek');
   }
 
+  console.log('19) ring, tema düğmesi, kırmızı not istekleri, bölüm sırası');
+  {
+    const t = await asStudent();
+    t.w.localStorage.setItem('yw:welcomed:' + t.me, 'true');
+    await t.go('#/'); await t.wait(120);
+    const ring = t.$('.home-main > .hm-ring');
+    ok(ring && ring.querySelector('svg.rg') && ring.getAttribute('aria-hidden') === 'true', 'ana sayfada ring şeridi');
+    eq(t.$$('.hm-ring .rg-signt').map(e => e.textContent).join(), 'Kapı,Hukuk,Yurtlar', 'geniş çizimde üç durak');
+    ok(t.text('.hm-ring .rg-bus .rg-txt') === 'RİNG' && !/yeditepe/i.test(t.$('.hm-ring').innerHTML), 'ringin yanında RİNG yazar, üniversitenin adı yok');
+    ok(t.$$('.hm-ring .rg-spin').length === 2 && t.$('.hm-ring .rg-door-l') && t.$('.hm-ring .rg-water') && t.$$('.hm-ring .rg-w.lit').length > 0, 'tekerler, kapı, havuz, gece yanan pencereler');
+    { const ids = t.$$('.hm-ring [id]').map(e => e.id); ok(ids.length > 5 && new Set(ids).size === ids.length, 'çizim kimlikleri tek'); }
+    ok(/^translate\([\d.]+ [\d.]+\) rotate\(-?[\d.]+\) scale\(-?[\d.]+ [\d.]+\)$/.test(t.$('.hm-ring .rg-bus').getAttribute('transform')), 'ring yolun üstünde, eğime göre: ' + t.$('.hm-ring .rg-bus').getAttribute('transform'));
+    eq(t.ev("ringGeo(360).stops.map(s => s.name).join()"), 'Kapı,Hukuk', 'dar ekranda Kapı ve Hukuk');
+    ok(t.ev("(() => { const g = ringGeo(1100); return g.ry(1100) < g.ry(0) && g.H === 220 && ringGeo(360).H === 190; })()"), 'yol kapıdan yurtlara yokuş çıkar');
+    ok(/grid-template-areas:"lead" "notes" "ring"/.test(t.ev("[...document.querySelectorAll('style')].map(x => x.textContent).join('')")) && /\.hm-notes \.ncards>li:nth-child\(n\+5\)\{display:none\}/.test(t.ev("[...document.querySelectorAll('style')].map(x => x.textContent).join('')")), 'telefonda önce sıralama, sonra 4 not');
+    // tema: sağ üstte güneş, tıklayınca ay
+    const tb = t.$('.topbar [data-g=theme]');
+    ok(tb && tb.querySelector('.tt-sun') && tb.querySelector('.tt-moon') && !t.$('footer [data-g=theme]') && !t.$('.theme-btn'), 'tema düğmesi üst çubukta, alt menüde yok');
+    ok(!tb.classList.contains('is-dark') && tb.getAttribute('aria-pressed') === 'false' && /Gece/.test(tb.getAttribute('aria-label')), 'başta güneş');
+    tb.click(); await t.wait(30);
+    ok(t.w.document.documentElement.getAttribute('data-theme') === 'dark' && tb.classList.contains('is-dark') && tb.getAttribute('aria-pressed') === 'true' && JSON.parse(t.w.localStorage.getItem('yw:theme')) === 'dark', 'tıklayınca ay ve gece teması');
+    eq(t.$$('.topbar .top-stars i').length, 12, 'üst çubukta yıldızlar');
+    tb.click(); await t.wait(30);
+    ok(t.w.document.documentElement.getAttribute('data-theme') === 'light' && !tb.classList.contains('is-dark'), 'yeniden güneş');
+    ok(!t.$('.nav [data-nav=hakkinda]') && t.$$('footer.foot a').some(x => x.textContent === 'Hakkında' && x.getAttribute('href') === '#/hakkinda'), 'Hakkında üst menüde değil, altta');
+    // not istekleri: kırmızı kart, parıltılar, yukarı oklu düğme
+    t.store.put('requests/rq-19', { cid: 'CSE211', kind: 'genel', text: 'Vize özeti', why: '', by: 'zz-b', at: Date.now(), plus: { a: true }, done: false, nid: '', doneBy: '', doneAt: 0 });
+    await t.wait(120);
+    ok(t.$$('.req-card .rq-spark i').length >= 10, 'not istekleri kutusunda parıltılar');
+    { const b = t.$('.rq-line[data-id="rq-19"] .rq-up');
+      ok(b && b.querySelector('svg.up-arr') && b.querySelector('.rq-n') && t.text('.rq-line[data-id="rq-19"] .rq-n') === '2' && !/\+/.test(b.textContent), 'düğmede yukarı ok ve sayı, artı yok');
+      b.click(); await t.wait(150); }
+    ok(t.text('.rq-line[data-id="rq-19"] .rq-n') === '3' && t.$('.rq-line[data-id="rq-19"] .rq-up.on.go'), 'katılınca sayı arttı, ok fırladı');
+    t.ev("S.db.doc('requests/rq-19').delete()"); await t.wait(60);
+    // kullanıcı kartı ve profil: iki sıranın altında bölüm sırası
+    t.ev('openUserCard(S.me)'); await t.wait(40);
+    { const d = t.text('.modal .uc-dept') || '', rv = t.$$('.modal .uc-rank .uc-rv').map(x => x.textContent);
+      ok(/Bilgisayar Mühendisliği (bölümünde (bu dönem|tüm zamanlarda) \d\.|sıralamasında #\d+)/.test(d), 'kartta bölüm sırası: ' + d);
+      ok(rv.length === 2 && rv.every(v => /^(#\d+|[123]\.)$/.test(v)), 'ilk üç dışında #N: ' + rv.join(' ')); }
+    t.$('.modal [data-close]').click(); await t.wait(30);
+    await t.go('#/profil'); await t.wait(80);
+    ok(/Bilgisayar Mühendisliği/.test(t.text('.pf-kubbe .pf-k-dept') || '') && t.$$('.pf-kubbe .pf-k-rank b').every(b => /^(#\d+|[123]\. sıra)$/.test(b.textContent)), 'profildeki kubbede bölüm sırası: ' + t.text('.pf-kubbe'));
+    t.ev(`(() => { const all = boardList('all', 'bilgisayar-muhendisligi'); return all.length; })()`);
+    noErr(t, 'ring, tema, istekler ve bölüm sırası');
+  }
+
   console.log(`\n${pass} geçti, ${fail} kaldı`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('TEST ÇÖKTÜ', e); process.exit(2); });
