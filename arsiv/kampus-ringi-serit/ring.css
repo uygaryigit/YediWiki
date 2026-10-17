@@ -1,0 +1,93 @@
+/* Arşiv: tam genişlik kampüs ringi şeridinin stilleri (commit 7397e99). Izgarada "ring ring" satırı ve .hm-ring{grid-area:ring} gerekir. */
+/* Kampüs ringi (ana sayfa): Kayışdağı eteğinde ağaçlı yokuş yol; Kapı, Hukuk ve Yurtlar arasında sarı ring */
+.hm-ring{grid-area:ring;margin-bottom:40px;min-width:0;
+  --rg-night:0;--rg-day:1;
+  --rg-sky1:#8CCBF6;--rg-sky2:#E6F5FF;--rg-m1:#86CF9C;--rg-m2:#5CB27E;--rg-m3:#3F8F62;--rg-mk:#2B6B47;--rg-mdot:rgba(30,100,62,.28);--rg-ant:#5B647C;
+  --rg-meadow:#A5DA8C;--rg-verge:#8CC877;--rg-road:#8A92A6;--rg-curb:#F1F4F9;--rg-dash:#FFF1A6;--rg-near:#7BC46B;
+  --rg-leaf:#43A86B;--rg-leaf2:#2F8C55;--rg-leafk:#1C5A38;--rg-leafhi:#A6E6BC;--rg-trunk:#6B4423;
+  --rg-fb:#EFA772;--rg-fbk:#A55F33;--rg-fwin:#FFF2DE;--rg-pyr:#2E9A82;--rg-pyrk:#14604E;--rg-pyrhi:#7FD8C2;
+  --rg-st1:#F6E2BE;--rg-st2:#D2A267;--rg-st3:#EBD3A4;--rg-ln:#6B4520;--rg-wood:#7A4A22;
+  --rg-hs1:#E39550;--rg-hs2:#F3C88B;--rg-hk:#7A3E14;--rg-frame:#FFF8EE;--rg-g1:#4DB896;--rg-g2:#16644D;
+  --rg-win:#33466A;--rg-litw:#33466A;--rg-arch:#3B2A1C;--rg-plaza:#E8DDCA;--rg-fbn:#EFE9DE;--rg-fbnk:#8A8070;--rg-water:#59B9F2;
+  --rg-cr:#F5F0E7;--rg-cr2:#EAE3D6;--rg-ck:#8A8070;--rg-win2:#9DB3CF;--rg-litw2:#9DB3CF;
+  --rg-pole:#59627A;--rg-bulb:#E9EEF6;--rg-sign:#1C3AB0;--rg-busw:#2A3B5E;--rg-pax:rgba(10,16,40,.5);--rg-puff:#C9CED8}
+:root[data-theme="dark"] .hm-ring{--rg-night:1;--rg-day:0;
+  --rg-sky1:#060B26;--rg-sky2:#1A2862;--rg-m1:#245A41;--rg-m2:#1B4634;--rg-m3:#123428;--rg-mk:#0B2318;--rg-mdot:rgba(5,30,18,.45);--rg-ant:#8A93B4;
+  --rg-meadow:#1E4636;--rg-verge:#193C2E;--rg-road:#2C3350;--rg-curb:#495380;--rg-dash:#B7A665;--rg-near:#173A2C;
+  --rg-leaf:#1F5A42;--rg-leaf2:#184A36;--rg-leafk:#0A271B;--rg-leafhi:#3A8063;--rg-trunk:#3A2716;
+  --rg-fb:#6E4430;--rg-fbk:#2E1A10;--rg-fwin:#FFD27A;--rg-pyr:#1C6656;--rg-pyrk:#0A3329;--rg-pyrhi:#3C9A84;
+  --rg-st1:#9E8868;--rg-st2:#77603F;--rg-st3:#8C7A5E;--rg-ln:#2A1A0C;--rg-wood:#3E2510;
+  --rg-hs1:#86512E;--rg-hs2:#A0703F;--rg-hk:#331A08;--rg-frame:#C2BAAA;--rg-g1:#2C7B63;--rg-g2:#0D3A2C;
+  --rg-win:#1A2342;--rg-litw:#FFD27A;--rg-arch:#130C06;--rg-plaza:#4F4E5A;--rg-fbn:#7A7884;--rg-fbnk:#38363C;--rg-water:#79B6E8;
+  --rg-cr:#8F8B86;--rg-cr2:#7E7A74;--rg-ck:#3A3631;--rg-win2:#262E4B;--rg-litw2:#FFD27A;
+  --rg-pole:#7D87A6;--rg-bulb:#FFE9A0;--rg-sign:#2C4FD6;--rg-busw:#FFE3A0;--rg-pax:rgba(70,45,10,.55);--rg-puff:#6C7290}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hm-ring{--rg-night:1;--rg-day:0;
+  --rg-sky1:#060B26;--rg-sky2:#1A2862;--rg-m1:#245A41;--rg-m2:#1B4634;--rg-m3:#123428;--rg-mk:#0B2318;--rg-mdot:rgba(5,30,18,.45);--rg-ant:#8A93B4;
+  --rg-meadow:#1E4636;--rg-verge:#193C2E;--rg-road:#2C3350;--rg-curb:#495380;--rg-dash:#B7A665;--rg-near:#173A2C;
+  --rg-leaf:#1F5A42;--rg-leaf2:#184A36;--rg-leafk:#0A271B;--rg-leafhi:#3A8063;--rg-trunk:#3A2716;
+  --rg-fb:#6E4430;--rg-fbk:#2E1A10;--rg-fwin:#FFD27A;--rg-pyr:#1C6656;--rg-pyrk:#0A3329;--rg-pyrhi:#3C9A84;
+  --rg-st1:#9E8868;--rg-st2:#77603F;--rg-st3:#8C7A5E;--rg-ln:#2A1A0C;--rg-wood:#3E2510;
+  --rg-hs1:#86512E;--rg-hs2:#A0703F;--rg-hk:#331A08;--rg-frame:#C2BAAA;--rg-g1:#2C7B63;--rg-g2:#0D3A2C;
+  --rg-win:#1A2342;--rg-litw:#FFD27A;--rg-arch:#130C06;--rg-plaza:#4F4E5A;--rg-fbn:#7A7884;--rg-fbnk:#38363C;--rg-water:#79B6E8;
+  --rg-cr:#8F8B86;--rg-cr2:#7E7A74;--rg-ck:#3A3631;--rg-win2:#262E4B;--rg-litw2:#FFD27A;
+  --rg-pole:#7D87A6;--rg-bulb:#FFE9A0;--rg-sign:#2C4FD6;--rg-busw:#FFE3A0;--rg-pax:rgba(70,45,10,.55);--rg-puff:#6C7290}}
+.rg-box{border-radius:22px;overflow:hidden;border:1px solid var(--line);box-shadow:0 22px 44px -28px rgba(17,28,78,.6);background:var(--rg-sky2)}
+.rg{display:block;width:100%;height:auto}
+.rg text{font-family:var(--f-display);font-weight:800;font-stretch:80%}
+.rg-sky1{stop-color:var(--rg-sky1)}.rg-sky2{stop-color:var(--rg-sky2)}
+.rg-m1{stop-color:var(--rg-m1)}.rg-m2{stop-color:var(--rg-m2)}.rg-m3{stop-color:var(--rg-m3)}
+.rg-st1{stop-color:var(--rg-st1)}.rg-st2{stop-color:var(--rg-st2)}
+.rg-g1{stop-color:var(--rg-g1)}.rg-g2{stop-color:var(--rg-g2)}
+.rg-hs1{fill:var(--rg-hs1)}.rg-hs2{fill:var(--rg-hs2)}
+.rg-night{opacity:var(--rg-night);transition:opacity .6s ease}.rg-day{opacity:var(--rg-day);transition:opacity .6s ease}
+.rg-sun{fill:#FFD23F;stroke:#F2A900;stroke-width:2}
+.rg-moon{fill:#FFF0C2;stroke:#E9C76A;stroke-width:1.2}
+.rg-stars path{fill:#FFF6D6}
+.rg-tw{animation:mtTw 2.8s ease-in-out infinite}.rg-tw.d1{animation-delay:.9s}.rg-tw.d2{animation-delay:1.8s}
+.rg-cloud path{fill:#fff;opacity:.92}
+.rg-cloud{animation:rgDrift 46s ease-in-out infinite alternate}.rg-cloud.c1{animation-duration:58s;animation-delay:-18s}.rg-cloud.c2{animation-duration:52s;animation-delay:-31s}
+@keyframes rgDrift{from{transform:translateX(-24px)}to{transform:translateX(24px)}}
+.rg-ridge{fill:none;stroke:var(--rg-mk);stroke-width:2.2;stroke-linejoin:round}
+.rg-mdot{fill:var(--rg-mdot)}
+.rg-ant{fill:none;stroke:var(--rg-ant);stroke-width:1.4;stroke-linecap:round}
+.rg-red{fill:#FF5A4E}.rg-blink{animation:rgBlink 1.8s steps(1) infinite}
+@keyframes rgBlink{50%{opacity:.2}}
+.rg-meadow{fill:var(--rg-meadow)}.rg-verge{fill:var(--rg-verge)}
+.rg-fb{fill:var(--rg-fb);stroke:var(--rg-fbk);stroke-width:1.4}
+.rg-fwin{fill:none;stroke:var(--rg-fwin);stroke-width:2.4;stroke-dasharray:3 2.6}
+.rg-pyr{fill:var(--rg-pyr);stroke:var(--rg-pyrk);stroke-width:1.4;stroke-linejoin:round}.rg-pyrhi{fill:var(--rg-pyrhi);opacity:.55}
+.rg-trunk{fill:var(--rg-trunk);stroke:var(--rg-leafk);stroke-width:1}
+.rg-leafk{fill:var(--rg-leafk)}.rg-leaf{fill:var(--rg-leaf)}.rg-leafhi{fill:var(--rg-leafhi);opacity:.5}
+.rg-pine{fill:var(--rg-leaf2);stroke:var(--rg-leafk);stroke-width:1.3;stroke-linejoin:round}.rg-pinehi{fill:var(--rg-leafhi);opacity:.4}
+.rg-ln{stroke:var(--rg-ln);stroke-width:1.8;stroke-linejoin:round}
+.rg-st3{fill:var(--rg-st3)}
+.rg-twist{fill:none;stroke:var(--rg-ln);stroke-width:1;opacity:.55}
+.rg-mq{fill:none;stroke:var(--rg-ln);stroke-width:1.2;opacity:.7}
+.rg-wood{fill:var(--rg-wood)}.rg-woodk{fill:none;stroke:var(--rg-ln);stroke-width:1.2}
+.rg-hk{stroke:var(--rg-hk);stroke-width:2;stroke-linejoin:round}
+.rg-frame{fill:none;stroke:var(--rg-frame);stroke-width:1.3}
+.rg-fr{stroke:var(--rg-frame);stroke-width:1.8}
+.rg-w{fill:var(--rg-win);stroke:var(--rg-frame);stroke-width:1.2}.rg-w.lit{fill:var(--rg-litw)}
+.rg-arch{fill:var(--rg-arch);stroke:var(--rg-frame);stroke-width:1.5}
+.rg-canopy{fill:var(--rg-frame)}
+.rg-plaza{fill:var(--rg-plaza)}
+.rg-fbn{fill:var(--rg-fbn);stroke:var(--rg-fbnk);stroke-width:1}
+.rg-water{fill:none;stroke:var(--rg-water);stroke-width:1.5;stroke-linecap:round;stroke-dasharray:2.4 2.6;animation:rgWater .7s linear infinite}
+@keyframes rgWater{to{stroke-dashoffset:-5}}
+.rg-cr{fill:var(--rg-cr)}.rg-cr2{fill:var(--rg-cr2)}.rg-ln2{stroke:var(--rg-ck);stroke-width:1.6}
+.rg-w2{fill:var(--rg-win2)}.rg-w2.lit{fill:var(--rg-litw2)}
+.rg-road{fill:var(--rg-road)}.rg-curb{fill:none;stroke:var(--rg-curb);stroke-width:2.2}.rg-dash{fill:none;stroke:var(--rg-dash);stroke-width:2;stroke-dasharray:9 9}
+.rg-near{fill:var(--rg-near)}
+.rg-pole{fill:none;stroke:var(--rg-pole);stroke-width:2.2;stroke-linecap:round}.rg-lamph{fill:var(--rg-pole)}.rg-bulb{fill:var(--rg-bulb)}
+.rg-pool{fill:#FFE6A0;fill-opacity:.24}
+.rg-sign{fill:var(--rg-sign);stroke:#0D1B5E;stroke-width:1.2}.rg-signt{fill:#fff;font-size:9.5px}
+.rg-bw{fill:var(--rg-busw)}.rg-pax{fill:var(--rg-pax)}
+.rg-head{fill:#FFF6C8}.rg-tail{fill:#C93128}.rg-bus.brake .rg-tail{fill:#FF6A5C}
+.rg-txt{fill:#1B1330;font-size:9.6px;letter-spacing:.05em}
+.rg-bus.flip .rg-txt{transform:scaleX(-1);transform-box:fill-box;transform-origin:50% 50%}
+.rg-door-l,.rg-door-r{transform-box:fill-box;transition:transform .35s ease}.rg-door-l{transform-origin:0 50%}.rg-door-r{transform-origin:100% 50%}
+.rg-bus.open .rg-door-l,.rg-bus.open .rg-door-r{transform:scaleX(.28)}
+.rg-puff circle{fill:var(--rg-puff);opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.rg-puff.go circle{animation:rgPuff 1.1s ease-out both}.rg-puff.go circle:nth-child(2){animation-delay:.1s}.rg-puff.go circle:nth-child(3){animation-delay:.2s}
+@keyframes rgPuff{0%{opacity:.85;transform:scale(.5)}100%{opacity:0;transform:translate(-9px,-7px) scale(1.9)}}
+@media (prefers-reduced-motion:reduce){.rg *{animation:none!important}}

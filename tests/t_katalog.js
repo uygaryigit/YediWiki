@@ -1089,6 +1089,9 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(nu && nu.avk === 'harf' && nu.harf === 'YÖ' && nu.color === '#203040' && nu.pic === '', 'hesap harfli profil resmiyle açıldı: ' + JSON.stringify(nu && { avk: nu.avk, harf: nu.harf, color: nu.color }));
     eq((t.store.get('data/users/viewer-d/private') || {}).email, 'yeni.ogrenci@std.yeditepe.edu.tr', 'özel kayıtta tam adres');
     ok(t.$('[data-r=acc] .avatar.harf') && t.text('[data-r=acc] .avatar') === 'YÖ', 'üst çubukta harfler');
+    await t.wait(1100);
+    ok(t.ev('TOUR.on') === true, 'yeni açılan hesapta Ayhan Abi turu kendiliğinden başlar');
+    t.ev('tourEnd()'); await t.wait(30);
     noErr(t, 'hesap açma ve harfli profil resmi');
   }
   {
@@ -1097,11 +1100,12 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     seed['data/users/viewer-e/private'] = { myc: ['MATH131'], done: ['MATH131'] };
     const t = await boot({ html: HTML, seed, userId: 'viewer-e', webcrypto: true });
     await t.wait(200);
-    t.w.localStorage.setItem('yw:welcomed:deneme123', 'true');
     t.ev('openAuth({ login: true })'); await t.wait(60);
     t.$('#au-lmail').value = 'deneme123'; t.$('#au-lpw').value = 'deneme123';
     await submit(t, 300);
     ok(t.ev('S.me') === 'deneme123' && !t.$('.modal'), 'yalnızca ilk kısımla giriş');
+    await t.wait(1100);
+    ok(!t.ev('TOUR.on'), 'var olan hesapla (deneme hesabı) girişte tur kendiliğinden çıkmaz');
     eq(t.ev('privPath()'), 'data/users/viewer-e/private-deneme123', 'deneme hesabının ayrı özel kaydı');
     eq(JSON.stringify(t.ev('myCourses()')), '[]', 'kendi hesabının Derslerim’i deneme hesabına karışmaz');
     eq(t.ev('balanceOf("deneme123")'), 10050, 'hediye kubbe bakiyede');
@@ -1388,25 +1392,26 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     const t = await asStudent();
     t.w.localStorage.setItem('yw:welcomed:' + t.me, 'true');
     await t.go('#/'); await t.wait(120);
-    const ring = t.$('.home-main > .hm-ring');
-    ok(ring && ring.querySelector('svg.rg') && ring.getAttribute('aria-hidden') === 'true', 'ana sayfada ring şeridi');
-    eq(t.$$('.hm-ring .rg-signt').map(e => e.textContent).join(), 'Kapı,Hukuk,Yurtlar', 'geniş çizimde üç durak');
-    ok(t.text('.hm-ring .rg-bus .rg-txt') === 'RİNG' && !/yeditepe/i.test(t.$('.hm-ring').innerHTML), 'ringin yanında RİNG yazar, üniversitenin adı yok');
-    ok(t.$$('.hm-ring .rg-spin').length === 2 && t.$('.hm-ring .rg-door-l') && t.$('.hm-ring .rg-water') && t.$$('.hm-ring .rg-w.lit').length > 0, 'tekerler, kapı, havuz, gece yanan pencereler');
-    { const ids = t.$$('.hm-ring [id]').map(e => e.id); ok(ids.length > 5 && new Set(ids).size === ids.length, 'çizim kimlikleri tek'); }
-    ok(/^translate\([\d.]+ [\d.]+\) rotate\(-?[\d.]+\) scale\(-?[\d.]+ [\d.]+\)$/.test(t.$('.hm-ring .rg-bus').getAttribute('transform')), 'ring yolun üstünde, eğime göre: ' + t.$('.hm-ring .rg-bus').getAttribute('transform'));
-    eq(t.ev("ringGeo(360).stops.map(s => s.name).join()"), 'Kapı,Hukuk', 'dar ekranda Kapı ve Hukuk');
-    ok(t.ev("(() => { const g = ringGeo(1100); return g.ry(1100) < g.ry(0) && g.H === 220 && ringGeo(360).H === 190; })()"), 'yol kapıdan yurtlara yokuş çıkar');
-    ok(/grid-template-areas:"lead" "notes" "ring"/.test(t.ev("[...document.querySelectorAll('style')].map(x => x.textContent).join('')")) && /\.hm-notes \.ncards>li:nth-child\(n\+5\)\{display:none\}/.test(t.ev("[...document.querySelectorAll('style')].map(x => x.textContent).join('')")), 'telefonda önce sıralama, sonra 4 not');
-    // tema: sağ üstte güneş, tıklayınca ay
-    const tb = t.$('.topbar [data-g=theme]');
-    ok(tb && tb.querySelector('.tt-sun') && tb.querySelector('.tt-moon') && !t.$('footer [data-g=theme]') && !t.$('.theme-btn'), 'tema düğmesi üst çubukta, alt menüde yok');
+    // ring yan boşluklarda: jsdom'da yerleşim yok, yol gizli kalır; çizim doğrudan denenir
+    ok(t.$('#main > .lane[data-r=lane]') && t.$('#main > .lane').hidden && !t.$('.hm-ring'), 'ana sayfada yan boşluk yolu (yer yokken gizli), ayrı şerit yok');
+    { const L = t.ev("laneSvg('L', laneGeo(250))"), Rr = t.ev("laneSvg('R', laneGeo(250))");
+      ok(/rg-twist/.test(L) && (L.match(/class="rg-trunk"/g) || []).length === 2 && !/rg-hk/.test(L), 'solda Kapı ve iki ağaç');
+      ok(/rg-hk/.test(Rr) && /rg-water/.test(Rr) && (Rr.match(/class="rg-trunk"/g) || []).length === 1 && !/rg-twist/.test(Rr), 'sağda Hukuk (havuzuyla) ve bir ağaç');
+      ok(!/meadow|rg-near|rg-sky|mtn/.test(L + Rr) && /ln-road/.test(L) && /ln-road/.test(Rr), 'yeşillik yok, düz zeminde yol');
+      ok(/>YEDİTEPE ÜNİVERSİTESİ</.test(L) && />RİNG</.test(Rr), 'ringin yanında YEDİTEPE ÜNİVERSİTESİ yazıyor'); }
+    ok(t.ev("(() => { const g = laneGeo(250); return g.stopL > 0 && g.stopL < g.G && g.outL > g.W && g.inR < 0 && g.stopR > 60 && g.stopR < g.W; })()"), 'ring Kapı’dan çıkıp ortaya girer, sağdan çıkıp Hukuk’ta durur');
+    ok(/grid-template-areas:"lead" "notes" "cmh"/.test(t.ev("[...document.querySelectorAll('style')].map(x => x.textContent).join('')")) && /\.hm-notes \.ncards>li:nth-child\(n\+5\)\{display:none\}/.test(t.ev("[...document.querySelectorAll('style')].map(x => x.textContent).join('')")), 'telefonda önce sıralama, sonra 4 not');
+    // tema: siteye giren önce açık temayı görür; sağ boşluğun tepesindeki güneşe basınca ay ve gece
+    eq(t.w.document.documentElement.getAttribute('data-theme'), 'light', 'ilk açılışta açık tema');
+    const tb = t.$('.sky-sun[data-g=theme]');
+    ok(tb && tb.querySelector('.ss-sun .ss-rays') && tb.querySelector('.ss-moon') && !t.$('.topbar [data-g=theme]') && !t.$('footer [data-g=theme]') && !t.$('.top-stars'), 'güneş üst çubukta değil, sayfada; alt menüde tema yok');
     ok(!tb.classList.contains('is-dark') && tb.getAttribute('aria-pressed') === 'false' && /Gece/.test(tb.getAttribute('aria-label')), 'başta güneş');
     tb.click(); await t.wait(30);
     ok(t.w.document.documentElement.getAttribute('data-theme') === 'dark' && tb.classList.contains('is-dark') && tb.getAttribute('aria-pressed') === 'true' && JSON.parse(t.w.localStorage.getItem('yw:theme')) === 'dark', 'tıklayınca ay ve gece teması');
-    eq(t.$$('.topbar .top-stars i').length, 12, 'üst çubukta yıldızlar');
+    eq(t.$$('.sky .sky-stars i').length, 26, 'üst çubuğun altında yıldızlar');
     tb.click(); await t.wait(30);
     ok(t.w.document.documentElement.getAttribute('data-theme') === 'light' && !tb.classList.contains('is-dark'), 'yeniden güneş');
+    ok(/data-theme","?light|"dark"\?"dark":"light"/.test(t.w.document.head.innerHTML) || /yw-tema/.test(t.w.document.head.innerHTML), 'tema sayfa çizilmeden önce kuruluyor');
     ok(!t.$('.nav [data-nav=hakkinda]') && t.$$('footer.foot a').some(x => x.textContent === 'Hakkında' && x.getAttribute('href') === '#/hakkinda'), 'Hakkında üst menüde değil, altta');
     // not istekleri: kırmızı kart, parıltılar, yukarı oklu düğme
     t.store.put('requests/rq-19', { cid: 'CSE211', kind: 'genel', text: 'Vize özeti', why: '', by: 'zz-b', at: Date.now(), plus: { a: true }, done: false, nid: '', doneBy: '', doneAt: 0 });
