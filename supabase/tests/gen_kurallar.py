@@ -168,8 +168,10 @@ step('Yönetici hediye kubbe verir', C, f"select public.doc_update('users', '$A'
 step('A ürünü alır (bakiye tam hesaptan)', A, "select public.buy_item('kartal-kanatlari')",
      'ok', f"{U(A,'spent')}::int = 1500 and (select data->'items' ? 'kartal-kanatlari' from public.docs where col = 'users' and id = '$A')")
 step('Aynı ürün iki kez alınamaz', A, "select public.buy_item('kartal-kanatlari')", 'fail')
-step('Yeni ürünler markette türleriyle', A, "select 1",
-     'ok', "(select count(*) from yw_private.market where slot in ('ust','alt','elbise','el','taki','yoldas','sac')) = 23 and (select slot from yw_private.market where id = 'futbol-forma') = 'ust'")
+step('Market ürünleri türleriyle; kalkan ürünler yok, bilet elde, futbol topu ayakta', A, "select 1",
+     'ok', "(select count(*) from yw_private.market where slot in ('ust','alt','elbise','el','ayak','taki','yoldas','sac')) = 25 and (select slot from yw_private.market where id = 'futbol-forma') = 'ust' "
+           "and (select slot from yw_private.market where id = 'altin-ring') = 'el' and (select slot from yw_private.market where id = 'futbol-topu') = 'ayak' "
+           "and (select slot from yw_private.market where id = 'kampus-mafya') = 'yoldas' and not exists (select 1 from yw_private.market where id in ('son-sosisli','selcuklu-kapi','gunes-aurasi','nevada-kahve','ikinci-ev'))")
 step('Sahip olunan ürün karaktere takılır; türü tutmayan, olmayan ve boş yuva düşer', A,
      f"select public.doc_update('users', '$A', {j({'giy':{'taki':'kartal-kanatlari','el':'kartal-kanatlari','ust':'parlak-mont','alt':None,'uydurma':'kartal-kanatlari'}})})",
      'ok', f"{U(A,'giy')} = '{{\"taki\": \"kartal-kanatlari\"}}'")
@@ -180,6 +182,12 @@ step('A elbise alır', A, "select public.buy_item('bahar-elbisesi')", 'ok', f"{U
 step('Elbise varken üst ve alt düşer; Yeditepe Sarısı alındıysa kalır', A,
      f"select public.doc_update('users', '$A', {j({'sacr':'ysari','giy':{'ust':'futbol-forma','elbise':'bahar-elbisesi'}})})",
      'ok', f"{U(A,'sacr')} = 'ysari' and {U(A,'giy,elbise')} = 'bahar-elbisesi' and {U(A,'giy,ust')} is null and {U(A,'giy,taki')} = 'kartal-kanatlari'")
+step('Temel alt etek olur', A, f"select public.doc_update('users', '$A', {j({'altk':'etek'})})", 'ok', f"{U(A,'altk')} = 'etek'")
+step('Listede olmayan temel alt reddedilir', A, f"select public.doc_update('users', '$A', {j({'altk':'sort'})})", 'fail', f"{U(A,'altk')} = 'etek'")
+step('A futbol topu alır', A, "select public.buy_item('futbol-topu')", 'ok', f"{U(A,'spent')}::int = 3250")
+step('Futbol topu ayağa takılır, ele takılamaz', A,
+     f"select public.doc_update('users', '$A', {j({'giy':{'ayak':'futbol-topu','el':'futbol-topu'}})})",
+     'ok', f"{U(A,'giy,ayak')} = 'futbol-topu' and {U(A,'giy,el')} is null and {U(A,'giy,elbise')} = 'bahar-elbisesi' and {U(A,'giy,taki')} = 'kartal-kanatlari'")
 step('Sahip olunmayan ürün profil resmi olamaz', A, f"select public.doc_update('users', '$A', '{{\"avk\":\"urun\",\"urun\":\"gece-eskortu\"}}'::jsonb)",
      'ok', f"{U(A,'avk')} = 'emoji'")
 step('Sahip olunan ürün profil resmi olur', A, f"select public.doc_update('users', '$A', '{{\"avk\":\"urun\",\"urun\":\"kartal-kanatlari\"}}'::jsonb)",

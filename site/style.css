@@ -733,6 +733,11 @@ button.rank-row:hover{background:var(--surface-2)}
 .kh-dome{align-self:center}
 .kh-dome svg{display:block;width:48px;height:36px;animation:bob 2.8s ease-in-out infinite}
 .kh-ranks{display:flex;flex-wrap:wrap;gap:8px;flex-basis:100%}
+.kh-body{flex:1 1 320px;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:18px 34px}
+.kh-me{flex:0 0 auto;margin:-8px 0 -6px auto}
+.kh-me .pf-fig{width:120px}
+.ho-all{margin-top:26px}
+@media (max-width:560px){.kh-me{flex-basis:100%;margin:0;display:flex;justify-content:center;align-items:center;gap:14px}.kh-me .pf-fig{width:96px}}
 .rank-pill{display:inline-flex;flex-direction:column;padding:8px 14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);animation:popin .45s ease-out both}
 .rank-pill:nth-child(2){animation-delay:.08s}.rank-pill:nth-child(3){animation-delay:.16s}
 .rank-pill small{font-size:.72rem;color:var(--ink-3);font-weight:650}
@@ -859,10 +864,6 @@ button.rank-row:hover{background:var(--surface-2)}
 /* ===== Profil efektleri ===== */
 .badge-mini{display:inline-block;font-size:.85em;margin-left:4px;line-height:1}
 .badge-mini.r-efsane{filter:drop-shadow(0 0 3px #FF9F0A)}.badge-mini.r-epik{filter:drop-shadow(0 0 3px #A155FF)}
-.fx-glow{color:#B86E00;text-shadow:0 0 10px rgba(255,190,40,.75)}
-.lead .fx-glow{color:#FFD23F;text-shadow:0 0 12px rgba(255,200,60,.85)}
-.avatar.fr-selcuklu{box-shadow:0 0 0 2px var(--surface),0 0 0 5px #C9955A,0 0 0 7px #5E3F1C}
-.lead .avatar.fr-selcuklu{box-shadow:0 0 0 2px #111C4E,0 0 0 5px #C9955A,0 0 0 7px #5E3F1C}
 /* Kartal Kanatları: kanatlar profil resminin ve çerçevesinin arkasından, resmin üst yarısından çıkar (her yanda çapın üçte biri kadar).
    Resim kendi katmanında (isolation): ::before kanat en arkada, ::after resmin zemini ve çerçevesi (box-shadow) kanadın kökünü örter */
 .avatar.fx-wings{position:relative;overflow:visible;isolation:isolate}
@@ -1434,7 +1435,6 @@ button.rank-row:hover{background:var(--surface-2)}
 .avatar.hero.fx-wings.pic::after{background-color:var(--surface-2)}
 .avatar.hero.harf{font-size:3.4rem;letter-spacing:.02em;text-shadow:none}
 .avatar.hero.framed{box-shadow:0 0 0 7px #fff,0 0 0 11px #E0A800,0 18px 26px -12px rgba(17,28,78,.55)}
-.avatar.hero.fr-selcuklu{box-shadow:0 0 0 7px #fff,0 0 0 11px #C9955A,0 0 0 14px #5E3F1C,0 18px 26px -12px rgba(17,28,78,.55)}
 .pf-id{min-width:0}
 .pf-user{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-family:var(--f-display);font-weight:800;font-stretch:76%;font-size:clamp(2.2rem,5.2vw,3.5rem);line-height:.95;letter-spacing:-.02em;margin:0;overflow-wrap:anywhere}
 .pf-at{font-size:.62em;font-weight:700;opacity:.5;margin-right:-4px;align-self:center}

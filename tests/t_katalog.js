@@ -1163,14 +1163,19 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(!t.$('.modal [data-pane=giy]').hidden && t.$$('.modal [data-pane=giy] [data-shop=ust]').length === 5 && t.$$('.modal [data-pane=giy] [data-grp=ust]').length === 3, 'Kıyafet: üç temel üst, marketteki beş üst kilitli');
     t.$('.modal [data-grp=ust][data-v=mont]').click(); await t.wait(20);
     ok(t.$('.modal [data-grp=ust][data-v=mont]').getAttribute('aria-pressed') === 'true', 'mont seçili');
+    ok(t.$('.modal [data-grp=alt][data-v=kot]').getAttribute('aria-pressed') === 'true' && t.$('.modal [data-grp=alt][data-v=etek]'), 'Alt: kot seçili, etek de var');
+    t.$('.modal [data-grp=alt][data-v=etek]').click(); await t.wait(20);
+    ok(t.$('.modal [data-grp=alt][data-v=etek]').getAttribute('aria-pressed') === 'true' && t.$('.modal [data-grp=alt][data-v=kot]').getAttribute('aria-pressed') === 'false', 'etek seçildi');
     t.$('.modal [data-tab=esya]').click(); await t.wait(20);
     ok(t.$('.modal [data-grp=taki][data-v="kartal-kanatlari"]').getAttribute('aria-pressed') === 'true', 'alınan kanat takılı görünür');
+    ok(t.$('.modal [data-grp=ayak][data-v=""]') && t.$$('.modal [data-pane=esya] [data-shop=ayak]').length === 1, 'Ayakta yuvası: boş ve kilitli futbol topu');
     t.$('.modal [data-grp=taki][data-v=""]').click(); await t.wait(20);
     t.$('.modal [data-ok]').click(); await t.wait(250);
-    { const u = t.store.get('users/deneme123'); ok(u.sac === 'kivircik' && u.sacr === 'kizil' && u.kiyafet === 'mont' && u.giy && u.giy.taki === null, 'saç, renk ve kıyafet kaydedildi, kanat çıkarıldı: ' + JSON.stringify([u.sac, u.sacr, u.kiyafet, u.giy])); }
+    { const u = t.store.get('users/deneme123'); ok(u.sac === 'kivircik' && u.sacr === 'kizil' && u.kiyafet === 'mont' && u.altk === 'etek' && u.giy && u.giy.taki === null && 'ayak' in u.giy, 'saç, renk, kıyafet ve etek kaydedildi, kanat çıkarıldı: ' + JSON.stringify([u.sac, u.sacr, u.kiyafet, u.altk, u.giy])); }
     ok(!t.$('.modal') && !/class="mt-wl"/.test(t.$('.pf-me').innerHTML), 'pencere kapandı, karakterde kanat yok');
     // market türleri: Üst seçilince yalnızca üstler; forma alınca karaktere giyilir, kartta Karakterinde
     await t.go('#/kubbe?tur=ust');
+    ok(t.$('[data-r=head] .kh-me svg.fig') && t.$('[data-r=head] .kh-me .pf-char-edit[data-g=char-edit]'), 'Kubbe başlığında karakter ve Düzenle');
     ok(t.$('[data-r=turs] [data-tur=ust]').getAttribute('aria-selected') === 'true' && t.$$('[data-r=market] .loot').length === 5, 'adresten Üst türü, beş ürün');
     t.$('[data-g=buy][data-id="futbol-forma"]').click(); await t.wait(60);
     t.$('.modal [data-ok]').click(); await t.wait(300);
@@ -1194,8 +1199,13 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       eq(t.$$('[data-r=b-all] .mt-tag').map(b => b.className.match(/t(\d)/)[1]).join(), '2,1,3', 'künyeler 2, 1, 3 sırasıyla');
       ok(t.$$('[data-r=b-all] .mt-tag .mt-medal').length === 3 && !/\p{Extended_Pictographic}/u.test(t.text('[data-r=b-all] .mt')), 'her künyede çizim madalya, emoji yok');
       const ids = t.$$('.mt-art [id]').map(e => e.id); eq(new Set(ids).size, ids.length, 'iki sıralamadaki çizim kimlikleri çakışmaz'); }
-    { const top = t.ev(`mtFront('x-', { r: 1, sid: 's1', c: '#9DB0FF', body: 'e', fit: 'tisort', hair: '#3B2416', pose: 'flag', g: mtGear({ items: { 'kartal-kanatlari': 1, 'gece-eskortu': 1, 'son-sosisli': 1, 'ikinci-ev': 1 } }) })`);
-      ok(/class="mt-wl"/.test(top) && /mt-dogsit/.test(top) && /#D9442E/.test(top) && !/#3D5BD9/.test(top) && /mt-flag/.test(top), 'birincide bayrak, kanat, yanında Ayhan Abi, elinde (pahalı olan) sosisli');
+    { const top = t.ev(`mtFront('x-', { r: 1, sid: 's1', c: '#9DB0FF', body: 'e', fit: 'tisort', hair: '#3B2416', pose: 'flag', g: mtGear({ items: { 'kartal-kanatlari': 1, 'gece-eskortu': 1, 'kirmizi-sufle': 1, 'karsi-durum': 1 } }) })`);
+      ok(/class="mt-wl"/.test(top) && /mt-dogsit/.test(top) && /#5A2E1A/.test(top) && !/#F0C98A/.test(top) && /mt-flag/.test(top), 'birincide bayrak, kanat, yanında köpek, elinde (pahalı olan) sufle');
+      { const g = t.ev(`JSON.stringify([mtGear({ items: { 'futbol-topu': 1, 'altin-ring': 1 } }), mtGear({ items: { 'kampus-mafya': 1, 'gece-eskortu': 1, steteskop: 1, 'yokus-canavari': 1 } })])`); const [a, b] = JSON.parse(g);
+        ok(a.foot === 'futbol-topu' && a.hand === 'altin-ring' && !a.wings && b.pet === 'dog' && b.steto && !b.pack, 'futbol topu ayakta, altın bilet elde; en değerli yoldaş köpek, takı steteskop: ' + g); }
+      { const c = t.ev(`(() => { const f = u => charSpec('x', u, { r: 0, sid: 's0', pose: 'wave' }); const k = f({ govde: 'k', altk: 'etek' }), e = f({ govde: 'e', altk: 'etek' }), pp = f({ govde: 'k', items: { 'ponpon-kiyafeti': 1 }, giy: { elbise: 'ponpon-kiyafeti' } });
+          return [k.etek, e.etek, pp.etek, /mt-pom/.test(mtFront('x-', pp)), /mt-dogsit/.test(mtFront('x-', f({ items: { 'kampus-mafya': 1 }, giy: { yoldas: 'kampus-mafya' } })))].join(); })()`);
+        eq(c, 'mini,,pli,true,true', 'kızda etek (erkekte yok), ponpon kıyafeti pilili etek ve ponponlarla, kedi yanında oturur'); }
       ok(!/#FF7C7E|ponpon/.test(top) && /fill="#3B2416"/.test(top), 'birincinin başında bere yok, saçı görünür');
       const bare = t.ev(`mtClimb('x-', { r: 3, sid: 's3', c: '#FFE14D', body: 'k', fit: 'mont', hair: '#3B2416', g: mtGear({ items: {} }), flip: true })`);
       ok(!/mt-wl|mt-dog|mt-reach/.test(bare) && /mt-sweat/.test(bare) && /matrix\(-1/.test(bare), 'ürünsüz üçüncü yamaçta terler, aynalanmış madalya sayısı düz');
@@ -1246,7 +1256,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       ok(/Son puanlanan hocalar/.test(t.text('[data-r=list] .sub-h')) && shown.length === Math.min(10, rated) && (rated || /Henüz puanlanan hoca yok/.test(t.text('[data-r=list]'))), 'HocaÖlçer önce son puanlanan hocaları gösterir: ' + shown.length + '/' + rated);
       const last = shown.map(a => t.ev(`Math.max(...ratingsOf(S.hocas.get(${JSON.stringify(a.getAttribute('href').slice(7))})).map(r => r.at))`));
       ok(last.every((x, i) => !i || last[i - 1] >= x), 'en son puanlanan en üstte');
-      ok(t.$('[data-r=sort]').hidden && /Tüm hocaları göster \(\d+ hoca\)/.test(t.text('[data-r=list] [data-r=all]')), 'sıralama gizli, Tüm hocaları göster düğmesi'); }
+      ok(t.$('[data-r=sort]').hidden && /Tüm hocaları göster \(\d+ hoca\)/.test(t.text('[data-r=list] [data-r=all]')) && t.$('[data-r=list] .ho-all [data-r=all]'), 'sıralama gizli, Tüm hocaları göster düğmesi (listeden biraz aşağıda)'); }
     t.$('[data-r=list] [data-r=all]').click(); await t.wait(60);
     ok(t.$$('[data-r=list] .hcard').length === 60 && /Daha fazla göster \(\d+ hoca daha\)/.test(t.text('[data-r=list] [data-r=more]')) && !t.$('[data-r=sort]').hidden, 'Tümünü göster: ilk 60 hoca, devamı düğmede, sıralama görünür');
     { const c = t.$('[data-r=list] .hcard'), hid0 = c.getAttribute('href').slice(7), st0 = JSON.parse(t.ev(`JSON.stringify(hocaStats(S.hocas.get(${JSON.stringify(hid0)})))`));
