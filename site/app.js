@@ -79,6 +79,7 @@ const ICONS = {
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   eyeoff: '<path d="M3 3l18 18"/><path d="M10.6 5.6c.5-.1.9-.1 1.4-.1 6 0 9.5 6.5 9.5 6.5a17.6 17.6 0 0 1-3.1 3.9M6.4 6.5C3.9 8.2 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.3-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   grad: '<path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.6v4.1c1.4 1.4 3.3 2.3 5.5 2.3s4.1-.9 5.5-2.3v-4.1"/><path d="M21.5 9.5v5"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
   lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   out: '<path d="M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/><path d="M10 16l-4-4 4-4M6 12h10"/>',
@@ -1342,7 +1343,6 @@ const G = {
   'cap-clear': id => capClear(id),
   'cap-hide': (id, el) => capHide(id, el.dataset.k),
   'cap-unhide': (id, el) => capUnhide(id, +el.dataset.sem),
-  'sem-step': (id, el) => semStep(id, +el.dataset.d || 0),
   'recent-clear': () => { ls.set('recent', []); changed(); },
   'dview-max': (id, el) => dviewMax(el.closest('.dview')),
   'welcome': () => { if (hasAcc()) openWelcome(); else openAuth(); },
@@ -2290,7 +2290,7 @@ function startAyhan(stage) {
   return () => { dead = true; clearTimeout(timer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('resize', onResize); };
 }
 /* ================= Ring: yan boşluklarda =================
-   Geniş ekranda sayfanın sol ve sağ boşluğunda, düz zeminde bir yol: solda Kapı ve iki ağaç, sağda Hukuk ve bir ağaç.
+   Geniş ekranda sayfanın sol ve sağ boşluğunda, düz zeminde kıvrımlı bir yol: solda Kapı ve iki ağaç, sağda Hukuk ve bir ağaç.
    Sarı Yeditepe Üniversitesi ringi Kapı'da bekler, sağa gidip ortadaki listelerin arkasına girer, sağ boşluktan çıkıp
    Hukuk'ta durur, sonra aynı yoldan geri döner. Yol, Kubbe sıralaması ile Not istekleri arasındaki hizada.
    Boşluk dar ise (yaklaşık 1360 pikselin altı) gösterilmez. Eski tam genişlik şerit: arsiv/kampus-ringi-serit. */
@@ -2359,11 +2359,43 @@ function laneBus(p) {
 /* Bir yanın çizimi. G: boşluk (ekran kenarından içeriğe); çizim içeriğin 50 piksel içine uzanır ve orada solar.
    Sol yanda x=0 ekranın sol kenarı, sağ yanda x=0 içeriğin 50 piksel içi. Döner: svg, yolun hizası, durak ve giriş/çıkış noktaları. */
 function laneGeo(G) {
-  const s = Math.max(0.72, Math.min(1.3, (G - 20) / 170)), W = Math.round(G + 50), H = Math.round(165 * s);
+  const s = Math.max(0.72, Math.min(1.3, (G - 20) / 170)), W = Math.round(G + 50), A = 13 * s, H = Math.round(165 * s);
   const yr = H - 24 * s, hr = 10.5 * s, bs = s * 1.18, big = G >= 240;
   const gs = s * (big ? 1.4 : 1.15), hs = s * (big ? 1.2 : 1), half = 42 * gs;   // kapı ve Hukuk ringden yüksek dursun
   const gx = Math.max(half + 26 * s, Math.min(G - 10 - half - 18 * s, G * 0.42)), hx = W - 62 * hs - 10;
-  return { G, s, W, H, yr, hr, bs, gs, hs, gx, hx, stopL: gx + 10 * s, stopR: hx - 24 * s, outL: W + 70 * bs, inR: -70 * bs };
+  const stopL = gx + 10 * s, stopR = hx - 24 * s, cL = W - 50;
+  // Kıvrımlar: yol yalnızca yukarı kıvrılır (tepeler), durakların ve binaların önünde düz hizada kalır; böylece hiçbir şey havada durmaz.
+  // Uzun aralıkta birkaç tepe; eğim en çok 1/4. Ekran kenarlarında yol yokuş çıkar.
+  const hills = (a, b) => {
+    const k = Math.max(1, Math.floor((b - a) / 190)), D = (b - a) / (2 * k), h = -Math.min(A, D / 6), out = [];
+    for (let i = 0; i < k; i++) out.push([a + D * (2 * i + 1), h], [a + D * (2 * i + 2), 0]);
+    out.pop();
+    return out;
+  };
+  const nodes = {
+    L: [[-10, -Math.min(A * 0.7, (stopL + 10) / 8)], [stopL, 0], ...hills(stopL, cL), [cL, 0], [W + 10, 0]],
+    R: [[-10, 0], [50, 0], ...hills(50, stopR), [stopR, 0], [W + 10, -Math.min(A * 0.7, (W + 10 - stopR) / 8)]]
+  };
+  return { G, s, W, H, yr, hr, bs, gs, hs, gx, hx, stopL, stopR, outL: W + 70 * bs, inR: -70 * bs, nodes };
+}
+/* Yolun kıvrımı: düğümlerde yatay, aralarında yumuşak geçiş (smoothstep; x'e göre doğrusal kübik Bézier'in kendisi).
+   laneDy: x'teki yükseklik farkı; lanePath: y hizasından çizgi (rev: sağdan sola, kapalı şekil için) */
+function laneDy(nodes, x) {
+  let i = 0;
+  while (i < nodes.length - 2 && x > nodes[i + 1][0]) i++;
+  const [x0, y0] = nodes[i], [x1, y1] = nodes[i + 1];
+  if (x <= x0) return y0;
+  if (x >= x1) return y1;
+  const t = (x - x0) / (x1 - x0);
+  return y0 + (y1 - y0) * t * t * (3 - 2 * t);
+}
+function lanePath(nodes, y, rev) {
+  const N = rev ? nodes.slice().reverse() : nodes;
+  return N.map(([x, dy], i) => {
+    if (!i) return (rev ? 'L' : 'M') + rgN(x) + ' ' + rgN(y + dy);
+    const [px, pdy] = N[i - 1], d = (x - px) / 3;
+    return `C${rgN(px + d)} ${rgN(y + pdy)} ${rgN(x - d)} ${rgN(y + dy)} ${rgN(x)} ${rgN(y + dy)}`;
+  }).join('');
 }
 function laneSvg(side, g) {
   const { W, H, s, yr, hr } = g, p = 'ln' + (++artSeq) + '-', top = yr - hr;
@@ -2375,10 +2407,11 @@ function laneSvg(side, g) {
     + `<linearGradient id="${p}gw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="rg-g1"/><stop offset="1" class="rg-g2"/></linearGradient>`
     + `<pattern id="${p}hs" width="12" height="9" patternUnits="userSpaceOnUse"><rect class="rg-hs2" width="12" height="9"/><rect class="rg-hs1" width="12" height="4.5"/></pattern>`
     + '</defs>';
+  const n = g.nodes[side], up = lanePath(n, top), tree = (x, h, pine) => rgTree(x, top + laneDy(n, x) - 1, h, pine);   // ağaçlar tepelerde yolla yükselir
   const back = side === 'L'
-    ? rgTree(g.gx - 42 * g.gs - 12 * s, top - 1, 40 * s, false) + `<g transform="translate(${rgN(g.gx)} ${rgN(top - 2)}) scale(${g.gs.toFixed(3)})">${rgGate(p)}</g>` + rgTree(g.gx + 42 * g.gs + 10 * s, top - 1, 36 * s, true)
-    : `<g transform="translate(${rgN(g.hx)} ${rgN(top - 9 * g.hs)}) scale(${g.hs.toFixed(3)})">${rgHukuk(p)}</g>` + rgTree(g.hx - 64 * g.hs, top - 1, 40 * s, false);
-  const road = `<rect class="ln-road" x="-10" y="${rgN(top)}" width="${W + 20}" height="${rgN(2 * hr)}"/><path class="ln-curb" d="M-10 ${rgN(top)}H${W + 10}M-10 ${rgN(yr + hr)}H${W + 10}"/><path class="ln-dash" d="M-10 ${rgN(yr)}H${W + 10}"/>`;
+    ? tree(g.gx - 42 * g.gs - 12 * s, 40 * s, false) + `<g transform="translate(${rgN(g.gx)} ${rgN(top - 2)}) scale(${g.gs.toFixed(3)})">${rgGate(p)}</g>` + tree(g.gx + 42 * g.gs + 10 * s, 36 * s, true)
+    : `<g transform="translate(${rgN(g.hx)} ${rgN(top - 9 * g.hs)}) scale(${g.hs.toFixed(3)})">${rgHukuk(p)}</g>` + tree(g.hx - 64 * g.hs, 40 * s, false);
+  const road = `<path class="ln-road" d="${up}${lanePath(n, yr + hr, true)}Z"/><path class="ln-curb" d="${up}${lanePath(n, yr + hr)}"/><path class="ln-dash" d="${lanePath(n, yr)}"/>`;
   return `<svg class="ln-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true" focusable="false">${defs}${back}${road}${laneBus(p)}</svg>`;
 }
 /* Ana sayfada yanları kurar ve ringi yürütür. Döner: { place (yerleri yeniden hesaplar), stop } */
@@ -2410,7 +2443,9 @@ function startLane(root) {
     if (ph.hide) { show(''); return; }
     const b = buses[ph.side]; show(ph.side);
     const moving = !ph.dwell, rot = (st.d / (7.6 * g.bs)) * 57.2958 % 360;
-    b.el.setAttribute('transform', `translate(${rgN(st.x)} ${rgN(g.yr + 4.5 * g.s)}) scale(${ph.face * g.bs} ${g.bs})`);
+    // yolun kıvrımında: teker hizasındaki iki noktadan eğim, ortadan yükseklik
+    const n = g.nodes[ph.side], w = 26 * g.bs, ang = Math.atan2(laneDy(n, st.x + w) - laneDy(n, st.x - w), 2 * w) * 57.2958;
+    b.el.setAttribute('transform', `translate(${rgN(st.x)} ${rgN(g.yr + laneDy(n, st.x) + 4.5 * g.s)}) rotate(${ang.toFixed(1)}) scale(${ph.face * g.bs} ${g.bs})`);
     b.el.classList.toggle('flip', ph.face < 0);
     b.spins.forEach(w => w.setAttribute('transform', `rotate(${rot.toFixed(1)})`));
     b.body.setAttribute('transform', moving ? `translate(0 ${(-Math.abs(Math.sin(t / 95)) * 0.8).toFixed(2)})` : 'translate(0 0)');
@@ -3952,22 +3987,35 @@ function requestBoxHtml(cid) {
 }
 function openRequestModal(cid) {
   if (!needAcc()) return;
-  if (openRequests(cid).filter(r => r.by === S.me).length >= 3) { toast('Bu ders için en fazla 3 açık isteğin olabilir.', 'err'); return; }
-  const m = openModal({ title: codeOf(cid) + ' için not iste', body: `<form novalidate>
+  const tooMany = c => openRequests(c).filter(r => r.by === S.me).length >= 3;
+  if (cid && tooMany(cid)) { toast('Bu ders için en fazla 3 açık isteğin olabilir.', 'err'); return; }
+  // ders verilmeden açılırsa (ana sayfadaki İSTE) önce ders sorulur
+  const m = openModal({ title: cid ? codeOf(cid) + ' için not iste' : 'Not iste', body: `<form novalidate>
+      ${cid ? '' : '<div class="field cb-wrap"><label for="rq-course">Hangi ders?</label><input id="rq-course" class="input" maxlength="12" autocomplete="off" placeholder="Örn. CSE 211" required></div>'}
       <div class="field"><label for="rq-text">Ne lazım? <span class="opt">isteğe bağlı</span></label><input id="rq-text" class="input" maxlength="140" autocomplete="off" placeholder="Örn. 3. hafta, bağlı listeler"><p class="help">Boş bırakırsan bu dersten herhangi bir not istemiş olursun.</p></div>
       <div class="field"><label for="rq-why">Neden lazım? <span class="opt">isteğe bağlı</span></label><textarea id="rq-why" class="input" rows="2" maxlength="300" placeholder="Örn. vizeye çalışıyorum, katılamadığım haftalar eksik"></textarea><p class="help">İstekler sayfasında görünür; ana sayfada yalnızca kısa hali yazar.</p></div>
       <p class="help">İsteğin ders sayfasında ve ana sayfada görünür. Notu paylaşıp isteği karşılayan kişi ${KUBBE.fill} kubbe kazanır.</p>
       <p class="err" role="alert"></p>
       <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button class="btn btn-primary" type="submit">İste</button></div></form>` });
+  const cIn = $('#rq-course', m.el);
+  if (cIn) courseCombo(cIn);
   $('form', m.el).addEventListener('submit', async e => {
     e.preventDefault();
+    const err = $('.err', m.el);
+    let c = cid;
+    if (!c) {
+      const pc = parseCode(cIn.value);
+      if (!pc || !S.courses.has(pc.id)) { err.textContent = cIn.value.trim() ? 'Bu ders kodunu bulamadık. Listeden seç ya da kodu kontrol et.' : 'Hangi dersten not istediğini yaz.'; cIn.focus(); return; }
+      c = pc.id;
+      if (tooMany(c)) { err.textContent = 'Bu ders için en fazla 3 açık isteğin olabilir.'; return; }
+    }
     const text = $('#rq-text', m.el).value.trim().replace(/\s+/g, ' ').slice(0, 140), why = $('#rq-why', m.el).value.trim().replace(/\s+/g, ' ').slice(0, 300);
     // aynı ders için aynı istek (boş istek de) zaten açıksa yenisi açılmaz: başkasınınsa ona katılınır
-    const dup = openRequests(cid).find(r => reqNorm(r.text) === reqNorm(text));
+    const dup = openRequests(c).find(r => reqNorm(r.text) === reqNorm(text));
     if (dup && dup.by !== S.me) { m.close(); await togglePlus(dup.id, true); return; }
-    if (dup) { $('.err', m.el).textContent = 'Bu ders için aynı isteğin zaten açık.'; return; }
+    if (dup) { err.textContent = 'Bu ders için aynı isteğin zaten açık.'; return; }
     const ref = S.db.collection('requests').doc();
-    if (await write(() => ref.set({ cid, text, why, by: S.me, at: Date.now(), plus: {}, done: false, nid: '', doneBy: '', doneAt: 0 }), 'İsteğin yayınlandı')) m.close();
+    if (await write(() => ref.set({ cid: c, text, why, by: S.me, at: Date.now(), plus: {}, done: false, nid: '', doneBy: '', doneAt: 0 }), 'İsteğin yayınlandı')) m.close();
   });
 }
 async function togglePlus(id, join, el) {
@@ -4001,7 +4049,7 @@ function renderReqBanner(root) {
 }
 ROUTES['istekler'] = function viewRequests(root) {
   let only = 'all', want = parseHash().q.get('r') || '';
-  root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Not istekleri</h1><p>Öğrencilerin aradığı notlar. Elinde varsa paylaş, isteği karşıla, ${KUBBE.fill} kubbe kazan. Yeni istek için ders sayfasındaki “Not iste” düğmesini kullan.</p></div>
+  root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Not istekleri</h1><p>Öğrencilerin aradığı notlar. Elinde varsa paylaş, isteği karşıla, ${KUBBE.fill} kubbe kazan. Aradığın notu bulamazsan sen iste.</p><div class="head-actions"><button type="button" class="btn btn-primary" data-g="req-new" aria-label="Not iste">${gl('megaphone')}İSTE</button></div></div>
     <div class="toolbar"><div class="chips" role="group" aria-label="Göster"><button type="button" class="chip" data-f="all" aria-pressed="true">Açık istekler</button><button type="button" class="chip" data-f="mine" aria-pressed="false">Derslerim</button><button type="button" class="chip" data-f="done" aria-pressed="false">Karşılananlar</button></div></div>
     <div class="panel pt0" data-r="list"></div></div>`;
   $$('[data-f]', root).forEach(b => b.addEventListener('click', () => { only = b.dataset.f; $$('[data-f]', root).forEach(x => x.setAttribute('aria-pressed', String(x === b))); api.refresh(); }));
@@ -4012,7 +4060,7 @@ ROUTES['istekler'] = function viewRequests(root) {
     const mine = new Set(myCourses());
     const list = only === 'done' ? requestsWhere(r => r.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 30) : openRequests().filter(r => only !== 'mine' || mine.has(r.cid));
     el.innerHTML = list.length ? `<ul class="reqs">${list.map(r => reqItemHtml(r, { showCourse: true })).join('')}</ul>`
-      : emptyHtml(only === 'done' ? 'Henüz karşılanan istek yok' : only === 'mine' ? 'Derslerinde açık istek yok' : 'Şu an açık istek yok', only === 'mine' && !mine.size ? 'Önce ders sayfalarından Derslerim’e ders ekle.' : 'Bir ders sayfasından “Not iste” diyerek ilk isteği sen aç.');
+      : emptyHtml(only === 'done' ? 'Henüz karşılanan istek yok' : only === 'mine' ? 'Derslerinde açık istek yok' : 'Şu an açık istek yok', only === 'mine' && !mine.size ? 'Önce ders sayfalarından Derslerim’e ders ekle.' : 'Yukarıdaki “İSTE” ile ilk isteği sen aç.');
     if (want) { const li = document.getElementById('rq-' + want); if (li) { want = ''; li.classList.add('flash'); try { li.scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); } catch (e) { /* yok */ } } }
   } };
   return api;
@@ -4110,32 +4158,6 @@ function openZorModal(cid) {
   const del = $('[data-r=zdel]', m.el);
   if (del) del.addEventListener('click', async () => { if (await write(() => zorWrite(cid, null), 'Oyun kaldırıldı')) m.close(); });
 }
-/* Bu dönem: giriş yılından planın kaçıncı dönemi olduğu tahmin edilir (Güz: Ağustos-Ocak, Bahar: Şubat-Temmuz).
-   Hazırlık okuyan ya da dönemi farklı olan öğrenci oklarla düzeltir. Seçim hesabın özel kaydında: donem[bölüm] = { s: dönem, t: seçildiği dönemin sırası };
-   dönem değişince seçim de bir ilerler. */
-function acadNow(now = new Date()) { const Y = now.getFullYear(), M = now.getMonth(), guz = M >= 7 || M === 0; return { y: M >= 7 ? Y : Y - 1, guz }; }
-const termIdx = t => t.y * 2 + (t.guz ? 0 : 1);
-const planSems = P => Object.keys(P.plan || {}).map(Number).filter(n => n > 0).sort((a, b) => a - b);
-function nowSem(bol, P) {
-  const sems = planSems(P);
-  if (!sems.length) return null;
-  const t = acadNow(), ti = termIdx(t), yil = +((userOf(S.me) || {}).yil) || 0, sv = privGet('donem')[bol];
-  let sn;
-  if (sv && typeof sv === 'object' && +sv.s > 0 && +sv.t > 0) sn = +sv.s + (P.yillik ? t.y - Math.floor(+sv.t / 2) : ti - +sv.t);
-  else if (yil) sn = P.yillik ? t.y - yil + 1 : (t.y - yil) * 2 + (t.guz ? 1 : 2);
-  else sn = sems[0];
-  sn = clamp(sn, sems[0], sems[sems.length - 1]);
-  if (!sems.includes(sn)) sn = sems.find(x => x > sn) || sems[sems.length - 1];
-  return { sn, sems, ti, tk: t.y * 10 + (t.guz ? 1 : 2) };
-}
-function semStep(bol, d) {
-  const P = planOf(bol);
-  if (!P || !d || !needAcc()) return;
-  const ns = nowSem(bol, P);
-  if (!ns) return;
-  const nx = ns.sems[clamp(ns.sems.indexOf(ns.sn) + d, 0, ns.sems.length - 1)];
-  if (nx !== ns.sn) privPut('donem', bol, { s: nx, t: ns.ti });
-}
 /* Mezuniyet yolu */
 function doneCourses() {
   const p = S.priv && Array.isArray(S.priv.done) ? S.priv.done : null;
@@ -4206,7 +4228,7 @@ function tourSteps(u) {
     { go: '#/dersler', sel: '#main .toolbar', t: 'Bölümünün ders planı', say: 'Buradan bölümünü seç: dönem dönem bütün derslerin çıkar. Bitirdiğin dersleri ✓ ile işaretlersen ne kadar kaldığını da görürsün.' },
     cid ? { go: '#/ders/' + cid, sel: ['#main [data-r=myc]', '#main .head-actions'], t: 'Derslerini ekle', say: 'Her dersin kendi sayfası var: notlar, yorumlar ve hocalar. “Derslerime ekle”ye basarsan o derse yeni not düşünce ilk sen görürsün.' } : null,
     { go: '#/paylas', sel: ['#main [data-r=gpick]', '#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `${gdCfg() ? '“Drive’dan seç”e bas, notunu Drive’ından seç; paylaşım ayarını ben hallederim.' : 'Notunu Google Drive’a koy, linkini buraya yapıştır.'} Her not ${KUBBE.note} kubbe, her ▲ oy +${KUBBE.up} kubbe kazandırır; bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
-    { go: '#/hocaolcer', sel: '#main .toolbar', t: 'HocaÖlçer', say: 'Hocayı adıyla ya da ders koduyla bul. Anlatım, ödev yükü, not verme ve devamsızlıkta puanla; yorumunu anonim bırakabilirsin.' },
+    { go: '#/hocaolcer', sel: '#main .ho-search', t: 'HocaÖlçer', say: 'Hocayı adıyla ya da ders koduyla bul. Anlatım, ödev yükü, not verme ve devamsızlıkta puanla; yorumunu anonim bırakabilirsin.' },
     { go: '#/kubbe', sel: ['#main [data-r=head]', '#main .shop-sec'], t: 'Kubbe ve market', say: 'Paylaştıkça kubbe toplarsın. Dönemin yıldızı sıralamasında yüksel, marketten profilini süsleyecek parçalar al.' },
     { go: '#/', sel: '#main [data-r=ayhan]', t: 'Hepsi bu kadar!', say: 'Ben burada, ana sayfada dolaşıyorum; yorulunca kırmızı kulübemin önünde uyurum. Canın sıkılırsa gel beni sev. İlk notunu bekliyorum, hav!', next: 'Başlayalım' }
   ].filter(Boolean);
@@ -4481,7 +4503,7 @@ ROUTES[''] = function viewHome(root) {
     </aside>
     <section class="req-card hm-reqs" data-r="reqsec" aria-labelledby="rq-h">
       <span class="rq-spark" aria-hidden="true">${[[88, 9, 13, 0], [76, 24, 7, 1], [95, 42, 9, 2], [6, 6, 9, 1], [56, 5, 6, 2], [97, 70, 10, 0], [3, 56, 7, 2], [66, 97, 9, 1], [26, 97, 7, 0], [42, 12, 5, 1], [83, 96, 6, 2], [13, 97, 8, 1]].map(([x, y, z, d]) => `<i class="d${d}" style="--x:${x}%;--y:${y}%;--z:${z}px"></i>`).join('')}</span>
-      <div class="req-card-top"><span class="req-card-ico" aria-hidden="true">${gl('megaphone')}</span><h2 id="rq-h">Not istekleri</h2></div>
+      <div class="req-card-top"><span class="req-card-ico" aria-hidden="true">${gl('megaphone')}</span><h2 id="rq-h">Not istekleri</h2><button type="button" class="rq-ask" data-g="req-new" aria-label="Not iste">İSTE</button></div>
       <div data-r="reqs"></div>
       <a class="btn btn-sm req-card-all" href="#/istekler">Tüm istekler</a>
     </section>
@@ -4549,7 +4571,7 @@ ROUTES[''] = function viewHome(root) {
       R('try').hidden = !tryList.length;
       R('try').innerHTML = tryList.length ? 'Hızlı erişim: ' + tryList.map(id => `<a class="code" href="#/ders/${esc(id)}">${esc(codeOf(id))}</a>`).join('') : '';
       { const rc = R('recent'), h = recentHtml(); rc.hidden = !h; if (rc.dataset.h !== h) { rc.dataset.h = h; rc.innerHTML = h; } }
-      { const list = openRequests().slice(0, 5), h = list.length ? `<ul class="rq-lines">${list.map(reqLineHtml).join('')}</ul>` : '<p class="req-empty">Şu an açık istek yok. Aradığın notu bulamazsan ders sayfasından iste; arkadaşların görsün.</p>', el2 = R('reqs');
+      { const list = openRequests().slice(0, 5), h = list.length ? `<ul class="rq-lines">${list.map(reqLineHtml).join('')}</ul>` : '<p class="req-empty">Şu an açık istek yok. Aradığın notu bulamazsan “İSTE”ye bas; arkadaşların görsün.</p>', el2 = R('reqs');
         if (el2.dataset.h !== h) {   // sayı artınca küçük bir sıçrama
           const prev = el2._n || {}, now = {}; el2.dataset.h = h; el2.innerHTML = h;
           $$('.rq-line', el2).forEach(li => { const n = +li.dataset.n; now[li.dataset.id] = n; if (prev[li.dataset.id] != null && n > prev[li.dataset.id]) { const b = $('.rq-n', li), u = $('.rq-up', li); if (b) b.classList.add('bump'); if (u) u.classList.add('go'); } });
@@ -4586,6 +4608,41 @@ ROUTES[''] = function viewHome(root) {
   return api;
 };
 
+/* ================= Ders ve hoca kartları =================
+   Kutu görünümü: arama sonuçları, Derslerim, HocaÖlçer. Kartın rengi ders kodunun başından ya da hocanın fakültesinden (hep aynı). */
+const TINTS = ['#3D5BD9', '#22A86A', '#FF4D6D', '#7C5CFF', '#F29A0B', '#0098B8', '#E0262F', '#2E8F6E'];
+const tintOf = k => { let h = 0; for (const ch of String(k || '')) h = (h * 31 + ch.codePointAt(0)) >>> 0; return TINTS[h % TINTS.length]; };
+const codePrefix = id => (/^[A-Z]+/.exec(String(id || '')) || [''])[0];
+// name: ders adı yerine (vurgulu) HTML; sub: alt satır HTML; fresh: Derslerim'de yeni not sayısı
+function courseCardHtml(id, { name = '', sub = '', fresh = 0 } = {}) {
+  const c = S.courses.get(id) || {}, a = courseActivity().get(id) || { notes: 0 }, kr = loadText(c);
+  return `<li><a class="ccard" href="#/ders/${esc(id)}" style="--hc:${tintOf(codePrefix(id))}"><span class="cc-top"><span class="code">${esc(c.code || codeOf(id))}</span>${fresh ? `<span class="fresh-n">${fresh} yeni not</span>` : ''}</span>`
+    + `<span class="cc-name">${name || esc(c.name || 'Ders adı yükleniyor')}</span>${sub ? `<span class="cc-sub">${sub}</span>` : ''}`
+    + `<span class="cc-foot">${zchipHtml(id)}${kr ? `<span class="ects">${kr}</span>` : ''}${a.notes ? `<span class="cc-n">${a.notes} not</span>` : ''}</span></a></li>`;
+}
+const hocaCodes = id => [...coursesOfHoca(id).entries()].sort((a, b) => b[1].son - a[1].son).slice(0, 3).map(([cid]) => cid);
+const hocaItem = id => { const h = S.hocas.get(id); return h ? { id, h, st: hocaStats(h) } : null; };
+const CRIT_BY_W = () => CRIT.slice().sort((a, b) => CRIT_W[b.k] - CRIT_W[a.k]);
+// x: { id, h, st }; tail: "az önce" gibi ek
+function hocaCardHtml(x, tail = '') {
+  const { h, st } = x, cs = hocaCodes(x.id);
+  const crit = CRIT_BY_W().map(c => `<span class="hc-k"><span>${esc(c.name)}</span><b>${fmt1(st[c.k])}</b><span class="hc-bar"><i data-w="${Math.round(st[c.k] / 5 * 100)}" style="background:${HEAT[lvOf(st[c.k]) - 1]}"></i></span></span>`).join('');
+  const meta = [st.cnt ? st.cnt + ' puan' : '', tail].filter(Boolean).join(' · ');
+  return `<li><a class="hcard" href="#/hoca/${esc(x.id)}" style="--hc:${tintOf(h.fac || h.dept || '')}"><span class="hc-band" aria-hidden="true"></span>`
+    + `<span class="hc-top"><span class="hc-av" aria-hidden="true">${esc(initials(h.name))}</span>`
+    + (st.cnt ? `<span class="hc-score" title="Ağırlıklı genel puan"><b style="color:${HEAT[lvOf(st.all) - 1]}">${fmt1(st.all)}</b>${starsHtml(st.all, 'sm')}</span>` : '<span class="hc-score none">Puan yok</span>') + '</span>'
+    + (h.title ? `<span class="hc-title">${esc(h.title)}</span>` : '')
+    + `<span class="hc-name">${esc(h.name)}${h.demo ? '<span class="tag">örnek kayıt</span>' : ''}</span>`
+    + (h.dept || h.fac ? `<span class="hc-dept">${esc(h.dept || h.fac)}</span>` : '')
+    + (st.cnt ? `<span class="hc-crit">${crit}</span>` : '<span class="hc-empty">Henüz puanlanmadı. İlk puanı sen ver.</span>')
+    + `<span class="hc-foot">${cs.map(cid => `<span class="code">${esc(codeOf(cid))}</span>`).join('')}${meta ? `<span class="hc-meta">${esc(meta)}</span>` : ''}</span></a></li>`;
+}
+function hocaRowHtml(x, tail = '') {
+  const cs = hocaCodes(x.id);
+  const sub = [x.h.dept, cs.map(codeOf).join(', ')].filter(Boolean).join(' / ') + (tail ? (x.h.dept || cs.length ? ' · ' : '') + tail : '');
+  return `<li><a class="row-link" href="#/hoca/${esc(x.id)}"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><span class="row-title">${esc(hocaFull(x.h))}${x.h.demo ? '<span class="tag">örnek kayıt</span>' : ''}</span><span class="row-sub">${esc(sub)}</span></span><span class="row-end">${x.st.cnt ? `<span class="minirate">${starsHtml(x.st.all, 'sm')}${fmt1(x.st.all)}</span><span>${x.st.cnt} puan</span>` : '<span>Puan yok</span>'}</span></a></li>`;
+}
+
 /* ================= Arama sonuçları ================= */
 ROUTES['ara'] = function viewSearch(root, r) {
   const q0 = r.q.get('q') || '';
@@ -4605,10 +4662,11 @@ ROUTES['ara'] = function viewSearch(root, r) {
       const all = searchAll(q), cs = all.filter(x => x.kind === 'course'), hs = all.filter(x => x.kind === 'hoca');
       const pc = parseCode(q);
       let html = '';
-      if (cs.length) html += `<h2 class="sub-h">Dersler</h2><ul class="list">${cs.slice(0, 30).map(x => `<li><a class="row-link" href="#/ders/${esc(x.id)}"><span class="code">${hl(x.label, q)}</span><span class="row-main hl"><span class="row-title">${hl(x.sub, q)}</span></span></a></li>`).join('')}</ul>`;
-      if (hs.length) html += `<h2 class="sub-h mt2">Hocalar</h2><ul class="list">${hs.slice(0, 30).map(x => `<li><a class="row-link" href="#/hoca/${esc(x.id)}"><span class="avatar">${esc(initials(x.label))}</span><span class="row-main hl"><span class="row-title">${hl(x.label, q)}</span>${x.sub ? `<span class="row-sub">${esc(x.sub)}</span>` : ''}</span></a></li>`).join('')}</ul>`;
-      if (!cs.length && !hs.length) html = emptyHtml('Sonuç bulunamadı', 'Yazımı kontrol et ya da hocanın yalnızca soyadıyla ara. Listede olmayan ders ve hocalar site yönetimi tarafından eklenir.');
-      res.innerHTML = html;
+      const hItems = hs.slice(0, 30).map(x => hocaItem(x.id)).filter(Boolean);
+      if (cs.length) html += `<h2 class="sub-h">Dersler<span class="count">${cs.length > 30 ? 'ilk 30 / ' + cs.length : cs.length}</span></h2><ul class="ccards">${cs.slice(0, 30).map(x => courseCardHtml(x.id, { name: `<span class="hl">${hl(x.sub, q)}</span>` })).join('')}</ul>`;
+      if (hItems.length) html += `<h2 class="sub-h mt2">Hocalar<span class="count">${hs.length > 30 ? 'ilk 30 / ' + hs.length : hs.length}</span></h2><ul class="hcards">${hItems.map(x => hocaCardHtml(x)).join('')}</ul>`;
+      if (!cs.length && !hItems.length) html = emptyHtml('Sonuç bulunamadı', 'Yazımı kontrol et ya da hocanın yalnızca soyadıyla ara. Listede olmayan ders ve hocalar site yönetimi tarafından eklenir.');
+      res.innerHTML = html; applyWidths(res);
     }
   };
   return api;
@@ -4623,7 +4681,7 @@ ROUTES['dersler'] = function viewCourses(root, r) {
       <div class="head-actions" data-owner hidden><button type="button" class="btn btn-primary" data-g="add-course">${icon('plus')}Ders ekle</button></div></div>
     <div class="toolbar"><select class="select bol-sel" data-r="bol" aria-label="Bölüm"></select>
       <label class="search sm cb-wrap grow">${icon('search')}<input class="input" data-r="f" type="search" placeholder="Ders kodu ya da adıyla ara" aria-label="Derslerde ara"></label></div>
-    <div data-r="now"></div>
+    <div data-r="mine"></div>
     <div class="panel pt0" data-r="list"></div></div>`;
   const f = $('[data-r=f]', root), bSel = $('[data-r=bol]', root);
   f.addEventListener('input', () => { LIST.lim = 80; api.refresh(); });
@@ -4634,27 +4692,22 @@ ROUTES['dersler'] = function viewCourses(root, r) {
     const a = (actCache || (actCache = courseActivity())).get(id) || { notes: 0 };
     return `<li><a class="row-link" href="#/ders/${esc(id)}"><span class="code">${esc(c.code || codeOf(id))}</span><span class="row-main"><span class="row-title">${esc(c.name || 'Ders adı yükleniyor')}</span>${extra}</span><span class="row-end">${zchipHtml(id)}${loadText(c) ? `<span class="ects">${loadText(c)}</span>` : ''}${a.notes ? `<span>${a.notes} not</span>` : ''}</span></a></li>`;
   };
-  /* Kendi bölümünün planında, aramıyorken: bu dönemin dersleri en üstte (seçmelilerden yalnızca seçilmiş olanlar) */
-  const nowHtml = (bol, P, two) => {
-    const ns = nowSem(bol, P);
-    if (!ns) return '';
-    const sn = ns.sn, ids = Array.isArray(P.plan[sn]) ? P.plan[sn].slice() : [], els = (P.el && P.el[sn]) || [];
-    const picked = els.map((e, i) => elPick(elKey(bol, sn, i, e))).filter(id => id && !ids.includes(id));
-    if (two && (!!two.P2.yillik === !!P.yillik)) for (const id of (Array.isArray(two.P2.plan[sn]) ? two.P2.plan[sn] : [])) if (!two.mainIds.has(id) && !two.hid.has(id) && !ids.includes(id)) ids.push(id);
-    const openEl = els.length - els.filter((e, i) => elPick(elKey(bol, sn, i, e))).length;
-    const btn = (d, lbl, off) => `<button type="button" class="iconbtn" data-g="sem-step" data-id="${esc(bol)}" data-d="${d}" aria-label="${lbl}"${off ? ' disabled' : ''}>${icon(d < 0 ? 'cl' : 'cr')}</button>`;
-    const i = ns.sems.indexOf(sn);
-    const rows = ids.map(id => courseRow(id)).join('') + picked.map(id => courseRow(id, '<span class="row-sub">Seçmeli</span>')).join('');
-    return `<section class="now-sem" aria-labelledby="now-h"><div class="now-head"><div><h2 id="now-h">Bu dönemki dersler</h2><p class="now-term">${esc(termLabel(ns.tk))}</p></div>`
-      + `<div class="now-step" role="group" aria-label="Kaçıncı dönemdesin">${btn(-1, 'Önceki dönem', i <= 0)}<span class="now-lbl">${P.yillik ? esc(semLabel(P, sn)) : `<b>${sn}.</b> dönem · ${esc(semLabel(P, sn))}`}</span>${btn(1, 'Sonraki dönem', i >= ns.sems.length - 1)}</div></div>`
-      + (rows ? `<ul class="list">${rows}</ul>` : '<p class="muted now-empty">Bu dönemin planında ders yok.</p>')
-      + `<p class="fine now-fine">${openEl ? `${openEl} seçmeli henüz seçilmedi; aşağıda ${esc(semLabel(P, sn))} planından seç. ` : ''}Dönem giriş yılından hesaplandı. Hazırlık okuduysan ya da dönemin farklıysa oklarla düzelt.</p></section>`;
+  /* Derslerim: hesabı olan öğrencide, aramıyorken listenin üstünde kutu kutu; ilk 6 ders, gerisi "Tümünü göster" ile */
+  const MY_N = 6;
+  let myAll = false;
+  const mineHtml = () => {
+    const mine = myCourses().filter(id => S.courses.has(id)), shown = myAll ? mine : mine.slice(0, MY_N);
+    const head = `<div class="my-head"><h2 id="my-h">Derslerim${mine.length ? `<span class="count">${mine.length}</span>` : ''}</h2>${mine.length ? '<a class="sec-link" href="#/dersler?b=__mine">Liste olarak gör</a>' : ''}</div>`;
+    if (!mine.length) return `<section class="my-sec" aria-labelledby="my-h">${head}<p class="my-empty">Aldığın dersleri buraya ekle: bir ders sayfası açıp “Derslerime ekle”ye bas. Yeni not düşen derste rozet görürsün.</p></section>`;
+    return `<section class="my-sec" aria-labelledby="my-h">${head}<ul class="ccards">${shown.map(id => courseCardHtml(id, { fresh: freshNotes(id) })).join('')}</ul>`
+      + (mine.length > MY_N ? `<div class="more-wrap"><button type="button" class="btn btn-sm" data-r="my-all" aria-expanded="${myAll}">${myAll ? 'Daha az göster' : `Tümünü göster (${mine.length} ders)`}</button></div>` : '') + '</section>';
   };
+  $('[data-r=mine]', root).addEventListener('click', e => { if (e.target.closest('[data-r=my-all]')) { myAll = !myAll; api.refresh(); } });
   const api = {
     refresh() {
-      const el = $('[data-r=list]', root), st = waitState(), nowEl = $('[data-r=now]', root);
+      const el = $('[data-r=list]', root), st = waitState(), myEl = $('[data-r=mine]', root);
       actCache = null;
-      nowEl.innerHTML = '';
+      myEl.innerHTML = '';
       if (st === 'nodb') { el.innerHTML = noDbHtml(); return; }
       if (st === 'loading' || !allLoaded()) { el.innerHTML = loadingHtml(); return; }
       const facs = new Map();
@@ -4665,9 +4718,11 @@ ROUTES['dersler'] = function viewCourses(root, r) {
       bSel.value = (S.bolumler.has(bol) || (bol === '__mine' && myAcc())) ? bol : ''; bol = bSel.value;
       const q = fold(f.value), qc = q.replace(/\s+/g, '');
       const match = id => { const c = S.courses.get(id) || {}; return !q || id.toLowerCase().includes(qc) || foldName(c.name).includes(q); };
+      if (myAcc() && !q && bol !== '__mine') { myEl.innerHTML = mineHtml(); applyWidths(myEl); }
       if (bol === '__mine') {
         const mine = myCourses().filter(id => S.courses.has(id) && match(id));
-        el.innerHTML = '<div class="bol-head"><h2>Derslerim</h2><p class="muted">Ders sayfalarındaki “Derslerime ekle” düğmesiyle eklediğin dersler. Son bakışından sonra yeni not düşen derste rozet görürsün.</p></div>' + (mine.length ? `<ul class="list">${mine.map(id => { const f = freshNotes(id); return courseRow(id, f ? `<span class="row-sub"><span class="fresh-n">${f} yeni not</span></span>` : ''); }).join('')}</ul>` : emptyHtml('Henüz ders eklemedin', 'Bir ders sayfası açıp “Derslerime ekle”ye bas.'));
+        el.innerHTML = '<div class="bol-head"><h2>Derslerim</h2><p class="muted">Ders sayfalarındaki “Derslerime ekle” düğmesiyle eklediğin dersler. Son bakışından sonra yeni not düşen derste rozet görürsün.</p></div>' + (mine.length ? `<ul class="ccards">${mine.map(id => courseCardHtml(id, { fresh: freshNotes(id) })).join('')}</ul>` : emptyHtml('Henüz ders eklemedin', 'Bir ders sayfası açıp “Derslerime ekle”ye bas.'));
+        applyWidths(el);
         return;
       }
       if (bol) {
@@ -4740,7 +4795,6 @@ ROUTES['dersler'] = function viewCourses(root, r) {
           else if (ae.dataset && ae.dataset.g && ae.dataset.id) fsel = `[data-g="${ae.dataset.g}"][data-id="${ae.dataset.id}"]` + (ae.dataset.c != null ? `[data-c="${ae.dataset.c}"]` : '');
         }
         const fscroll = EL_SCROLL; EL_FOCUS = ''; EL_SCROLL = false;
-        if (accd && !q && bol === (userOf(S.me) || {}).bolum) { nowEl.innerHTML = nowHtml(bol, P, P2 ? { P2, mainIds, hid } : null); applyWidths(nowEl); }
         const tail = hasEls ? (hasPools ? ' Seçmelilerin ders listeleri fakülte sitesinden alındı: mavi seçmeli satırına basınca o seçmeli için alınabilecek dersler açılır, birini seçince satırda o dersin adı görünür. Listesi çok uzun olan seçmelilerde (serbest, tamamlayıcı) aldığın dersi tüm dersler arasında arayıp seçebilirsin.' : ' Mavi seçmeli satırına basıp aldığın dersi tüm dersler arasında arayıp seçebilirsin.') : '';
         el.innerHTML = head + gradHtml(P, bol, P2 ? { P2, b2, cap, mainIds, hid: new Set([...hid, ...sharedEl]) } : null) + (secs + elSec || emptyHtml('Eşleşen ders yok', 'Aramayı temizle.')) + `<p class="fine">Zorunlu dersler${hasEls ? ' ve seçmeliler' : ''} Yeditepe AKTS Bilgi Paketi’ndeki ders planından alındı${progKnown && progTot ? `; planın toplamı ${fmtKr(progTot)} kredi` : ''}.${tail}${P2 ? ` ${esc(capTag(cap))} programının dersleri ${esc(b2.ad || cap.b)} planından; ana programında da olan dersler bir kez gösterilir.` : ''}</p>`; applyWidths(el);
         el.querySelectorAll('[data-r=el-q]').forEach(inp => { const v = EL_Q.get(inp.dataset.id); if (v) { inp.value = v; elFilter(inp); } });
@@ -4754,7 +4808,10 @@ ROUTES['dersler'] = function viewCourses(root, r) {
       const cut = list.slice(0, LIST.lim), rest = list.length - cut.length;
       const groups = new Map();
       for (const id of cut) { const p = (/^[A-Z]+/.exec(id) || ['?'])[0]; if (!groups.has(p)) groups.set(p, []); groups.get(p).push(id); }
-      el.innerHTML = `<p class="list-info">${q ? `<b>${list.length}</b> ders eşleşti` : `Katalogda <b>${list.length}</b> ders var`}${rest > 0 ? `, ilk ${cut.length} tanesi gösteriliyor. Kod ya da ad yazarak daralt ya da yukarıdan bölümünü seç.` : '.'}</p>`
+      const info = `<p class="list-info">${q ? `<b>${list.length}</b> ders eşleşti` : `Katalogda <b>${list.length}</b> ders var`}${rest > 0 ? `, ilk ${cut.length} tanesi gösteriliyor. Kod ya da ad yazarak daralt ya da yukarıdan bölümünü seç.` : '.'}</p>`;
+      // ararken eşleşen dersler kutu kutu; aramıyorken katalog kod başına göre satır satır
+      if (q) { el.innerHTML = info + `<ul class="ccards">${cut.map(id => courseCardHtml(id, { sub: S.courses.get(id).dept ? esc(S.courses.get(id).dept) : '' })).join('')}</ul>` + (rest > 0 ? `<div class="more-wrap"><button type="button" class="btn" data-g="more-courses">Daha fazla göster (${rest} ders daha)</button></div>` : ''); applyWidths(el); return; }
+      el.innerHTML = info
         + [...groups.entries()].map(([p, ids]) => `<section class="grp"><h2 class="sub-h">${esc(p)}</h2><ul class="list">${ids.map(id => courseRow(id, S.courses.get(id).dept ? `<span class="row-sub">${esc(S.courses.get(id).dept)}</span>` : '')).join('')}</ul></section>`).join('')
         + (rest > 0 ? `<div class="more-wrap"><button type="button" class="btn" data-g="more-courses">Daha fazla göster (${rest} ders daha)</button></div>` : '');
     }
@@ -4909,28 +4966,29 @@ function courseHocasTab(panel, cid) {
 /* ================= HocaÖlçer ================= */
 ROUTES['hocaolcer'] = function viewHocas(root) {
   root.innerHTML = `<div class="wrap">
-    <div class="page-intro"><h1>HocaÖlçer</h1>
-      <p>Hocalar dört kriterde, 5 yıldız üzerinden buçuklu puanlanır: anlatım, ödev yükü, not verme ve devamsızlık. Her kriterde 5 yıldız öğrenci açısından en iyi durumdur. Genel puanda en çok anlatım ve not verme sayılır, sonra ödev yükü, en az devamsızlık. Puanlar anonimdir.</p>
-      ${CAT.hocas.size ? `<p class="fine">Hoca listesi Yeditepe’nin sitesindeki akademik kadro sayfalarından alındı: ${CAT.hocas.size} kişi, unvanı, fakültesi, bölümü ve verdiği dersler. Ders kodu yazınca o dersi verenler çıkar.</p>` : ''}
+    <div class="page-intro ho-intro"><h1>HocaÖlçer</h1>
       <div class="head-actions" data-owner hidden><button type="button" class="btn btn-primary" data-g="add-hoca">${icon('plus')}Hoca ekle</button></div></div>
-    <div class="toolbar"><label class="search sm cb-wrap grow">${icon('search')}<input class="input" data-r="f" type="search" placeholder="Hoca adı ya da ders kodu, örn. CSE 211" aria-label="Hocalarda ara"></label>
-      <select class="select sm" data-r="dept" aria-label="Fakülte"></select>
-      <select class="select sm" data-r="sort" aria-label="Sıralama" hidden><option value="n">En çok puanlanan</option><option value="top">En yüksek puan</option><option value="az">A’dan Z’ye</option></select></div>
-    <div class="panel pt0" data-r="list"></div></div>`;
+    <form class="search big ho-search" role="search" data-r="hs">${icon('search')}<input data-r="f" type="search" enterkeyhint="search" autocomplete="off" placeholder="Hoca adı ya da ders kodu, örn. CSE 211" aria-label="Hocalarda ara"></form>
+    <div class="toolbar ho-bar"><select class="select sm" data-r="dept" aria-label="Fakülte"></select>
+      <select class="select sm" data-r="sort" aria-label="Sıralama" hidden><option value="n">En çok puanlanan</option><option value="top">En yüksek puan</option><option value="az">A’dan Z’ye</option></select>
+      <div class="seg ho-view" role="group" aria-label="Görünüm"><button type="button" class="seg-btn" data-v="card" aria-pressed="true">${icon('grid')}Kutu</button><button type="button" class="seg-btn" data-v="list" aria-pressed="false">${icon('list')}Liste</button></div></div>
+    <div class="panel pt0" data-r="list"></div>
+    ${CAT.hocas.size ? `<p class="fine ho-src">Hoca listesi Yeditepe’nin sitesindeki akademik kadro sayfalarından alındı: ${CAT.hocas.size} kişi, unvanı, fakültesi, bölümü ve verdiği dersler. Ders kodu yazınca o dersi verenler çıkar. Puanlar anonimdir.</p>` : ''}</div>`;
   const f = $('[data-r=f]', root), dSel = $('[data-r=dept]', root), sSel = $('[data-r=sort]', root);
-  // Arama ya da fakülte seçilmedikçe yalnızca son puanlanan hocalar görünür; hepsi "Tüm hocaları göster" ile açılır
-  let lim = 60, showAll = false;
+  $('[data-r=hs]', root).addEventListener('submit', e => { e.preventDefault(); f.blur(); });
+  // Arama ya da fakülte seçilmedikçe yalnızca son puanlanan hocalar görünür; hepsi "Tüm hocaları göster" ile açılır.
+  // Görünüm: kutu (varsayılan) ya da liste; seçim bu tarayıcıda kalır.
+  let lim = 60, showAll = false, view = ls.get('hocaView', 'card') === 'list' ? 'list' : 'card';
+  const paintView = () => $$('[data-v]', root).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === view)));
+  paintView();
+  $$('[data-v]', root).forEach(b => b.addEventListener('click', () => { if (view === b.dataset.v) return; view = b.dataset.v; ls.set('hocaView', view); paintView(); api.refresh(); }));
   [f, dSel, sSel].forEach(x => x.addEventListener(x === f ? 'input' : 'change', () => { lim = 60; api.refresh(); }));
   $('[data-r=list]', root).addEventListener('click', e => {
     if (e.target.closest('[data-r=more]')) { lim += 120; api.refresh(); }
     else if (e.target.closest('[data-r=all]')) { showAll = true; lim = 60; api.refresh(); }
     else if (e.target.closest('[data-r=recent]')) { showAll = false; api.refresh(); }
   });
-  const hocaRow = (x, tail) => {
-    const cs = [...coursesOfHoca(x.id).entries()].sort((a, b) => b[1].son - a[1].son).slice(0, 3).map(([cid]) => cid);
-    const sub = [x.h.dept, cs.map(codeOf).join(', ')].filter(Boolean).join(' / ') + (tail ? (x.h.dept || cs.length ? ' · ' : '') + tail : '');
-    return `<li><a class="row-link" href="#/hoca/${esc(x.id)}"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><span class="row-title">${esc(hocaFull(x.h))}${x.h.demo ? '<span class="tag">örnek kayıt</span>' : ''}</span><span class="row-sub">${esc(sub)}</span></span><span class="row-end">${x.st.cnt ? `<span class="minirate">${starsHtml(x.st.all, 'sm')}${fmt1(x.st.all)}</span><span>${x.st.cnt} puan</span>` : '<span>Puan yok</span>'}</span></a></li>`;
-  };
+  const items = (xs, tail) => (view === 'list' ? `<ul class="list">${xs.map(x => hocaRowHtml(x, tail && tail(x))).join('')}</ul>` : `<ul class="hcards">${xs.map(x => hocaCardHtml(x, tail && tail(x))).join('')}</ul>`);
   const allBtn = () => `<div class="more-wrap"><button type="button" class="btn" data-r="all">Tüm hocaları göster (${S.hocas.size} hoca)</button></div>`;
   const api = {
     refresh() {
@@ -4954,7 +5012,7 @@ ROUTES['hocaolcer'] = function viewHocas(root) {
         }
         recent.sort((a, b) => b.last - a.last);
         el.innerHTML = `<h2 class="sub-h">Son puanlanan hocalar</h2>`
-          + (recent.length ? `<ul class="list">${recent.slice(0, 10).map(x => hocaRow(x, x.last ? ago(x.last) : '')).join('')}</ul>` : emptyHtml('Henüz puanlanan hoca yok', 'Hocanı arayıp ilk puanı sen ver.'))
+          + (recent.length ? items(recent.slice(0, 10), x => (x.last ? ago(x.last) : '')) : emptyHtml('Henüz puanlanan hoca yok', 'Hocanı arayıp ilk puanı sen ver.'))
           + allBtn();
         applyWidths(el);
         return;
@@ -4972,7 +5030,7 @@ ROUTES['hocaolcer'] = function viewHocas(root) {
       const more = all.length - lim;
       const head = byCode ? `<p class="fine mb">${esc(qc.code)} dersini verenler: ${all.length} hoca</p>`
         : !q && !dSel.value ? `<p class="list-info">Tüm hocalar: <b>${all.length}</b>. <button type="button" class="linkbtn" data-r="recent">Son puanlananlara dön</button></p>` : '';
-      el.innerHTML = head + `<ul class="list">${all.slice(0, lim).map(x => hocaRow(x)).join('')}</ul>` + (more > 0 ? `<div class="more-wrap"><button type="button" class="btn" data-r="more">Daha fazla göster (${more} hoca daha)</button></div>` : '');
+      el.innerHTML = head + items(all.slice(0, lim)) + (more > 0 ? `<div class="more-wrap"><button type="button" class="btn" data-r="more">Daha fazla göster (${more} hoca daha)</button></div>` : '');
       applyWidths(el);
     }
   };
