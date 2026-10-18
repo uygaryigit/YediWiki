@@ -1156,11 +1156,13 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     ok(t.$('.modal.ce-modal .ce-fig') && t.$$('.modal [data-tab]').length === 3 && !t.$('.modal [data-pane=sac]').hidden && t.$('.modal [data-pane=giy]').hidden, 'düzenleyici: önizleme, üç sekme, Saç açık');
     eq(t.$$('.modal [data-grp=sac]').length, 8, 'diğerde sekiz saç modeli');
     ok(t.$$('.modal [data-grp=sac] .ce-head').length === 8 && !t.$('.modal [data-grp=sacr][data-v=sari]') && t.$('.modal [data-grp=sacr][data-v=kizil]') && t.$('.modal [data-shop=sac]'), 'saç modelleri küçük başlarla; diğerde sarı yok, kızıl var, Yeditepe Sarısı kilitli');
+    ok(t.$('.modal [data-grp=bas][data-v=""]') && t.$$('.modal [data-pane=sac] [data-shop=sac]').length === 2, 'Saç: Şapka yuvası; şapka ve Yeditepe Sarısı kilitli');
     t.$('.modal [data-grp=sac][data-v=kivircik]').click(); await t.wait(20);
     t.$('.modal [data-grp=sacr][data-v=kizil]').click(); await t.wait(20);
     ok(t.$('.modal [data-grp=sac][data-v=kivircik]').getAttribute('aria-pressed') === 'true' && /#B4452B/.test(t.$('.modal [data-r=ce-fig]').innerHTML), 'önizleme kıvırcık ve kızıl');
     t.$('.modal [data-tab=giy]').click(); await t.wait(20);
-    ok(!t.$('.modal [data-pane=giy]').hidden && t.$$('.modal [data-pane=giy] [data-shop=ust]').length === 5 && t.$$('.modal [data-pane=giy] [data-grp=ust]').length === 3, 'Kıyafet: üç temel üst, marketteki beş üst kilitli');
+    ok(!t.$('.modal [data-pane=giy]').hidden && t.$$('.modal [data-pane=giy] [data-shop=ust]').length === 6 && t.$$('.modal [data-pane=giy] [data-grp=ust]').length === 3, 'Kıyafet: üç temel üst, marketteki altı üst kilitli');
+    ok(t.$('.modal [data-grp=ayakkabi][data-v=""]').getAttribute('aria-pressed') === 'true' && t.$$('.modal [data-pane=giy] [data-shop=ayakkabi]').length === 2, 'Ayakkabı: temel spor seçili, iki ayakkabı kilitli');
     t.$('.modal [data-grp=ust][data-v=mont]').click(); await t.wait(20);
     ok(t.$('.modal [data-grp=ust][data-v=mont]').getAttribute('aria-pressed') === 'true', 'mont seçili');
     ok(t.$('.modal [data-grp=alt][data-v=kot]').getAttribute('aria-pressed') === 'true' && t.$('.modal [data-grp=alt][data-v=etek]'), 'Alt: kot seçili, etek de var');
@@ -1176,7 +1178,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     // market türleri: Üst seçilince yalnızca üstler; forma alınca karaktere giyilir, kartta Karakterinde
     await t.go('#/kubbe?tur=ust');
     ok(t.$('[data-r=head] .kh-me svg.fig') && t.$('[data-r=head] .kh-me .pf-char-edit[data-g=char-edit]'), 'Kubbe başlığında karakter ve Düzenle');
-    ok(t.$('[data-r=turs] [data-tur=ust]').getAttribute('aria-selected') === 'true' && t.$$('[data-r=market] .loot').length === 5, 'adresten Üst türü, beş ürün');
+    ok(t.$('[data-r=turs] [data-tur=ust]').getAttribute('aria-selected') === 'true' && t.$$('[data-r=market] .loot').length === 6, 'adresten Üst türü, altı ürün');
     t.$('[data-g=buy][data-id="futbol-forma"]').click(); await t.wait(60);
     t.$('.modal [data-ok]').click(); await t.wait(300);
     eq((t.store.get('users/deneme123').giy || {}).ust, 'futbol-forma', 'alınan forma karaktere giyildi');
@@ -1203,6 +1205,12 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       ok(/class="mt-wl"/.test(top) && /mt-dogsit/.test(top) && /#5A2E1A/.test(top) && !/#F0C98A/.test(top) && /mt-flag/.test(top), 'birincide bayrak, kanat, yanında köpek, elinde (pahalı olan) sufle');
       { const g = t.ev(`JSON.stringify([mtGear({ items: { 'futbol-topu': 1, 'altin-ring': 1 } }), mtGear({ items: { 'kampus-mafya': 1, 'gece-eskortu': 1, steteskop: 1, 'yokus-canavari': 1 } })])`); const [a, b] = JSON.parse(g);
         ok(a.foot === 'futbol-topu' && a.hand === 'altin-ring' && !a.wings && b.pet === 'dog' && b.steto && !b.pack, 'futbol topu ayakta, altın bilet elde; en değerli yoldaş köpek, takı steteskop: ' + g); }
+      { const r = t.ev(`JSON.stringify([slotOf(MARKET_BY_ID['eagles-sapka']), isDye(MARKET_BY_ID['eagles-sapka']), isDye(MARKET_BY_ID['yeditepe-sarisi']), wearPatch({ items: { 'eagles-sapka': 1 } }, 'eagles-sapka').giy.bas, mtGear({ items: { 'kurklu-bot': 1, 'eagles-sapka': 1 }, giy: { ayakkabi: 'kurklu-bot', bas: 'eagles-sapka', taki: 'eagles-sapka' } })])`);
+        const [sl, d1, d2, wb, gg] = JSON.parse(r);
+        ok(sl === 'bas' && !d1 && d2 && wb === 'eagles-sapka' && gg.shoe === 'kurklu-bot' && gg.hat === 'eagles-sapka' && !gg.wings, 'şapka Saç türünde ama başta, saç boyası yuvasız; bot ayakkabı yuvasında: ' + r); }
+      { const f = t.ev(`mtFront('x-', charSpec('x', { govde: 'e', sac: 'kisa', items: { 'eagles-sapka': 1, 'kampus-sneaker': 1 }, giy: { bas: 'eagles-sapka', ayakkabi: 'kampus-sneaker' } }, { r: 0, sid: 's0', pose: 'wave' }))`);
+        ok(f.includes('M-18.4 -66.4C') && f.includes('#F7F8FC') && !f.includes('M-9.8 -64.8L-3.6 -65.6'), 'şapka başta, kaşlar siperin altında; beyaz sneaker'); }
+      ok(!/#2F86E0/.test(t.ev('PET_SIT.dog + PET_WALK.dog')) && /#A65E2E/.test(t.ev('PET_SIT.dog')) && !t.ev('HAIR_F.kisa.fade'), 'köpek küpesiz ve sarkık kahve kulaklı; kısa saç tıraşlı değil');
       { const c = t.ev(`(() => { const f = u => charSpec('x', u, { r: 0, sid: 's0', pose: 'wave' }); const k = f({ govde: 'k', altk: 'etek' }), e = f({ govde: 'e', altk: 'etek' }), pp = f({ govde: 'k', items: { 'ponpon-kiyafeti': 1 }, giy: { elbise: 'ponpon-kiyafeti' } });
           return [k.etek, e.etek, pp.etek, /mt-pom/.test(mtFront('x-', pp)), /mt-dogsit/.test(mtFront('x-', f({ items: { 'kampus-mafya': 1 }, giy: { yoldas: 'kampus-mafya' } })))].join(); })()`);
         eq(c, 'mini,,pli,true,true', 'kızda etek (erkekte yok), ponpon kıyafeti pilili etek ve ponponlarla, kedi yanında oturur'); }

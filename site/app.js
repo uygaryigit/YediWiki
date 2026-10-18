@@ -46,36 +46,45 @@ const RARITY = {
   epik: { ad: 'Epik', c: '#A155FF' },
   efsane: { ad: 'Efsane', c: '#FF9F0A' }
 };
-/* Market ürününün türü (tur): karakterde nereye gittiği. Karakter her türden bir tane takar; Takı'dan da bir tane (kanat, çanta ya da
-   stetoskop). Elbise üstü ve altı birlikte kaplar. Ayakta: ayağının dibinde duran (futbol topu). Saç türü (Yeditepe Sarısı) bir saç
-   rengidir. g: takının karakterdeki çizimi, pet: yoldaşın çizimi. Sunucuda yw_private.market (fiyat ve tür) aynı listeyi tutar.
+/* Market ürününün türü (tur): markette hangi sekmede durduğu ve karakterde nereye gittiği. Karakter her yuvaya bir tane takar; Takı'dan da
+   bir tane (kanat, çanta ya da stetoskop). Elbise üstü ve altı birlikte kaplar. Ayakkabı ayağında, Ayakta ayağının dibinde (futbol topu).
+   Saç türünde Yeditepe Sarısı bir saç rengidir (yuvasız); şapka da Saç türündedir ama yuvası baştır (slot: 'bas', slotOf).
+   g: takının karakterdeki çizimi, pet: yoldaşın çizimi. Sunucuda yw_private.market (fiyat ve yuva) aynı listeyi tutar.
    yeni: markette "Yeni" etiketi. 18 Ekim'de kaldırılanlar (sahiplerine iade edildi): Son Sosisli, Selçuklu Kapısı, Güneş Paneli Aurası,
    Nevada Muhabbeti, İkinci Ev Kupası */
-const TUR = [{ k: 'ust', ad: 'Üst' }, { k: 'alt', ad: 'Alt' }, { k: 'elbise', ad: 'Elbise' }, { k: 'el', ad: 'Elde' }, { k: 'ayak', ad: 'Ayakta' }, { k: 'taki', ad: 'Takı' }, { k: 'yoldas', ad: 'Yoldaş' }, { k: 'sac', ad: 'Saç' }];
+const TUR = [{ k: 'ust', ad: 'Üst' }, { k: 'alt', ad: 'Alt' }, { k: 'elbise', ad: 'Elbise' }, { k: 'ayakkabi', ad: 'Ayakkabı' }, { k: 'el', ad: 'Elde' }, { k: 'ayak', ad: 'Ayakta' }, { k: 'taki', ad: 'Takı' }, { k: 'yoldas', ad: 'Yoldaş' }, { k: 'sac', ad: 'Saç' }];
 const TUR_AD = Object.fromEntries(TUR.map(x => [x.k, x.ad]));
-const GIY_SLOTS = ['ust', 'alt', 'elbise', 'el', 'ayak', 'taki', 'yoldas'];
+const GIY_SLOTS = ['ust', 'alt', 'elbise', 'ayakkabi', 'el', 'ayak', 'taki', 'yoldas', 'bas'];
+// ürünün karakterdeki yuvası (çoğunda türüyle aynı; şapka Saç türünde, yuvası baş). Saç boyası yuvasızdır, saç rengini değiştirir
+const slotOf = it => (it ? it.slot || it.tur : '');
+const isDye = it => !!it && it.tur === 'sac' && !it.slot;
 const MARKET = [
   { id: 'kartal-kanatlari', name: 'Kartal Kanatları', desc: 'Yeditepe Kartalları için: profil resminin ve karakterinin arkasında altın kanatlar açılır.', price: 1500, rar: 'efsane', kind: 'Profil efekti', tur: 'taki', g: 'wings', mini: 1 },
-  { id: 'gece-eskortu', name: 'Gece Eskortu', desc: 'Gece üst kapıdan yurda kadar sana eşlik eden sarı sokak köpeği; kulağında belediyenin küpesi. Karakterinin yanında durur.', price: 1200, rar: 'efsane', kind: 'Yoldaş', tur: 'yoldas', pet: 'dog', mini: 1 },
+  { id: 'gece-eskortu', name: 'Gece Eskortu', desc: 'Gece üst kapıdan yurda kadar sana eşlik eden sarı sokak köpeği. Karakterinin yanında durur.', price: 1200, rar: 'efsane', kind: 'Yoldaş', tur: 'yoldas', pet: 'dog', mini: 1 },
   { id: 'mezuniyet-cubbesi', name: 'Mezuniyet Cübbesi', desc: 'Siyah cübbe, omuzlarında sarı lacivert şerit. Karakterin mezuniyetini senden önce kutlar.', price: 1100, rar: 'efsane', kind: 'Elbise', tur: 'elbise', mini: 0 },
   { id: 'kampus-mafya', name: 'Kampüs Mafya', desc: 'Kampüsün asıl sahibi tekir kedi. Kantinin önünden geçenlerden haracını sosisle alır.', price: 1000, rar: 'efsane', kind: 'Yoldaş', tur: 'yoldas', pet: 'cat', mini: 0, yeni: 1 },
-  { id: 'parlak-mont', name: 'Parlak Mont', desc: 'Kampüsün kış üniforması. Güneşte parlar, yanında “yeni mi aldın?” sorusunu da getirir.', price: 950, rar: 'epik', kind: 'Üst', tur: 'ust', mini: 0 },
+  { id: 'parlak-mont', name: 'Parlak Mont', desc: 'Nevada’da takılanların vazgeçilmezi; kampüsün bitmeyen geyik muhabbeti.', price: 950, rar: 'epik', kind: 'Üst', tur: 'ust', mini: 0 },
+  { id: 'kampus-sneaker', name: 'Kampüs Sneaker’ı', desc: 'Yeditepe’de herkesin ayağında olan beyaz deri sneaker. Koridorda görmeyen kalmadı.', price: 850, rar: 'epik', kind: 'Ayakkabı', tur: 'ayakkabi', mini: 0, yeni: 1 },
+  { id: 'kurklu-bot', name: 'Kürklü Bot', desc: 'İçi kürklü süet bot. Kayışdağı’nın kış rüzgârına karşı kampüsün bir numaralı tercihi.', price: 750, rar: 'epik', kind: 'Ayakkabı', tur: 'ayakkabi', mini: 0, yeni: 1 },
   { id: 'altin-ring', name: 'Altın Ring Bileti', desc: 'Tıklım tıklım ringde yer bulmanın efsanevi yolu. Adının yanında altın bilet, karakterinin elinde.', price: 700, rar: 'epik', kind: 'Elde', tur: 'el', mini: 1 },
   { id: 'eagles-forma', name: 'Eagles Forması', desc: 'Amerikan futbolu takımı Yeditepe Eagles’ın omuz pedli forması. Takım 2001’den beri sahada, 2020’de lig şampiyonu.', price: 700, rar: 'epik', kind: 'Üst', tur: 'ust', mini: 0 },
   { id: 'ponpon-kiyafeti', name: 'Ponpon Kız Kıyafeti', desc: 'Eagles maçlarında tribünün ritmi: lacivert üst, sarı pileli etek ve iki ponpon.', price: 650, rar: 'epik', kind: 'Elbise', tur: 'elbise', mini: 0, yeni: 1 },
-  { id: 'yeditepe-sarisi', name: 'Yeditepe Sarısı', desc: 'Saçın ringin sarısına boyanır; amfinin en arka sırasından bile seçilirsin.', price: 600, rar: 'epik', kind: 'Saç rengi', tur: 'sac', mini: 0 },
+  { id: 'yeditepe-sarisi', name: 'Yeditepe Sarısı', desc: 'Yeditepe kızlarının vazgeçilmezi. Herkes sarıya boyatır ama bu tonu Yeditepe’den başka yer tutturamaz.', price: 600, rar: 'epik', kind: 'Saç rengi', tur: 'sac', mini: 0 },
   { id: 'bahar-elbisesi', name: 'Bahar Şenliği Elbisesi', desc: 'Şenlikte çimlere yakışan çiçekli sarı elbise.', price: 480, rar: 'nadir', kind: 'Elbise', tur: 'elbise', mini: 0 },
   { id: 'futbol-forma', name: 'Futbol Forması', desc: 'Sarı lacivert, göğsünde 7 numara: yedi tepe için. Halı sahada pas istemenin en kısa yolu.', price: 450, rar: 'nadir', kind: 'Üst', tur: 'ust', mini: 0 },
   { id: 'basket-forma', name: 'Basketbol Forması', desc: 'Spor salonunun parkesine yakışan beyaz atlet; sarı lacivert şeritli, 7 numara.', price: 450, rar: 'nadir', kind: 'Üst', tur: 'ust', mini: 0 },
+  { id: 'voleybol-forma', name: 'Voleybol Forması', desc: 'Filenin önünde Yeditepe: lacivert sarı, çapraz kesim, göğsünde 7.', price: 450, rar: 'nadir', kind: 'Üst', tur: 'ust', mini: 0, yeni: 1 },
   { id: 'steteskop', name: 'Stetoskop', desc: 'Tıp fakültesinin olmazsa olmazı. Boynunda durunca herkes seni doktor sanar.', price: 450, rar: 'nadir', kind: 'Takı', tur: 'taki', g: 'steto', mini: 0, yeni: 1 },
   { id: 'ani-makinesi', name: 'Anı Makinesi', desc: 'Hazırlıktan mezuniyete üniversite anılarını biriktiren fotoğraf makinesi.', price: 380, rar: 'nadir', kind: 'Elde', tur: 'el', mini: 0, yeni: 1 },
   { id: 'yokus-canavari', name: 'Yokuş Canavarı', desc: 'Kayışdağı yokuşunu “oy anam” demeden çıkanlara verilir. Karakterine yeşil sırt çantası.', price: 350, rar: 'nadir', kind: 'Rozet', tur: 'taki', g: 'pack', mini: 1 },
   { id: 'amerikan-topu', name: 'Amerikan Futbolu Topu', desc: 'Eagles antrenmanından kaçmış oval top. Elden ele, tepeden tepeye.', price: 320, rar: 'nadir', kind: 'Elde', tur: 'el', mini: 0 },
   { id: 'yediwiki-notu', name: 'YediWiki Notu', desc: 'Sınavdan önceki gece hayat kurtaran not. Paylaşana selam olsun.', price: 300, rar: 'nadir', kind: 'Elde', tur: 'el', mini: 0, yeni: 1 },
+  { id: 'eagles-sapka', name: 'Eagles Şapkası', desc: 'Lacivert kep, önünde sarı 7. Saçın kötü olduğu sabahların kurtarıcısı.', price: 300, rar: 'nadir', kind: 'Şapka', tur: 'sac', slot: 'bas', mini: 0, yeni: 1 },
   { id: 'cikis-birasi', name: 'Çıkış Birası', desc: 'Son dersten çıkınca pub’a. “Bir tane içip kalkarız” diye başlayan akşamların başrolü.', price: 260, rar: 'yaygin', kind: 'Elde', tur: 'el', mini: 0, yeni: 1 },
   { id: 'yeditepe-tisort', name: 'Yeditepe Tişörtü', desc: 'Lacivert, göğsünde sarı YEDİTEPE yazısı. Hazırlıktan mezuniyete her gün giyilir.', price: 250, rar: 'yaygin', kind: 'Üst', tur: 'ust', mini: 0 },
   { id: 'futbol-topu', name: 'Futbol Topu', desc: 'Halı sahaya “bir kişi eksik” mesajıyla gelen top. Karakterinin ayağının dibinde durur.', price: 220, rar: 'yaygin', kind: 'Ayakta', tur: 'ayak', mini: 0 },
   { id: 'basket-topu', name: 'Basketbol Topu', desc: 'Spor salonunun parkesinde sektirilmeye hazır.', price: 220, rar: 'yaygin', kind: 'Elde', tur: 'el', mini: 0 },
+  { id: 'voleybol-topu', name: 'Voleybol Topu', desc: 'Smaç için havaya kalkmayı bekliyor. Manşette kolları kızartır.', price: 220, rar: 'yaygin', kind: 'Elde', tur: 'el', mini: 0, yeni: 1 },
   { id: 'kirmizi-sufle', name: 'Kırmızı’nın Suflesi', desc: 'Kırmızı’nın efsane suflesi: kaşığı batırınca içinden sıcak çikolata akar.', price: 200, rar: 'yaygin', kind: 'Elde', tur: 'el', mini: 0, yeni: 1 },
   { id: 'kampus-esofman', name: 'Kampüs Eşofmanı', desc: 'Yanlarında sarı şerit olan lacivert eşofman altı. Sabah dersine en hızlı hazırlanma yolu.', price: 200, rar: 'yaygin', kind: 'Alt', tur: 'alt', mini: 0 },
   { id: 'eagles-sort', name: 'Eagles Şortu', desc: 'Formanın yanına lacivert şort; yanlarında sarı şerit. Antrenmana hazırsın.', price: 160, rar: 'yaygin', kind: 'Alt', tur: 'alt', mini: 0 },
@@ -3152,21 +3161,22 @@ const giyPatch = q => Object.fromEntries(GIY_SLOTS.map(k => [k, q[k] || null]));
 function wearPatch(u, id) {
   const it = MARKET_BY_ID[id];
   if (!it) return null;
-  if (it.tur === 'sac') return { sacr: 'ysari' };
-  if (!GIY_SLOTS.includes(it.tur)) return null;
-  const q = Object.assign({}, giyOf(u), { [it.tur]: id });
-  if (it.tur === 'elbise') { delete q.ust; delete q.alt; }
-  if (it.tur === 'ust' || it.tur === 'alt') delete q.elbise;
+  if (isDye(it)) return { sacr: 'ysari' };
+  const sl = slotOf(it);
+  if (!GIY_SLOTS.includes(sl)) return null;
+  const q = Object.assign({}, giyOf(u), { [sl]: id });
+  if (sl === 'elbise') { delete q.ust; delete q.alt; }
+  if (sl === 'ust' || sl === 'alt') delete q.elbise;
   return { giy: giyPatch(q) };
 }
-const isWorn = (uid, u, id) => { const it = MARKET_BY_ID[id]; return !!it && ownsItem(u, id) && (it.tur === 'sac' ? sacrOf(uid, u) === 'ysari' : giyOf(u)[it.tur] === id); };
-const WEAR_OK = { sac: 'Saçın artık Yeditepe sarısı', ust: 'karakterinin üstünde', alt: 'karakterinin altında', elbise: 'karakterinin üstünde', el: 'karakterinin elinde', ayak: 'karakterinin ayağında', taki: 'karakterine takıldı', yoldas: 'karakterinin yanında' };
+const isWorn = (uid, u, id) => { const it = MARKET_BY_ID[id]; return !!it && ownsItem(u, id) && (isDye(it) ? sacrOf(uid, u) === 'ysari' : giyOf(u)[slotOf(it)] === id); };
+const WEAR_OK = { sac: 'Saçın artık Yeditepe sarısı', ust: 'karakterinin üstünde', alt: 'karakterinin altında', elbise: 'karakterinin üstünde', el: 'karakterinin elinde', ayak: 'karakterinin ayağının dibinde', ayakkabi: 'karakterinin ayağında', bas: 'karakterinin başında', taki: 'karakterine takıldı', yoldas: 'karakterinin yanında' };
 async function wearItem(id) {
   if (!needAcc()) return;
   const u = myAcc(), it = MARKET_BY_ID[id];
   if (!u || !it || !ownsItem(u, id)) return;
   const patch = wearPatch(u, id);
-  if (patch) await write(() => S.db.doc('users/' + S.me).update(patch), it.tur === 'sac' ? WEAR_OK.sac : `${it.name} ${WEAR_OK[it.tur]}`);
+  if (patch) await write(() => S.db.doc('users/' + S.me).update(patch), isDye(it) ? WEAR_OK.sac : `${it.name} ${WEAR_OK[slotOf(it)]}`);
 }
 // saç seçicinin küçük başı
 function headSvg(uid, u) {
@@ -3174,6 +3184,7 @@ function headSvg(uid, u) {
   return `<svg class="ce-head" viewBox="-26 -97 52 57" aria-hidden="true"><defs>${mtDefs(p, [o])}</defs>${mtFront(p, o)}</svg>`;
 }
 const PANTS_IC = '<svg class="fit-ic" viewBox="0 0 32 32" aria-hidden="true"><path d="M9.6 4.4h12.8l2 23.2h-6L16 12.6l-2.4 15H7.6z" fill="#3550A8" stroke="#1B1330" stroke-width="1.9" stroke-linejoin="round"/><path d="M9.8 8.2h12.4M16 8.2v4.4" fill="none" stroke="#1B1330" stroke-width="1.4" stroke-linecap="round" opacity=".7"/></svg>';
+const SHOE_IC = '<svg class="fit-ic" viewBox="0 0 32 32" aria-hidden="true"><path d="M3.6 22.6C3.6 18.8 5.4 16.6 8.6 15.6L14.4 13.6C16.2 12.8 17.4 11 18 9.4H21.6C22.4 12.4 24.6 14.2 27.4 14.8C28.8 15.4 29 17.4 28.8 19.6V22.6Z" fill="#2E2A44" stroke="#1B1330" stroke-width="1.9" stroke-linejoin="round"/><path d="M3.2 22.6H29.2V25.6H3.2Z" fill="#E9ECF5" stroke="#1B1330" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 14.8L16.2 16.6M16.6 12.6L18.8 14.4" stroke="#E9ECF5" stroke-width="1.4" stroke-linecap="round"/></svg>';
 const SKIRT_IC = '<svg class="fit-ic" viewBox="0 0 32 32" aria-hidden="true"><path d="M10.4 6.2h11.2l5 17.6Q16 26.8 5.4 23.8z" fill="#3550A8" stroke="#1B1330" stroke-width="1.9" stroke-linejoin="round"/><path d="M10 10.2h12M16 10.2v4.4M12.4 14.4l-1.6 9.4M19.6 14.4l1.6 9.4" fill="none" stroke="#1B1330" stroke-width="1.4" stroke-linecap="round" opacity=".7"/></svg>';
 const CE_TABS = [{ k: 'sac', ad: 'Saç' }, { k: 'giy', ad: 'Kıyafet' }, { k: 'esya', ad: 'Eşyalar' }];
 function openCharEdit(tab = 'sac') {
@@ -3183,6 +3194,7 @@ function openCharEdit(tab = 'sac') {
   const body = govdeOf(u), color = avColor(u);
   const st = { sac: sacOf(u), sacr: sacrOf(S.me, u), kiyafet: fitOf(u), altk: altOf(u), giy: Object.assign({}, giyOf(u)), tab: CE_TABS.some(t => t.k === tab) ? tab : 'sac' };
   const draft = () => Object.assign({}, u, { sac: st.sac, sacr: st.sacr, kiyafet: st.kiyafet, altk: st.altk, giy: giyPatch(st.giy) });
+  const bare = k => Object.assign(draft(), { sac: k, giy: Object.assign(giyPatch(st.giy), { bas: null }) });   // saç seçeneğinin başı: şapkasız
   const on = (grp, v) => {
     if (grp === 'sac') return st.sac === v;
     if (grp === 'sacr') return st.sacr === v;
@@ -3196,20 +3208,22 @@ function openCharEdit(tab = 'sac') {
   const none = (grp, label) => opt(grp, '', '<span class="ce-none" aria-hidden="true"></span>', label);
   // bir yuvanın seçenekleri: önce sahip olunanlar, sonra kilitli olanlar (fiyat sırasıyla)
   const slot = (tur, first) => {
-    const all = MARKET.filter(m => m.tur === tur).sort((a, b) => a.price - b.price);
+    const all = MARKET.filter(m => slotOf(m) === tur).sort((a, b) => a.price - b.price);
     return first + all.filter(m => ownsItem(u, m.id)).map(m => opt(tur, m.id, art(m.id), m.name)).join('') + all.filter(m => !ownsItem(u, m.id)).map(lock).join('');
   };
   const row = (h, inner) => `<h3 class="ce-h">${h}</h3><div class="ce-row">${inner}</div>`;
   const ysari = SACR_BY.ysari, yOwn = ownsItem(u, ysari.urun);
   const panes = {
-    sac: row('Saç modeli', sacList(body).map(x => opt('sac', x.k, headSvg(S.me, Object.assign(draft(), { sac: x.k })), x.ad)).join(''))
+    sac: row('Saç modeli', sacList(body).map(x => opt('sac', x.k, headSvg(S.me, bare(x.k)), x.ad)).join(''))
       + row('Saç rengi', sacrList(body).map(x => opt('sacr', x.k, `<span class="ce-sw" style="--sw:${x.c}" aria-hidden="true"></span>`, x.ad)).join('')
         + (yOwn ? opt('sacr', 'ysari', `<span class="ce-sw ys" style="--sw:${ysari.c}" aria-hidden="true"></span>`, ysari.ad)
           : `<button type="button" class="ce-opt lock" data-shop="sac" title="Yeditepe Sarısı: markette ${MARKET_BY_ID[ysari.urun].price} kubbe"><span class="ce-sw ys" style="--sw:${ysari.c}" aria-hidden="true"></span><span>${ysari.ad}</span><b class="ce-lk">${gl('coin', 'k-coin')}${MARKET_BY_ID[ysari.urun].price}</b></button>`))
+      + row('Şapka', slot('bas', none('bas', 'Yok')))
       + (body === 'e' ? '' : `<p class="help">Sarı saç markette: Yeditepe Sarısı.</p>`),
     giy: row('Üst', KIYAFET.map(f => opt('ust', f.k, fitIcon(f.k, color), f.ad)).join('') + slot('ust', ''))
       + row('Alt', slot('alt', opt('alt', 'kot', PANTS_IC, 'Kot') + (body === 'e' ? '' : opt('alt', 'etek', SKIRT_IC, 'Etek'))))
       + row('Elbise', slot('elbise', none('elbise', 'Yok')))
+      + row('Ayakkabı', slot('ayakkabi', opt('ayakkabi', '', SHOE_IC, 'Spor')))
       + '<p class="help">Elbise üstü ve altı birlikte kaplar. Temel üstler profil renginde.</p>',
     esya: row('Elinde', slot('el', none('el', 'Boş')))
       + row('Ayakta', slot('ayak', none('ayak', 'Boş')))
@@ -3227,7 +3241,7 @@ function openCharEdit(tab = 'sac') {
     $('[data-r=ce-fig]', m.el).innerHTML = figSvg(S.me, draft(), { cls: 'ce-fig' });
     $$('[data-grp]', m.el).forEach(b => b.setAttribute('aria-pressed', String(on(b.dataset.grp, b.dataset.v))));
     // saç rengi değişince saç modellerinin küçük başları da o renge boyanır
-    $$('[data-grp=sac]', m.el).forEach(b => { const h = b.querySelector('.ce-head'); if (h) h.outerHTML = headSvg(S.me, Object.assign(draft(), { sac: b.dataset.v })); });
+    $$('[data-grp=sac]', m.el).forEach(b => { const h = b.querySelector('.ce-head'); if (h) h.outerHTML = headSvg(S.me, bare(b.dataset.v)); });
   };
   m.el.addEventListener('click', e => {
     const t = e.target.closest('[data-tab]');
@@ -3295,14 +3309,14 @@ async function buyItem(id) {
   if (ownsItem(u, id)) { toast('Bu ürün zaten sende.'); return; }
   const bal = balanceOf(S.me);
   if (bal < it.price) { toast(`${it.price - bal} kubbe daha biriktirmen gerekiyor.`, 'err'); return; }
-  const ok = await confirmModal({ title: it.name, text: `${it.price} kubbe harcanacak, bakiyen ${bal - it.price} kubbeye düşecek. ${it.tur === 'sac' ? 'Saçın hemen boyanır.' : GIY_SLOTS.includes(it.tur) ? 'Ürün hemen karakterine giyilir.' : 'Ürün hemen profiline eklenir.'}`, ok: 'Satın al' });
+  const ok = await confirmModal({ title: it.name, text: `${it.price} kubbe harcanacak, bakiyen ${bal - it.price} kubbeye düşecek. ${isDye(it) ? 'Saçın hemen boyanır.' : GIY_SLOTS.includes(slotOf(it)) ? 'Ürün hemen karakterine giyilir.' : 'Ürün hemen profiline eklenir.'}`, ok: 'Satın al' });
   if (!ok) return;
   const card = document.querySelector(`[data-g=buy][data-id="${id}"]`), loot = card && card.closest('.loot'), stage = loot && loot.querySelector('.loot-stage');
   const [bx, by] = centerOf(stage || card);
   // alınan ürün hemen karaktere giyilir (türünde ne takılıysa yerine geçer); saç boyası saç rengini değiştirir
   const wear = wearPatch(u, id);
   const done = await write(() => (S.supa ? S.db.rpc('buy_item', { p_item: id }, 'users/' + S.me) : S.db.doc('users/' + S.me).update({ spent: spentOf(S.me) + it.price, items: { [id]: Date.now() } })),
-    it.name + ' alındı' + (!wear ? '' : it.tur === 'sac' ? ', saçın boyandı' : ', karakterine giyildi'));
+    it.name + ' alındı' + (!wear ? '' : isDye(it) ? ', saçın boyandı' : ', karakterine giyildi'));
   if (done) burst(bx, by, { glyphs: ['coin', 'spark', 'coin'], n: 22, cls: 'coin', spread: 120 });
   if (done && wear) { try { await retrying(() => S.db.doc('users/' + S.me).update(wear)); } catch (e) { console.error(e); } }
 }
@@ -3649,10 +3663,10 @@ function giyOf(u) {
   const out = {};
   if (!u) return out;
   if (u.giy && typeof u.giy === 'object') {
-    for (const s of GIY_SLOTS) { const id = u.giy[s], it = MARKET_BY_ID[id]; if (it && it.tur === s && ownsItem(u, id)) out[s] = id; }
+    for (const s of GIY_SLOTS) { const id = u.giy[s], it = MARKET_BY_ID[id]; if (it && slotOf(it) === s && ownsItem(u, id)) out[s] = id; }
   } else {
     for (const s of ['taki', 'el', 'ayak', 'yoldas']) {
-      const best = MARKET.filter(m => m.tur === s && ownsItem(u, m.id)).sort((a, b) => b.price - a.price)[0];
+      const best = MARKET.filter(m => slotOf(m) === s && ownsItem(u, m.id)).sort((a, b) => b.price - a.price)[0];
       if (best) out[s] = best.id;
     }
   }
@@ -3661,7 +3675,7 @@ function giyOf(u) {
 }
 function mtGear(u) {
   const q = giyOf(u), t = q.taki ? MARKET_BY_ID[q.taki].g : '';
-  return { wings: t === 'wings', pack: t === 'pack', steto: t === 'steto', pet: q.yoldas ? MARKET_BY_ID[q.yoldas].pet || 'dog' : '', hand: q.el || '', foot: q.ayak || '', top: q.ust || '', bottom: q.alt || '', dress: q.elbise || '' };
+  return { wings: t === 'wings', pack: t === 'pack', steto: t === 'steto', pet: q.yoldas ? MARKET_BY_ID[q.yoldas].pet || 'dog' : '', hand: q.el || '', foot: q.ayak || '', shoe: q.ayakkabi || '', hat: q.bas || '', top: q.ust || '', bottom: q.alt || '', dress: q.elbise || '' };
 }
 /* Giyilen ürünün karakterdeki görünümü. Üst ve elbise: c gövde rengi, fit kol biçimi (tisort kısa kol, atlet kolsuz, ped omuz pedli,
    mont kabarık uzun kol, cubbe geniş uzun kol), tr kol bandı. Alt: p pantolon renkleri (açık, koyu, ışık, bel), st yan şerit, sort şort.
@@ -3676,7 +3690,8 @@ const CLOTH = {
   'eagles-sort': { p: ['#27367F', '#1D2A66', '#5C70C9', '#141E52'], st: '#FFC928', sort: 1 },
   'bahar-elbisesi': { c: '#FFD24A', fit: 'tisort', etek: 'kisa' },
   'mezuniyet-cubbesi': { c: '#26252F', fit: 'cubbe', etek: 'uzun' },
-  'ponpon-kiyafeti': { c: '#1F2E78', fit: 'atlet', etek: 'pli' }
+  'ponpon-kiyafeti': { c: '#1F2E78', fit: 'atlet', etek: 'pli' },
+  'voleybol-forma': { c: '#1F2E78', fit: 'tisort', tr: '#FFC928' }
 };
 const MT_PANTS_DEF = [MT_PANTS, MT_PANTS2, MT_PANTS_HI, '#22357A'];
 /* Çizim için karakterin özeti: vücut, saç, renkler ve takılanlar. Profilde, kartta, sıralamada ve düzenleyicide aynı */
@@ -3723,7 +3738,24 @@ function mtArm(s, e, h, shirt, fit = 'tisort', tr = '') {
   return o + `<circle cx="${mtN(h[0])}" cy="${mtN(h[1])}" r="4.5" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.7"/>`
     + `<path d="M${mtN(h[0] - 2.7)} ${mtN(h[1] - .8)}a2.9 2.9 0 0 1 2.4-2.3" stroke="#fff" stroke-width="1.1" opacity=".75" ${MT_J}/>`;
 }
-const mtShoe = (x, y, rot) => `<g transform="translate(${mtN(x)} ${mtN(y)}) rotate(${rot})"><ellipse rx="6.8" ry="3.9" fill="#2E2A44" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.2 1.6Q0 4.4 6.2 1.6" stroke="#E9ECF5" stroke-width="1.6" ${MT_J}/><path d="M-3.6 -2Q-.4 -3.4 2.8 -2.8" stroke="#77739C" stroke-width="1.2" ${MT_J}/></g>`;
+// ayakkabı: k boşsa temel koyu spor ayakkabı; sneaker beyaz deri, kalın taban, lacivert bağcık; bot süet (konçu mtBoot çizer)
+const SHOE_K = { 'kampus-sneaker': 'sneaker', 'kurklu-bot': 'bot' };
+const mtShoe = (x, y, rot, k = '') => `<g transform="translate(${mtN(x)} ${mtN(y)}) rotate(${rot})">`
+  + (k === 'sneaker' ? `<ellipse rx="6.9" ry="4" fill="#F7F8FC" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.4 1.2Q0 4.6 6.4 1.2" stroke="#C3CADB" stroke-width="2.4" ${MT_J}/><path d="M-2.4 -2.8L-.8 -1.4M.6 -3.1L2.2 -1.7" stroke="#1F2E78" stroke-width="1.1" ${MT_J}/><path d="M-5.4 -1.2Q-4.6 -2.8 -3 -3.2" stroke="#fff" stroke-width="1.2" ${MT_J}/>`
+    : k === 'bot' ? `<ellipse rx="6.9" ry="4.1" fill="#C99561" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.4 1.6Q0 4.4 6.4 1.6" stroke="#7A5230" stroke-width="1.8" ${MT_J}/><path d="M-3.6 -2Q-.4 -3.4 2.8 -2.8" stroke="#E8C9A0" stroke-width="1.2" ${MT_J}/>`
+    : `<ellipse rx="6.8" ry="3.9" fill="#2E2A44" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.2 1.6Q0 4.4 6.2 1.6" stroke="#E9ECF5" stroke-width="1.6" ${MT_J}/><path d="M-3.6 -2Q-.4 -3.4 2.8 -2.8" stroke="#77739C" stroke-width="1.2" ${MT_J}/>`)
+  + '</g>';
+// kürklü botun konçu: dizin biraz üstünden bileğe süet, ağzında kabarık kürk (a diz, b ayak bileği; uçlar düz kesilir)
+function mtBoot(a, b) {
+  const B = 'fill="none" stroke-linecap="butt" stroke-linejoin="round"', t = mtAt(a, b, -.22), e = mtAt(a, b, 1.1), m = mtAt(a, b, .45);
+  const c0 = mtAt(a, b, -.26), c1 = mtAt(a, b, .2), f0 = mtAt(a, b, -.2), f1 = mtAt(a, b, .14);
+  return `<path d="${mtPl([t, e])}" stroke="${MT_K}" stroke-width="12.6" ${B}/><path d="${mtPl([t, e])}" stroke="#C99561" stroke-width="9.6" ${B}/>`
+    + `<path d="${mtPl([[m[0] + 2.2, m[1]], [e[0] + 2.2, e[1] - 1]])}" stroke="#A8743F" stroke-width="2.2" opacity=".6" ${B}/>`
+    + `<path d="${mtPl([c0, c1])}" stroke="${MT_K}" stroke-width="14.4" ${B}/><path d="${mtPl([f0, f1])}" stroke="#F4E9D4" stroke-width="11.4" ${B}/>`
+    + `<path d="${mtPl([[f0[0] - 3.4, f0[1] + .6], [f1[0] - 3.4, f1[1] - .4]])}" stroke="#fff" stroke-width="1.4" opacity=".8" ${B}/>`
+    + `<circle cx="${mtN(f0[0] + 1.6)}" cy="${mtN(f0[1] + .9)}" r=".8" fill="#D9C6A2"/><circle cx="${mtN(f1[0] + 3)}" cy="${mtN(f1[1] - .5)}" r=".8" fill="#D9C6A2"/>`;
+}
+
 const MT_WING = '<path d="M0 0C-14 -16 -32 -30 -56 -34C-52 -28 -51 -24 -52 -19C-46 -20 -42 -18 -40 -15C-44 -10 -45 -6 -46 -1C-40 -3 -35 -1 -33 2C-36 7 -36 11 -37 15C-31 12 -26 13 -23 16C-24 20 -24 24 -25 28C-18 24 -10 18 2 12Z" fill="url(#@wg)" stroke="#7A4A00" stroke-width="3.2" stroke-linejoin="round"/>'
   + '<path d="M-40 -15C-30 -10 -18 -4 -6 2M-33 2C-26 5 -18 8 -6 9M-23 16C-18 14 -12 12 -4 11" stroke="#B86E06" stroke-width="2" stroke-linecap="round" fill="none" opacity=".75"/>'
   + '<path d="M-48 -30C-36 -28 -24 -22 -14 -14" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none" opacity=".6"/>';
@@ -3744,37 +3776,39 @@ const MT_ITEM = {
   'yediwiki-notu': `<g transform="rotate(-12)"><rect x="-6.4" y="-8.6" width="12.8" height="16.8" rx="1.2" fill="#FFFFFF" stroke="${MT_K}" stroke-width="1.3"/><path d="M-4.2 -1.6H4.2M-4.2 1.4H4.2M-4.2 4.4H2.4" stroke="#8B97BD" stroke-width="1"/><path d="M-4.4 1.4H2.4" stroke="#FFE14D" stroke-width="2.2" opacity=".8"/><path d="M-3 -3.4a3 2.8 0 0 1 6 0z" fill="#FFD23F" stroke="${MT_K}" stroke-width=".9" stroke-linejoin="round"/><path d="M0 -6.2V-7.6" stroke="${MT_K}" stroke-width=".9"/><path d="M3.6 -8.6V-4.4L4.8 -5.4L6 -4.4V-8.6" fill="#E5383B"/></g>`,
   'ani-makinesi': `<rect x="-8" y="-5.8" width="16" height="11.6" rx="2.2" fill="#F3E3C3" stroke="${MT_K}" stroke-width="1.3"/><path d="M-8 -2.6H8" stroke="#E5383B" stroke-width="1.6"/><rect x="-6.4" y="-4.6" width="3.6" height="2" rx=".6" fill="#DDE3F5" stroke="${MT_K}" stroke-width=".7"/><circle cx="1.4" cy=".8" r="4" fill="#26262E" stroke="${MT_K}" stroke-width="1.1"/><circle cx="1.4" cy=".8" r="2.2" fill="#4A6BFF"/><circle cx=".6" cy="0" r=".8" fill="#fff" opacity=".85"/><circle cx="6" cy="-6.2" r="1.2" fill="#E5383B" stroke="${MT_K}" stroke-width=".8"/><path d="M-7 4.6H-3.4" stroke="#fff" stroke-width=".9" opacity=".6"/>`,
   'kirmizi-sufle': `<path class="mt-steam" d="M-1.6 -9.6c-1.6-2 1.6-3.2 0-5.4M2 -9.6c-1.6-2 1.6-3.2 0-5.4" stroke="#DDE3F5" stroke-width="1.2" ${MT_J}/><path d="M-6.6 -5.6C-6.6 -11 6.6 -11 6.6 -5.6Z" fill="#5A2E1A" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/><circle cx="-2.6" cy="-8" r=".55" fill="#fff"/><circle cx="1" cy="-8.8" r=".5" fill="#fff"/><circle cx="3.4" cy="-7.4" r=".55" fill="#fff"/><circle cx="-.4" cy="-6.8" r=".45" fill="#fff"/><path d="M-7.2 -5.6H7.2L6 3.4Q5.8 4.8 4.4 4.8H-4.4Q-5.8 4.8 -6 3.4Z" fill="#E5383B" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><path d="M-4.6 -3.8V3M-1.6 -3.8V3.4M1.6 -3.8V3.4M4.6 -3.8V3" stroke="#B02130" stroke-width=".8"/><path d="M2.8 -5.8Q3.6 -3.4 2.8 -2" stroke="#3A1A0C" stroke-width="1.6" ${MT_J}/><path d="M-5.6 -4.4V2.6" stroke="#fff" stroke-width="1" opacity=".55" ${MT_J}/>`,
+  'voleybol-topu': `<circle r="7.6" fill="#F7F8FC"/><path d="M-7.5 -1.4C-3.6 -2 .4 -4.6 2.6 -7.2L5.4 -5.4C2.8 -2.6 -1.8 .6 -7 2.6Z" fill="#1F2E78"/><path d="M1.8 7.4C1.4 3.4 3.4 -.6 7.5 -1.8L7.4 1.8C5.4 3 4.4 5 4.6 6.8Z" fill="#1F2E78"/>`
+    + `<path d="M-7 2.6C-3.4 3.2 -.2 5.4 1.8 7.4M2.6 -7.2C1.4 -3.6 3 -.4 7.5 -1.8M-1.8 -.4C-4 -3 -4.4 -5.4 -3.4 -7" stroke="${MT_K}" stroke-width=".9" fill="none"/>`
+    + `<circle r="7.6" fill="none" stroke="${MT_K}" stroke-width="1.5"/><path d="M-5.6 -4.2A6.4 6.4 0 0 1 -3.4 -6.2" stroke="#fff" stroke-width="1.3" opacity=".9" ${MT_J}/>`,
   'basket-topu': `<circle r="7.6" fill="#F07A22" stroke="${MT_K}" stroke-width="1.5"/><path d="M0 -7.6V7.6M-7.6 0H7.6M-5.2 -5.6C-2 -2.6 -2 2.6 -5.2 5.6M5.2 -5.6C2 -2.6 2 2.6 5.2 5.6" stroke="${MT_K}" stroke-width="1" fill="none"/><path d="M-5.4 -3.2A5.8 5.8 0 0 1 -2.4 -6.2" stroke="#FFC08A" stroke-width="1.4" ${MT_J}/>`,
   'amerikan-topu': `<g transform="rotate(-30)"><ellipse rx="9.8" ry="5.9" fill="#8A4A22" stroke="${MT_K}" stroke-width="1.5"/><path d="M-6.6 -4Q-7.2 0 -6.6 4M6.6 -4Q7.2 0 6.6 4" stroke="#fff" stroke-width="1.3" fill="none"/><path d="M-3.4 -2H3.4" stroke="#fff" stroke-width="1.1"/><path d="M-2.4 -3.2V-.8M-.8 -3.2V-.8M.8 -3.2V-.8M2.4 -3.2V-.8" stroke="#fff" stroke-width=".9"/><path d="M-7 -2.6Q-3 -5.2 2 -4.8" stroke="#C88A5A" stroke-width="1.1" opacity=".85" ${MT_J}/></g>`,
 };
-// Yoldaşlar (18 Ekim): Gece Eskortu artık Ayhan Abi değil, kulağında belediye küpesi olan sarı sokak köpeği; Kampüs Mafya şapkalı tekir kedi.
+// Yoldaşlar (18 Ekim): Gece Eskortu artık Ayhan Abi değil, kullanıcının fotoğrafındaki sarı sokak köpeği (sarkık kızıl kahve kulaklar,
+// beyaz göğüs, burnu ve ağız çevresi kara); Kampüs Mafya şapkalı tekir kedi.
 // Oturan hâl Ayhan Abi'nin önden çiziminin ölçüsünde (karakterin yanında), yürüyen hâl yandan çiziminin ölçüsünde (tırmanırken)
 const PET_SIT = {
-  dog: '<ellipse cx="60" cy="128.6" rx="46" ry="3.2" fill="#0B1030" opacity=".14"/>'
-    + '<g class="af-tail"><path d="M86 120c12 2 20-4 20-14" fill="none" stroke="#1B1330" stroke-width="9.4" stroke-linecap="round"/><path d="M86 120c12 2 20-4 20-14" fill="none" stroke="#E1A245" stroke-width="6" stroke-linecap="round"/></g>'
-    + '<ellipse cx="33" cy="109" rx="16" ry="15.6" fill="#E1A245" stroke="#1B1330" stroke-width="2.4"/><ellipse cx="87" cy="109" rx="16" ry="15.6" fill="#E1A245" stroke="#1B1330" stroke-width="2.4"/>'
-    + '<path d="M21 113c2.6 6 8 10 15 10M99 113c-2.6 6-8 10-15 10" fill="none" stroke="#B97A2A" stroke-width="2.6" stroke-linecap="round" opacity=".7"/>'
-    + '<ellipse cx="23" cy="125.4" rx="8.4" ry="3.6" fill="#F6D79A" stroke="#1B1330" stroke-width="1.4"/><ellipse cx="97" cy="125.4" rx="8.4" ry="3.6" fill="#F6D79A" stroke="#1B1330" stroke-width="1.4"/>'
-    + '<path d="M40 66c-7 18-9 39-6.4 60h52.8c2.6-21 .6-42-6.4-60-6-6-34-6-40 0z" fill="#E1A245" stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round"/>'
-    + '<path d="M47.6 59c-7.6 12.4-9.6 29-6.6 43 2.2 10 9.4 16.6 19 17.6 9.6-1 16.8-7.6 19-17.6 3-14 1-30.6-6.6-43-5 4.4-19.8 4.4-24.8 0z" fill="#F6D79A"/>'
-    + '<path d="M45.4 97c-1 9.6-1 18.4 0 27.6h11.2c1-9.2 1-18 0-27.6zM63.4 97c-1 9.6-1 18.4 0 27.6h11.2c1-9.2 1-18 0-27.6z" fill="#EBB75E" stroke="#1B1330" stroke-width="1.4"/>'
-    + '<ellipse cx="51" cy="125" rx="8.2" ry="4.3" fill="#F6D79A" stroke="#1B1330" stroke-width="1.4"/><ellipse cx="69" cy="125" rx="8.2" ry="4.3" fill="#F6D79A" stroke="#1B1330" stroke-width="1.4"/>'
-    + '<path d="M47.6 123.4v2.8M51 123.2v3M54.4 123.4v2.8M65.6 123.4v2.8M69 123.2v3M72.4 123.4v2.8" stroke="#1B1330" stroke-width="1" stroke-linecap="round" opacity=".5"/>'
-    + '<path d="M41.6 78c1.6-4 3.6-6.4 6.6-7.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".45"/>'
-    + '<g class="af-head"><path d="M41.4 33.6C36 26 34.6 14.6 38 6.6C45.8 9.8 51.6 16.8 53.4 24.8Z" fill="#E1A245" stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round"/>'
-    + '<path d="M78.6 33.6C84 26 85.4 14.6 82 6.6C74.2 9.8 68.4 16.8 66.6 24.8Z" fill="#E1A245" stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round"/>'
-    + '<path d="M42.4 28.4C39.4 22.4 39 15.6 40.6 11.2C45.6 14.2 49 18.8 50.2 24ZM77.6 28.4C80.6 22.4 81 15.6 79.4 11.2C74.4 14.2 71 18.8 69.8 24Z" fill="#B97A2A" opacity=".55"/>'
-    + '<path d="M38 6.6C34.4 8.2 32.6 12 33.6 15.6C35.8 13.6 38 12 41.4 11.6Z" fill="#C98A36" stroke="#1B1330" stroke-width="1.8" stroke-linejoin="round"/>'
-    + '<g transform="rotate(18 80.8 23.8)"><rect x="76.6" y="20.6" width="8.4" height="6.2" rx="1.6" fill="#2F86E0" stroke="#1B1330" stroke-width="1.4"/><circle cx="79" cy="23.6" r=".9" fill="#fff"/><path d="M80.6 22.8h3" stroke="#fff" stroke-width=".9" stroke-linecap="round"/></g>'
-    + '<path d="M60 15.6c15.4 0 24.6 10.4 24.6 25.4 0 13.6-9.4 22.6-24.6 22.6S35.4 54.6 35.4 41C35.4 26 44.6 15.6 60 15.6z" fill="#E1A245" stroke="#1B1330" stroke-width="2.4"/>'
-    + '<path d="M51.4 21.4c5.4-2.2 11.8-2.2 17.2 0" fill="none" stroke="#F3C673" stroke-width="2" stroke-linecap="round"/>'
-    + '<path d="M57 24c1.6-1 4.4-1 6 0l-.6 16h-4.8z" fill="#F6D79A" opacity=".85"/>'
-    + '<path d="M46.6 46.4c0-4.4 6.2-6.6 13.4-6.6s13.4 2.2 13.4 6.6l1 6c-1 6.2-7.2 10.4-14.4 10.4S46.6 58.6 45.6 52.4z" fill="#F6D79A"/>'
-    + '<path d="M46.6 32.4q3.6-2 7.4-.6M73.4 32.4q-3.6-2-7.4-.6" fill="none" stroke="#B97A2A" stroke-width="1.8" stroke-linecap="round"/>'
-    + '<g class="af-eyes"><ellipse cx="50.6" cy="38.4" rx="3.7" ry="4" fill="#2A160B"/><ellipse cx="69.4" cy="38.4" rx="3.7" ry="4" fill="#2A160B"/><circle cx="51.8" cy="37" r="1.2" fill="#fff"/><circle cx="70.6" cy="37" r="1.2" fill="#fff"/></g>'
-    + '<path d="M53.4 46.2c0-2.8 13.2-2.8 13.2 0 0 3.2-3.8 5.6-6.6 5.6s-6.6-2.4-6.6-5.6z" fill="#2A1A10"/><ellipse cx="57.6" cy="45.6" rx="2" ry=".9" fill="#7A5A48"/>'
-    + '<g class="af-mouth"><path d="M53.2 53.6c2 5.4 11.6 5.4 13.6 0z" fill="#5B1A24"/><path d="M56.6 55.8c1.2 2.8 5.6 2.8 6.8 0z" fill="#E46A7B"/></g>'
-    + '<path d="M60 51.8v1.8M52.6 53.2c2.6 2.4 5 2.6 7.4.4 2.4 2.2 4.8 2 7.4-.4" fill="none" stroke="#2A1A10" stroke-width="1.3" stroke-linecap="round"/></g>',
+  dog: '<ellipse cx="60" cy="128.6" rx="44" ry="3.2" fill="#0B1030" opacity=".14"/>'
+    + '<g class="af-tail"><path d="M84 123.4c9 1.8 18 .8 25.4-3.8" fill="none" stroke="#1B1330" stroke-width="9" stroke-linecap="round"/><path d="M84 123.4c9 1.8 18 .8 25.4-3.8" fill="none" stroke="#EDCB8C" stroke-width="5.6" stroke-linecap="round"/><path d="M97 123.4c4.2-.4 8-1.6 11.2-3.6" fill="none" stroke="#FBF0D8" stroke-width="2" stroke-linecap="round" opacity=".8"/></g>'
+    + '<ellipse cx="38.4" cy="112.4" rx="13.6" ry="13" fill="#E3BC7C" stroke="#1B1330" stroke-width="2.4"/><ellipse cx="81.6" cy="112.4" rx="13.6" ry="13" fill="#E3BC7C" stroke="#1B1330" stroke-width="2.4"/>'
+    + '<path d="M28.6 116.4c2 4.6 6 7.6 11 8.2M91.4 116.4c-2 4.6-6 7.6-11 8.2" fill="none" stroke="#C99A55" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>'
+    + '<ellipse cx="31.6" cy="125.4" rx="7.4" ry="3.4" fill="#FBF0D8" stroke="#1B1330" stroke-width="1.4"/><ellipse cx="88.4" cy="125.4" rx="7.4" ry="3.4" fill="#FBF0D8" stroke="#1B1330" stroke-width="1.4"/>'
+    + '<path d="M41.4 64c-6.4 18-8.4 40-6 62h49.2c2.4-22 .4-44-6-62-6.2-5-31-5-37.2 0z" fill="#EDCB8C" stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round"/>'
+    + '<path d="M48.4 60c-6.6 12.4-8.2 28.6-5.6 42.4 2 10 8.6 16.2 17.2 17.2 8.6-1 15.2-7.2 17.2-17.2 2.6-13.8 1-30-5.6-42.4-5.2 4.2-18 4.2-23.2 0z" fill="#FBF0D8"/>'
+    + '<path d="M45.6 95c-1 9.6-1 19 0 28.8h11.2c1-9.8 1-19.2 0-28.8zM63.2 95c-1 9.6-1 19 0 28.8h11.2c1-9.8 1-19.2 0-28.8z" fill="#F6E3BC" stroke="#1B1330" stroke-width="1.4"/>'
+    + '<ellipse cx="51.2" cy="125" rx="8" ry="4.2" fill="#FBF0D8" stroke="#1B1330" stroke-width="1.4"/><ellipse cx="68.8" cy="125" rx="8" ry="4.2" fill="#FBF0D8" stroke="#1B1330" stroke-width="1.4"/>'
+    + '<path d="M47.8 123.4v2.8M51.2 123.2v3M54.6 123.4v2.8M65.4 123.4v2.8M68.8 123.2v3M72.2 123.4v2.8" stroke="#1B1330" stroke-width="1" stroke-linecap="round" opacity=".5"/>'
+    + '<path d="M41.4 80c1.4-4.4 3.2-7.2 6-8.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".45"/>'
+    + '<g class="af-head"><path d="M60 13.6C76.2 13.6 86.6 23.6 86.6 37.6C86.6 46.6 82.6 52.8 76.8 56.8H43.2C37.4 52.8 33.4 46.6 33.4 37.6C33.4 23.6 43.8 13.6 60 13.6Z" fill="#EDCB8C" stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round"/>'
+    + '<path d="M50.8 19.6c5.8-2.2 12.6-2.2 18.4 0" fill="none" stroke="#F6E3BC" stroke-width="2" stroke-linecap="round"/><path d="M56.6 22.4c2.2-1 4.6-1 6.8 0l-.8 16.4h-5.2z" fill="#F6E3BC" opacity=".8"/>'
+    + '<path d="M46.4 46.8c0-5.6 6-8.6 13.6-8.6s13.6 3 13.6 8.6v6.4c0 6.8-6 11.4-13.6 11.4S46.4 60 46.4 53.2z" fill="#F6E3BC" stroke="#1B1330" stroke-width="1.6"/>'
+    + '<path d="M50.2 51.2c1.8-3.6 5.6-5.2 9.8-5.2s8 1.6 9.8 5.2c1 4.8-2 10.4-9.8 10.6-7.8-.2-10.8-5.8-9.8-10.6z" fill="#4A3A33" opacity=".5"/>'
+    + '<path d="M45.6 21.6C37.6 18.6 29.4 24.6 27.8 34.6C26.6 43.4 28.8 52.6 34.4 58.2C37.8 61.2 42.6 59.6 43.8 55.4C45.2 47 44.4 36.6 48.8 27.6Z" fill="#A65E2E" stroke="#1B1330" stroke-width="2.2" stroke-linejoin="round"/>'
+    + '<path d="M74.4 21.6C82.4 18.6 90.6 24.6 92.2 34.6C93.4 43.4 91.2 52.6 85.6 58.2C82.2 61.2 77.4 59.6 76.2 55.4C74.8 47 75.6 36.6 71.2 27.6Z" fill="#A65E2E" stroke="#1B1330" stroke-width="2.2" stroke-linejoin="round"/>'
+    + '<path d="M41.4 27.6C35.6 30.6 33.2 38.4 34 46.4M78.6 27.6C84.4 30.6 86.8 38.4 86 46.4" fill="none" stroke="#7E4220" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>'
+    + '<path d="M34.6 31.6c2-3.6 5.4-5.8 9-6.2M85.4 31.6c-2-3.6-5.4-5.8-9-6.2" fill="none" stroke="#C88250" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>'
+    + '<path d="M45.8 32.6q3.8-2 7.8-.6M74.2 32.6q-3.8-2-7.8-.6" fill="none" stroke="#C99A55" stroke-width="1.8" stroke-linecap="round"/>'
+    + '<g class="af-eyes"><ellipse cx="51" cy="38.6" rx="3.8" ry="4.1" fill="#1B1330"/><ellipse cx="69" cy="38.6" rx="3.8" ry="4.1" fill="#1B1330"/><ellipse cx="51" cy="38.9" rx="2.9" ry="3.2" fill="#7A4318"/><ellipse cx="69" cy="38.9" rx="2.9" ry="3.2" fill="#7A4318"/><circle cx="51" cy="39.2" r="1.7" fill="#1B0D05"/><circle cx="69" cy="39.2" r="1.7" fill="#1B0D05"/><circle cx="52.2" cy="37.4" r="1.15" fill="#fff"/><circle cx="70.2" cy="37.4" r="1.15" fill="#fff"/></g>'
+    + '<path d="M53.4 47c0-3 13.2-3 13.2 0 0 3.4-3.8 5.8-6.6 5.8s-6.6-2.4-6.6-5.8z" fill="#1E1714"/><ellipse cx="57.6" cy="46.4" rx="2" ry=".9" fill="#7A6A60"/>'
+    + '<g class="af-mouth"><path d="M60 52.8v2.6M54.2 55.8c2.4 2.2 4.4 2.4 5.8.6 1.4 1.8 3.4 1.6 5.8-.6" fill="none" stroke="#1E1714" stroke-width="1.4" stroke-linecap="round"/></g></g>',
   cat: '<ellipse cx="60" cy="128.6" rx="32" ry="2.8" fill="#0B1030" opacity=".14"/>'
     + '<g class="af-tail"><path d="M80 124c14 1 20-8 16-18" fill="none" stroke="#1B1330" stroke-width="8.4" stroke-linecap="round"/><path d="M80 124c14 1 20-8 16-18" fill="none" stroke="#9A9087" stroke-width="5.4" stroke-linecap="round"/><path d="M90 122.4l2.4-3.4M95 118l3.4-1.4M97.4 111.4l3.4.4" stroke="#4A4038" stroke-width="2" stroke-linecap="round"/></g>'
     + '<path d="M45 84c-7 13-9 28-7 42h44c2-14 0-29-7-42-6-6-24-6-30 0z" fill="#9A9087" stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round"/>'
@@ -3796,19 +3830,20 @@ const PET_SIT = {
 };
 const PET_WALK = {
   dog: '<g class="ay-stand"><g class="dw-body">'
-    + '<g class="dw-tail"><path d="M35 31.6c-6.5-1.6-10-6.4-10.4-12.4" fill="none" stroke="#1B1330" stroke-width="7" stroke-linecap="round"/><path d="M35 31.6c-6.5-1.6-10-6.4-10.4-12.4" fill="none" stroke="#E1A245" stroke-width="4.4" stroke-linecap="round"/></g>'
-    + '<g class="dw-legs-b"><rect x="45.6" y="42" width="5.6" height="11.4" rx="2.8" fill="#B97A2A" stroke="#1B1330" stroke-width="1"/><rect x="83.6" y="42" width="5.6" height="11.4" rx="2.8" fill="#B97A2A" stroke="#1B1330" stroke-width="1"/><ellipse cx="49" cy="54.8" rx="3.4" ry="2" fill="#E9C688" stroke="#1B1330" stroke-width=".9"/><ellipse cx="87" cy="54.8" rx="3.4" ry="2" fill="#E9C688" stroke="#1B1330" stroke-width=".9"/></g>'
-    + '<g class="dw-legs-a"><rect x="38.4" y="42" width="6" height="12" rx="3" fill="#E1A245" stroke="#1B1330" stroke-width="1.1"/><rect x="76" y="42" width="6" height="12" rx="3" fill="#E1A245" stroke="#1B1330" stroke-width="1.1"/><ellipse cx="42.2" cy="55.2" rx="3.9" ry="2.2" fill="#F6D79A" stroke="#1B1330" stroke-width="1"/><ellipse cx="79.8" cy="55.2" rx="3.9" ry="2.2" fill="#F6D79A" stroke="#1B1330" stroke-width="1"/></g>'
-    + '<path d="M33 36c0-7 6-11 14-11h28c10 0 17 4 17.5 11 .5 7-5 12-13 12H46c-8 0-13-5-13-12z" fill="#E1A245" stroke="#1B1330" stroke-width="1.6"/>'
-    + '<path d="M40 44.6c9 2.6 25 2.6 38 0" fill="none" stroke="#F6D79A" stroke-width="3" stroke-linecap="round"/><path d="M39 29.4c7-3.2 18-4.2 31-3.6" fill="none" stroke="#F3C673" stroke-width="1.8" stroke-linecap="round"/>'
-    + '<path d="M80 27c3-6 9-9.4 14-9.4l6.4 12.2c-4 4-10 6.2-16.4 6.4z" fill="#E1A245" stroke="#1B1330" stroke-width="1.4" stroke-linejoin="round"/><path d="M92.4 35.5c.6 6.2-4.2 11.6-11.4 12.4l-5.4.1c4.6-3.6 8-9.6 9.2-16.6z" fill="#F6D79A"/>'
-    + '<g class="ay-head"><path d="M90.6 14.6L87.8 2.6C94.4 4 98.4 8.6 99 13.4Z" fill="#E1A245" stroke="#1B1330" stroke-width="1.4" stroke-linejoin="round"/><path d="M91.4 12.8L89.8 5.6C93.6 6.8 96 9.6 96.6 12.6Z" fill="#B97A2A" opacity=".6"/>'
-    + '<rect x="88.4" y="7.4" width="5" height="3.8" rx="1" fill="#2F86E0" stroke="#1B1330" stroke-width=".9" transform="rotate(-12 91 9.3)"/>'
-    + '<ellipse cx="97" cy="20.3" rx="10.6" ry="9.8" fill="#E1A245" stroke="#1B1330" stroke-width="1.4"/>'
-    + '<path d="M100.6 15.4c4.4.6 8.4 2.6 10.6 5.2 1.2 1.4.8 3.6-.8 4.4l-8 3.2c-3 .8-6-1-6.6-4.2-.6-3.6 1.4-8.8 4.8-8.6z" fill="#E1A245" stroke="#1B1330" stroke-width="1.2"/>'
-    + '<path d="M99 24.4c3.4.6 7.4.2 10.8-1.4l.6 1.6c-.4 1.6-2 2.6-3.8 3.2l-4.2 1.4c-2.4.4-3.4-.6-3.4-2z" fill="#F6D79A"/><path d="M103.4 27.4c2.2-.2 4.4-.8 6.4-2.2l.4 1.2c-2 1.8-4.2 2.8-6.6 3z" fill="#5B1A24"/>'
-    + '<ellipse cx="110.9" cy="21.4" rx="2.3" ry="2" fill="#2A1A10"/><ellipse cx="100.6" cy="18.3" rx="1.6" ry="1.7" fill="#2A160B"/><circle cx="101.1" cy="17.7" r=".55" fill="#fff"/>'
-    + '<path d="M98.8 15.2q1.8-1 3.6-.4" stroke="#B97A2A" stroke-width="1" fill="none" stroke-linecap="round"/></g></g></g>',
+    + '<g class="dw-tail"><path d="M35 31.6c-6.4-1.4-10.2-6-10.8-11.8" fill="none" stroke="#1B1330" stroke-width="7" stroke-linecap="round"/><path d="M35 31.6c-6.4-1.4-10.2-6-10.8-11.8" fill="none" stroke="#EDCB8C" stroke-width="4.4" stroke-linecap="round"/></g>'
+    + '<g class="dw-legs-b"><rect x="45.6" y="42" width="5.6" height="11.4" rx="2.8" fill="#D9AE6A" stroke="#1B1330" stroke-width="1"/><rect x="83.6" y="42" width="5.6" height="11.4" rx="2.8" fill="#D9AE6A" stroke="#1B1330" stroke-width="1"/><ellipse cx="49" cy="54.8" rx="3.4" ry="2" fill="#F6E3BC" stroke="#1B1330" stroke-width=".9"/><ellipse cx="87" cy="54.8" rx="3.4" ry="2" fill="#F6E3BC" stroke="#1B1330" stroke-width=".9"/></g>'
+    + '<g class="dw-legs-a"><rect x="38.4" y="42" width="6" height="12" rx="3" fill="#F3DDB0" stroke="#1B1330" stroke-width="1.1"/><rect x="76" y="42" width="6" height="12" rx="3" fill="#F3DDB0" stroke="#1B1330" stroke-width="1.1"/><ellipse cx="42.2" cy="55.2" rx="3.9" ry="2.2" fill="#FBF0D8" stroke="#1B1330" stroke-width="1"/><ellipse cx="79.8" cy="55.2" rx="3.9" ry="2.2" fill="#FBF0D8" stroke="#1B1330" stroke-width="1"/></g>'
+    + '<path d="M33 36c0-7 6-11 14-11h28c10 0 17 4 17.5 11 .5 7-5 12-13 12H46c-8 0-13-5-13-12z" fill="#EDCB8C" stroke="#1B1330" stroke-width="1.6"/>'
+    + '<path d="M40 44.6c9 2.6 25 2.6 38 0" fill="none" stroke="#FBF0D8" stroke-width="3" stroke-linecap="round"/><path d="M39 29.4c7-3.2 18-4.2 31-3.6" fill="none" stroke="#F6E3BC" stroke-width="1.8" stroke-linecap="round"/>'
+    + '<path d="M80 27c3-6 9-9.4 14-9.4l6.4 12.2c-4 4-10 6.2-16.4 6.4z" fill="#EDCB8C" stroke="#1B1330" stroke-width="1.4" stroke-linejoin="round"/><path d="M92.4 35.5c.6 6.2-4.2 11.6-11.4 12.4l-5.4.1c4.6-3.6 8-9.6 9.2-16.6z" fill="#FBF0D8"/>'
+    + '<g class="ay-head"><ellipse cx="97" cy="20.3" rx="10.6" ry="9.8" fill="#EDCB8C" stroke="#1B1330" stroke-width="1.4"/>'
+    + '<path d="M100.6 15.4c4.4.6 8.4 2.6 10.6 5.2 1.2 1.4.8 3.6-.8 4.4l-8 3.2c-3 .8-6-1-6.6-4.2-.6-3.6 1.4-8.8 4.8-8.6z" fill="#F6E3BC" stroke="#1B1330" stroke-width="1.2"/>'
+    + '<path d="M106.4 17.4c2.2.8 3.9 1.9 4.8 3.2.9 1.4.5 3-1 3.7l-4.2 1.7c-1.2-2.8-1.2-5.8.4-8.6z" fill="#4A3A33" opacity=".55"/><ellipse cx="110.9" cy="21.4" rx="2.3" ry="2" fill="#1E1714"/>'
+    + '<path d="M103.6 27.2c2.2-.4 4.4-1.2 6.2-2.4" fill="none" stroke="#1E1714" stroke-width="1" stroke-linecap="round"/>'
+    + '<ellipse cx="100.6" cy="18.3" rx="1.7" ry="1.8" fill="#1B1330"/><ellipse cx="100.7" cy="18.4" rx="1.1" ry="1.2" fill="#7A4318"/><circle cx="101.2" cy="17.6" r=".55" fill="#fff"/>'
+    + '<path d="M98.8 15.2q1.8-1 3.6-.4" stroke="#C99A55" stroke-width="1" fill="none" stroke-linecap="round"/>'
+    + '<path d="M88.8 13.2c3-2.6 7.6-2.4 9.2.4 1.4 2.4-.4 6.8-1.6 10.6-.8 2.8-3.8 3.8-6 2.2-2.6-1.8-3.6-6.6-3.4-9.6.1-1.6.8-2.9 1.8-3.6z" fill="#A65E2E" stroke="#1B1330" stroke-width="1.2" stroke-linejoin="round"/>'
+    + '<path d="M91.6 15.6c-.6 2.8-.2 5.8 1.2 8.2" fill="none" stroke="#7E4220" stroke-width="1" stroke-linecap="round" opacity=".7"/></g></g></g>',
   cat: '<g class="ay-stand"><g class="dw-body">'
     + '<g class="dw-tail"><path d="M42 33c-8-2-10-12-5-20" fill="none" stroke="#1B1330" stroke-width="6.6" stroke-linecap="round"/><path d="M42 33c-8-2-10-12-5-20" fill="none" stroke="#9A9087" stroke-width="4" stroke-linecap="round"/><path d="M36.6 25.6l3.4-.6M36.4 19.4l3.2.8" stroke="#4A4038" stroke-width="1.6" stroke-linecap="round"/></g>'
     + '<g class="dw-legs-b"><rect x="48" y="40" width="4.6" height="12.6" rx="2.3" fill="#7E756C" stroke="#1B1330" stroke-width=".9"/><rect x="76.4" y="40" width="4.6" height="12.6" rx="2.3" fill="#7E756C" stroke="#1B1330" stroke-width=".9"/></g>'
@@ -3862,16 +3897,18 @@ function mtArcs(pts, k = .62) {
 }
 const mtScal = (pts, k) => `M${mtN(pts[0][0])} ${mtN(pts[0][1])}` + mtArcs(pts, k) + 'Z';
 /* Önden saç (başın merkezi 0,-62; yarıçap 17). back: başın arkasında kalan, omza dökülen kısım; front: tepe ve perçem;
-   ears: kulaklar görünür; ghost: kazınmış (yarı saydam, kontursuz); bl / fl: arka ve öndeki saç telleri (koyu); over: başın önündeki süs (toka) */
+   ears: kulaklar görünür; ghost: kazınmış (yarı saydam, kontursuz); bl / fl: arka ve öndeki saç telleri (koyu); over: başın önündeki süs (toka).
+   Erkekte Kısa klasik yan ayrık, Orta geriye taranmış dolgun orta boy (18 Ekim: kullanıcı ilkini "keko" buldu, klas ve karizmatik istedi) */
 const HAIR_F = {
   kel: { ears: 1, ghost: 1, front: 'M-16.7 -63C-17.2 -74.8 -9.8 -80.8 0 -80.8C9.8 -80.8 17.2 -74.8 16.7 -63C16 -65.6 14.6 -67.8 12.4 -69.4C9 -71.6 -9 -71.6 -12.4 -69.4C-14.6 -67.8 -16 -65.6 -16.7 -63Z' },
-  kisa: { ears: 1, fade: 'M-17 -58.8C-18.4 -74 -10 -81 0 -81C10 -81 18.4 -74 17 -58.8C16.2 -61.6 15 -64.4 13.2 -66.6C9.6 -70.4 -9.6 -70.4 -13.2 -66.6C-15 -64.4 -16.2 -61.6 -17 -58.8Z',
-    front: 'M-13.4 -72.6C-15.4 -78 -12.6 -83.8 -6.6 -86.6C-.6 -89.6 8.6 -89.2 13.4 -84.4C16.4 -81.4 17 -77.2 15.8 -73.4C13.8 -75.6 10.6 -76.4 7.4 -75.6C5.6 -72.6 2.4 -71.4 -1.2 -71.6C-5.4 -71.8 -9.6 -73 -13.4 -72.6Z',
-    hl: 'M-6.2 -84.2C-1.4 -86.8 4.8 -86.8 9.6 -84.4', fl: 'M-9.6 -74.6C-6.8 -80.6 -.6 -84.6 7.6 -84.6M-4.2 -72.8C-1.4 -78 4.6 -80.4 11.6 -79.6' },
-  orta: {
-    back: 'M-18.6 -64.4C-20.6 -77.8 -11.4 -83.6 0 -83.6C11.4 -83.6 20.6 -77.8 18.6 -64.4C21 -60.4 18.8 -57.6 20.2 -53.6C21 -50.6 19 -48.4 16.6 -48.6C15.4 -50.6 15.6 -52.4 14.6 -54L-14.6 -54C-15.6 -52.4 -15.4 -50.6 -16.6 -48.6C-19 -48.4 -21 -50.6 -20.2 -53.6C-18.8 -57.6 -21 -60.4 -18.6 -64.4Z',
-    front: 'M-17.2 -62.2C-18.2 -75.4 -10 -82.6 .6 -82.6C11 -82.6 18.6 -75.8 17.4 -62.8C16.2 -66.4 13.8 -68.8 10.8 -69.6C10.4 -66.4 8.2 -63.8 5.2 -63C6.2 -65.6 5.6 -68.2 3.6 -69.6C.6 -67.4 -3.4 -67 -7 -68.2C-8.2 -66.2 -10.4 -64.8 -13.2 -64.6C-11.6 -66.2 -11 -67.8 -11.2 -69.4C-13.8 -67.8 -15.8 -65.4 -17.2 -62.2Z',
-    bl: 'M19.4 -60Q17.8 -57 19.2 -54M-19.4 -60Q-17.8 -57 -19.2 -54', fl: 'M-2.4 -78.4C1.8 -77.6 5.6 -74.6 7.4 -70.4M-9.6 -76C-7.4 -74.2 -6.2 -71.6 -6.2 -68.8'
+  kisa: { ears: 1,
+    front: 'M-17.2 -60.8C-18.6 -72.6 -12.2 -81.4 -2.4 -82.8C8.6 -84.4 17.6 -79.6 17.8 -69.8C17.9 -66.4 17.6 -63.6 17 -61C16 -65.4 13.8 -68.8 10.4 -70.8C6.4 -73.2 1 -73.8 -4.4 -75C-6.2 -73 -9.4 -71.2 -12.6 -69.6C-14.8 -67.8 -16.4 -64.8 -17.2 -60.8Z',
+    hl: 'M0 -81.2C5.2 -82.6 10.6 -81.2 14 -77.8', fl: 'M-4.4 -75C-4 -78.4 -3 -81 -1.4 -82.6M-1.6 -76.6C4 -79.2 10.6 -78.2 15.4 -73.4M2.8 -74.4C7.6 -75.8 12.4 -74 15.8 -69.4M-8.6 -73C-12 -71.6 -14.6 -68.8 -16 -65.4' },
+  orta: { ears: 1,
+    back: 'M-18.6 -64.2C-20.6 -78.6 -11.4 -84.8 0 -84.8C11.4 -84.8 20.6 -78.6 18.6 -64.2C19.6 -61.4 20.8 -58.8 21.6 -56.2C20.4 -54.6 18.6 -54.4 17.2 -55.4L-17.2 -55.4C-18.6 -54.4 -20.4 -54.6 -21.6 -56.2C-20.8 -58.8 -19.6 -61.4 -18.6 -64.2Z',
+    front: 'M-17.6 -61.4C-19.6 -75.6 -11.6 -86.4 1.2 -86.8C13 -87.2 20.4 -78.6 18.2 -63.4C16.6 -68.2 13.6 -71.6 9.6 -73C5.6 -74.4 1.4 -74.2 -2.2 -73.4C-4.4 -76.2 -8.4 -77 -11.6 -75.2C-14.6 -73 -16.6 -67.6 -17.6 -61.4Z',
+    hl: 'M-7 -82.6C-2 -85.4 5.2 -85.8 10.8 -83.8',
+    bl: 'M19.6 -59.4Q20.4 -57.6 21 -56.6M-19.6 -59.4Q-20.4 -57.6 -21 -56.6', fl: 'M-2.2 -73.4C2 -79.6 10.6 -81.4 16.4 -76.4M1.2 -77.2C7.2 -82.6 14 -81.6 17.8 -77M-4.2 -75.2C-7.8 -79.6 -13 -78.4 -15.8 -73.6'
   },
   uzun: {
     back: 'M-18.8 -64C-20.4 -78.4 -11.2 -83.2 0 -83.2C11.2 -83.2 20.4 -78.4 18.8 -64C19.8 -56.6 20.4 -49.4 19.4 -42.6C17.2 -41.2 13.8 -41.2 11.6 -42.6L-11.6 -42.6C-13.8 -41.2 -17.2 -41.2 -19.4 -42.6C-20.4 -49.4 -19.8 -56.6 -18.8 -64Z',
@@ -3954,6 +3991,9 @@ function mtWearFront(p, o, T, tf) {
     + `<path d="M-7.8 -45.6Q-8.6 -40.4 -12.6 -36.4M7.8 -45.6Q8.6 -40.4 12.6 -36.4" stroke="#FFC928" stroke-width="1.5" ${MT_J}/>`
     + `<path d="M-12.4 -36.6L0 -27.6L12.4 -36.6" stroke="#FFC928" stroke-width="3" ${MT_J}/><path d="M-12 -33.4L0 -24.6L12 -33.4" stroke="#fff" stroke-width="1.4" ${MT_J}/>`
     + `<path d="M-5.6 -45.6L0 -40L5.6 -45.6" stroke="#fff" stroke-width="1.6" ${MT_J}/>`;
+  if (w === 'voleybol-forma') return `<clipPath id="${p}${o.sid}vb"><path d="${T}"${tf}/></clipPath>`
+    + `<g clip-path="url(#${p}${o.sid}vb)"><path d="M-22 -16L22 -48V-12H-22Z" fill="#FFC928"/><path d="M-22 -16L22 -48" stroke="#fff" stroke-width="1.6"/><path d="M-22 -12.6L22 -44.6" stroke="#B57F00" stroke-width="1" opacity=".5"/></g>`
+    + `<path d="M-6.2 -44.8L0 -39L6.2 -44.8" stroke="#FFC928" stroke-width="2.2" ${MT_J}/>` + mtNo(0, -24.6, 12.6, '#FFFFFF', '#1F2E78');
   if (w === 'mezuniyet-cubbesi') return `<path d="M-6.6 -45.2L0 -35.4L6.6 -45.2" stroke="#55546A" stroke-width="1.6" ${MT_J}/>`
     + `<path d="M-9.2 -45.2L-4.8 -45.6L-3.6 -5.4L-8.2 -5.2ZM9.2 -45.2L4.8 -45.6L3.6 -5.4L8.2 -5.2Z" fill="#FFC928" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/>`
     + `<path d="M-7.2 -45.3L-6.1 -5.3M7.2 -45.3L6.1 -5.3" stroke="#1F2E78" stroke-width="1.6"/>`
@@ -3976,6 +4016,14 @@ function mtSkirtFront(p, o, SK, P) {
 const MT_CAP = `<path d="M-10 -76.4V-72.8Q0 -69.8 10 -72.8V-76.4" fill="#26252F" stroke="${MT_K}" stroke-width="1.8" stroke-linejoin="round"/>`
   + `<path d="M-17.4 -79.4L0 -85.6L17.4 -79.4L0 -73.2Z" fill="#33323F" stroke="${MT_K}" stroke-width="1.9" stroke-linejoin="round"/><path d="M-11 -80.4L0 -84.2" stroke="#fff" stroke-width="1" opacity=".35" stroke-linecap="round"/>`
   + `<circle cx="0" cy="-79.4" r="1.3" fill="#FFC928" stroke="${MT_K}" stroke-width=".9"/><path class="mt-tassel" d="M0 -79.4L12.4 -78.4L13.4 -70.6" stroke="#FFC928" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M12 -71.4h2.8l.6 4.4h-4z" fill="#FFC928" stroke="${MT_K}" stroke-width=".9" stroke-linejoin="round"/>`;
+// Eagles Şapkası (önden, saçın üstünde): lacivert tepe, sarı düğme, önünde sarı 7, sarı siper
+const MT_HAT_F = `<path d="M-18.4 -66.4C-19.4 -78.8 -10.8 -85.8 0 -85.8C10.8 -85.8 19.4 -78.8 18.4 -66.4Q0 -71 -18.4 -66.4Z" fill="#1F2E78" stroke="${MT_K}" stroke-width="2" stroke-linejoin="round"/>`
+  + `<path d="M0 -85.4V-80.4M-9.6 -83.4Q-12.4 -76.4 -12.4 -69.4M9.6 -83.4Q12.4 -76.4 12.4 -69.4" stroke="#121B4E" stroke-width="1.1" opacity=".8" ${MT_J}/>`
+  + `<path d="M-13.6 -79.6Q-9 -84.2 -2.4 -84.8" stroke="#fff" stroke-width="1.6" opacity=".35" ${MT_J}/>`
+  + `<ellipse cx="0" cy="-85.7" rx="2.6" ry="1.4" fill="#FFC928" stroke="${MT_K}" stroke-width="1"/>`
+  + mtNo(0, -71.8, 10.4, '#FFC928', '#121B4E')
+  + `<path d="M-18 -66.6Q0 -71.4 18 -66.6Q20 -64.4 15.8 -63.8Q0 -62.4 -15.8 -63.8Q-20 -64.4 -18 -66.6Z" fill="#FFC928" stroke="${MT_K}" stroke-width="1.8" stroke-linejoin="round"/>`
+  + `<path d="M-14 -65Q0 -63.6 14 -65" stroke="#B57F00" stroke-width="1" opacity=".7" ${MT_J}/>`;
 // Yeditepe Sarısı saçta iki küçük ışıltı
 const MT_SHINE = '<path class="mt-glint" d="M14.4 -79.2l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="#fff"/><path class="mt-glint g2" d="M-12.4 -78.2l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" fill="#fff"/>';
 // bacaklar (önden ya da yandan): pantolon (yan şeritli olabilir), şort ya da çıplak (kısa elbise). legs: [[noktalar, renk sırası]]
@@ -4014,11 +4062,11 @@ function mtFront(p, o) {
   const cheeks = `<ellipse cx="-11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/><ellipse cx="11" cy="-53.4" rx="3.2" ry="1.9" fill="#FF8FA8" opacity=".55"/>`
     + `<path d="M-1 -55.4Q.4 -54 1.8 -55.2" stroke="#C97E54" stroke-width="1.2" ${MT_J}/>`;
   const waveFace = `<ellipse cx="-6.4" cy="-58.6" rx="2.4" ry="3" fill="${MT_K}"/><ellipse cx="6.4" cy="-58.6" rx="2.4" ry="3" fill="${MT_K}"/><circle cx="-5.6" cy="-59.8" r=".95" fill="#fff"/><circle cx="7.2" cy="-59.8" r=".95" fill="#fff"/>`
-    + (o.body === 'k' ? `<path d="M-9.4 -64.4Q-6.6 -66.4 -3.8 -65M3.8 -65Q6.6 -66.4 9.4 -64.4" stroke="${o.hair}" stroke-width="1.4" ${MT_J}/><path d="M-8.6 -60.6L-10.4 -61.8M8.6 -60.6L10.4 -61.8M-8.2 -61.8L-9.4 -63.4M8.2 -61.8L9.4 -63.4" stroke="${MT_K}" stroke-width="1.1" ${MT_J}/>`
-      : `<path d="M-9.8 -64.8L-3.6 -65.6M3.6 -65.6L9.8 -64.8" stroke="${o.hair}" stroke-width="${o.body === 'e' ? 2.1 : 1.7}" ${MT_J}/>`)
+    + (o.body === 'k' ? (g.hat ? '' : `<path d="M-9.4 -64.4Q-6.6 -66.4 -3.8 -65M3.8 -65Q6.6 -66.4 9.4 -64.4" stroke="${o.hair}" stroke-width="1.4" ${MT_J}/>`) + `<path d="M-8.6 -60.6L-10.4 -61.8M8.6 -60.6L10.4 -61.8M-8.2 -61.8L-9.4 -63.4M8.2 -61.8L9.4 -63.4" stroke="${MT_K}" stroke-width="1.1" ${MT_J}/>`
+      : g.hat ? '' : `<path d="M-9.8 -64.8L-3.6 -65.6M3.6 -65.6L9.8 -64.8" stroke="${o.hair}" stroke-width="${o.body === 'e' ? 2.1 : 1.7}" ${MT_J}/>`)
     + `<path d="M-4.8 -51.8Q0 -51 4.8 -51.8Q4 -46.6 0 -46.6Q-4 -46.6 -4.8 -51.8Z" fill="#5B1A24" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><path d="M-2.4 -48.2Q0 -49.6 2.4 -48.2Q1.6 -46.8 0 -46.8Q-1.6 -46.8 -2.4 -48.2Z" fill="#E46A7B"/>`;
   if (o.head) return hairBack + (ears ? earK : '') + `<circle cx="0" cy="-62" r="17" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>` + (ears ? earS : '')
-    + `<circle cx="0" cy="-62" r="17" fill="url(#${p}sk)"/>` + hairFront + cheeks + waveFace;
+    + `<circle cx="0" cy="-62" r="17" fill="url(#${p}sk)"/>` + hairFront + (g.hat ? MT_HAT_F : '') + cheeks + waveFace;
   let s = `<ellipse cx="0" cy=".6" rx="${flag ? 24 : 19}" ry="3.6" fill="#0B1030" opacity=".22"/>`;
   if (g.wings) s += mtWing(p, -5, -40, 0, .62, .62) + mtWing(p, 5, -40, 0, -.62, .62);
   s += hairBack;
@@ -4029,7 +4077,8 @@ function mtFront(p, o) {
     + (ears ? earK : '')
     + `<circle cx="0" cy="-62" r="17" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
     + (o.etek === 'uzun' ? '' : mtLegs([[L, 1, -1.8, -.6, -2.9, 0], [R, 0, -1.8, -.6, 2.9, 0]], o, 9))
-    + mtShoe(-ft - 1.6, -3, -6) + mtShoe(ft + 1.6, -3, 6)
+    + (g.shoe === 'kurklu-bot' && o.etek !== 'uzun' ? mtBoot(L[1], L[2]) + mtBoot(R[1], R[2]) : '')
+    + mtShoe(-ft - 1.6, -3, -6, SHOE_K[g.shoe]) + mtShoe(ft + 1.6, -3, 6, SHOE_K[g.shoe])
     + (g.foot ? `<g transform="translate(2.8 -6.2) scale(.8)">${MT_ITEM[g.foot] || ''}</g>` : '')   // ayağının dibindeki top
     + `<path d="${T}"${tf} fill="url(#${p}${o.sid})"/>`
     + (SK ? mtSkirtFront(p, o, SK, P) : `<path d="${B.W}" fill="${P[0]}"/><path d="${B.W.split('L')[0]}" stroke="${P[3]}" stroke-width="1.5"/>`)
@@ -4038,7 +4087,7 @@ function mtFront(p, o) {
     + `<ellipse cx="0" cy="-44.4" rx="9.6" ry="3" fill="#000" opacity=".16"/>`
     + (ears ? earS : '')
     + `<circle cx="0" cy="-62" r="17" fill="url(#${p}sk)"/>`
-    + hairFront + (o.wear === 'mezuniyet-cubbesi' ? MT_CAP : '');
+    + hairFront + (g.hat ? MT_HAT_F : o.wear === 'mezuniyet-cubbesi' ? MT_CAP : '');
   if (g.pack) s += `<path d="M-8.8 -43.6Q-9.8 -33 -8.6 -24.8M8.8 -43.6Q9.8 -33 8.6 -24.8" stroke="${MT_K}" stroke-width="4.6" ${MT_J}/><path d="M-8.8 -43.6Q-9.8 -33 -8.6 -24.8M8.8 -43.6Q9.8 -33 8.6 -24.8" stroke="#2FA36B" stroke-width="2.8" ${MT_J}/><path d="M-8.6 -34H8.6" stroke="${MT_K}" stroke-width="3.2"/><path d="M-8.6 -34H8.6" stroke="#5CD49A" stroke-width="1.6"/>`;
   if (g.steto) s += MT_STETO_F;
   if (o.r) s += mtMedal(p, o.r, [-6.6, -43.8], [6.6, -43.8], [0, -29.4], 7.8, false);
@@ -4070,7 +4119,7 @@ const MT_TR = { e: 9.4, k: 8.6, d: 9 };
 const HAIR_S = {
   kel: { ghost: 1, d: 'M-15.6 4.4C-15.4 6.8 -14.4 8.6 -12.8 9.8C-12.8 7.6 -11.8 5.8 -10.4 4.8Z' },
   kisa: { d: 'M-15.6 4.4C-15.8 8.2 -14 11 -11 12.4C-12 9.2 -11.2 6.6 -9.2 5Z' },
-  orta: { d: 'M-15.6 4.4C-17.8 8.4 -14.4 10.8 -16.4 14.6C-14.6 16.6 -11.6 16.8 -9.6 15.4C-11.4 13 -9 10.8 -9.4 5.4Z' },
+  orta: { d: 'M-15.6 4.4C-17 8 -17.6 10.8 -19.2 12.8C-16.8 13.8 -14 13.4 -12.4 12C-11.2 9.8 -10 7.6 -9.4 5.4Z' },
   uzun: { d: 'M-15.6 4.4C-17.8 11.4 -17 18.4 -12.6 24.2C-11.8 19.6 -10.6 15 -8.6 11.4C-8.8 9 -9.2 7 -9.4 5.2Z' },
   duz: { d: 'M-14.4 2.2C-21.6 1 -27.4 6 -27.6 14.2C-26 11.2 -23 9.6 -19.6 9.6C-22 13.2 -21.6 18 -18.6 20.6C-19.2 15.4 -16.6 11 -12 8.6ZM-15.6 4.4C-15.4 7.4 -13.8 9.4 -11.6 10.2L-9.4 5.2Z', tie: [-14.6, 4.4] },
   dalgali: { d: 'M-15.6 4.4C-20.6 8.6 -14.2 12.6 -19.2 17.4C-22.4 20.6 -17.4 24.4 -13.6 24.2C-16.4 21.4 -12 18.6 -14.4 15C-16.2 12.2 -10.6 9.6 -9.4 5.2Z' },
@@ -4105,13 +4154,13 @@ function mtClimb(p, o) {
     + (SK ? `<path d="${SK}" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>` : '')
     + `<path d="${T}" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>`
     + `<circle cx="${H[0]}" cy="${H[1]}" r="15.4" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6"/>`
-    + leg(BL, 1) + mtShoe(2.6, -1.8, -38)
+    + leg(BL, 1) + (g.shoe === 'kurklu-bot' ? mtBoot(BL[1], BL[2]) : '') + mtShoe(2.6, -1.8, -38, SHOE_K[g.shoe])
     + (g.foot ? `<g transform="translate(-6.4 -5) scale(.7)">${MT_ITEM[g.foot] || ''}</g>` : '')
     + `<path d="${T}" fill="url(#${p}${o.sid})"/>` + (SK ? '' : `<path d="${PA}" fill="${P[0]}"/>`)
     + (SK ? `<path d="${SK}" fill="${o.etek === 'mini' ? P[0] : o.etek === 'pli' ? '#FFC928' : `url(#${p}${o.sid})`}"/>` + (o.wear === 'bahar-elbisesi' ? `<path d="${SK}" fill="url(#${p}fw)"/>` : '')
       + `<path d="${robe ? 'M1.6 -20Q.4 -10 .8 -1.4M5.6 -21Q5.6 -12 4.6 -1.6' : o.etek === 'pli' ? 'M2.4 -24.6Q.6 -18 -.6 -12.6M5.6 -24.8Q5 -18 4.4 -11.6' : 'M2 -21Q.4 -16 -.6 -11'}" stroke="${o.etek === 'pli' ? '#B57F00' : MT_K}" stroke-width="1.1" opacity="${o.etek === 'pli' ? .8 : .3}" ${MT_J}/>`
       + (o.etek === 'pli' ? `<path d="M-4.4 -12.4Q1.8 -10.4 8 -13.4" stroke="#1F2E78" stroke-width="1.8" ${MT_J}/>` : o.etek === 'mini' ? `<path d="M-.6 -25.6Q3.4 -24.2 8.4 -26.4" stroke="${P[3]}" stroke-width="1.6" ${MT_J}/>` : '') : '')
-    + leg(FL, 0) + mtShoe(22.6, -18.8, -38)
+    + leg(FL, 0) + (g.shoe === 'kurklu-bot' ? mtBoot(FL[1], FL[2]) : '') + mtShoe(22.6, -18.8, -38, SHOE_K[g.shoe])
     + `<path d="${mtPl([[TA[0] - 6.4, TA[1] - 2.4], [TB[0] - 7.4, TB[1] - 2.6]])}" stroke="#fff" stroke-width="1.8" opacity=".4" ${MT_J}/>`;
   if (fit === 'mont') s += `<path d="${mtCross(mtAt(TA, TB, .1), mtAt(TA, TB, .6), MT_TR[body] * 2)}${mtCross(mtAt(TA, TB, .45), mtAt(TA, TB, 1.05), MT_TR[body] * 2)}" stroke="${MT_K}" stroke-width="1.3" opacity=".35"/>`
     + `<path d="M8.4 -43C10.6 -45 16 -44.6 18.2 -41.6L17.4 -38.2C14.8 -40.4 10.6 -40.6 8 -39.4Z" fill="${mtMix(o.c, '#ffffff', .25)}" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/>`;
@@ -4120,6 +4169,7 @@ function mtClimb(p, o) {
   if (o.wear === 'parlak-mont') s += `<path d="M1.4 -29.4Q3.4 -36 7.6 -40.4" stroke="#fff" stroke-width="2.2" opacity=".55" ${MT_J}/>`;
   if (o.wear === 'bahar-elbisesi') s += `<path d="${T}" fill="url(#${p}fw)"/>`;
   if (o.wear === 'mezuniyet-cubbesi') s += `<path d="M15.4 -37.6Q13.4 -30.4 10 -25.6L12.6 -24.4Q16.4 -29.8 18.2 -36.8Z" fill="#FFC928" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/>`;
+  if (o.wear === 'voleybol-forma') s += `<path d="M9.4 -24.8L16.4 -36" stroke="#FFC928" stroke-width="6" ${MT_J}/><path d="M6.6 -24.4L13.4 -35.4" stroke="#fff" stroke-width="1.2" opacity=".8" ${MT_J}/>`;
   if (o.wear === 'ponpon-kiyafeti') s += `<path d="M6 -26.6Q9.4 -33.4 15.6 -36.4" stroke="#FFC928" stroke-width="2.6" ${MT_J}/><path d="M7.4 -26Q10.6 -32 16.2 -34.6" stroke="#fff" stroke-width="1" ${MT_J}/>`;
   if (o.wear === 'eagles-forma') s += `<path d="M8.6 -44.6C11.8 -48.4 17.6 -46.8 19.2 -42.2C16.6 -40.6 12.4 -40.2 9.4 -41.6Z" fill="${o.c}" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="M10.6 -44.8Q14.4 -46.4 17.6 -43.6" stroke="#FFC928" stroke-width="1.3" ${MT_J}/>`;
   s += `<ellipse cx="${mtN(H[0] - 5)}" cy="${mtN(H[1] + 13.6)}" rx="7.4" ry="2.6" transform="rotate(-30 ${mtN(H[0] - 5)} ${mtN(H[1] + 13.6)})" fill="#000" opacity=".16"/>`
@@ -4419,6 +4469,50 @@ function prodArt(id, pfx) {
       <text x="60" y="94" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="42" fill="#1F2E78" stroke="#FFC928" stroke-width="2.8" paint-order="stroke" stroke-linejoin="round">7</text>
       <path d="M33 52V98" stroke="#fff" stroke-width="3.2" opacity=".7" stroke-linecap="round"/>
       <path class="shine" d="M26 20h12L20 102H10z" fill="#fff" opacity=".4"/></g>`,
+    'voleybol-forma': `<defs><linearGradient id="${p}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D58C2"/><stop offset=".6" stop-color="#1F2E78"/><stop offset="1" stop-color="#121B4E"/></linearGradient><clipPath id="${p}c"><path d="M42 16L20 25L9 51L27 58L32 51V106H88V51L93 58L111 51L100 25L78 16C75 24 68 28 60 28C52 28 45 24 42 16Z"/></clipPath></defs>
+      <g transform="rotate(-4 60 62)"><path d="M42 16L20 25L9 51L27 58L32 51V106H88V51L93 58L111 51L100 25L78 16C75 24 68 28 60 28C52 28 45 24 42 16Z" fill="url(#${p}n)"/>
+      <g clip-path="url(#${p}c)"><path d="M0 116L120 26V120H0Z" fill="#FFC928"/><path d="M0 116L120 26" stroke="#fff" stroke-width="3.4"/><path d="M0 123L120 33" stroke="#B57F00" stroke-width="2" opacity=".45"/></g>
+      <path d="M42 16L20 25L9 51L27 58L32 51V106H88V51L93 58L111 51L100 25L78 16C75 24 68 28 60 28C52 28 45 24 42 16Z" fill="none" ${K}/>
+      <path d="M42 16L60 36L78 16" fill="none" stroke="#FFC928" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M12.6 43.6L29.6 50.6M107.4 43.6L90.4 50.6" stroke="#FFC928" stroke-width="5"/>
+      <text x="60" y="52" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="8" fill="#FFC928" textLength="34" lengthAdjust="spacingAndGlyphs">YEDİTEPE</text>
+      <text x="60" y="96" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="40" fill="#fff" stroke="#1F2E78" stroke-width="2.8" paint-order="stroke" stroke-linejoin="round">7</text>
+      <path class="shine" d="M24 22h12L18 102H8z" fill="#fff" opacity=".28"/></g>`,
+    'voleybol-topu': `<defs><radialGradient id="${p}b" cx="36%" cy="30%" r="78%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".7" stop-color="#EEF1F8"/><stop offset="1" stop-color="#BFC7DD"/></radialGradient><clipPath id="${p}c"><circle cx="60" cy="58" r="38"/></clipPath></defs>
+      <ellipse cx="60" cy="106" rx="30" ry="5" fill="#0B1030" opacity=".15"/>
+      <path d="M8 48h14M4 60h16M8 72h14" stroke="#8B97BD" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+      <circle cx="60" cy="58" r="38" fill="url(#${p}b)"/>
+      <g clip-path="url(#${p}c)">${[0, 120, 240].map(a => `<g transform="rotate(${a} 60 58)"><path d="M60 58C58 42 66 28 82 20L96 30C80 34 70 46 68 58Z" fill="#1F2E78"/><path d="M60 58C58 42 66 28 82 20M68 58C70 46 80 34 96 30M52 56C48 40 54 24 66 14" fill="none" stroke="#1B1330" stroke-width="2.2"/></g>`).join('')}</g>
+      <circle cx="60" cy="58" r="38" fill="none" ${K}/><path d="M32 44A31 31 0 0 1 46 27" fill="none" stroke="#fff" stroke-width="4" opacity=".9" stroke-linecap="round"/>`,
+    'kampus-sneaker': `<defs><linearGradient id="${p}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9DFEC"/></linearGradient></defs>
+      <ellipse cx="60" cy="101" rx="50" ry="5" fill="#0B1030" opacity=".15"/>
+      <path d="M12 82C11 72 16 66 25 64L46 58C54 56 60 50 64 42L72 38H88C93 38 97 42 99 48L103 60C108 64 110 70 110 77V82Z" fill="url(#${p}w)" ${K}/>
+      <path d="M88 38C93 38 97 42 99 48L103 60C99 63 93 63 89 61Z" fill="#1F2E78" stroke="#1B1330" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M10 82H112V90C112 94 109 96 105 96H17C13 96 10 94 10 90Z" fill="#F4F6FB" ${K}/>
+      <path d="M12 89H110" stroke="#C3CADB" stroke-width="2.6"/>
+      <path d="M52 56L58 62M58 51L64 57M64 46L70 52" stroke="#1F2E78" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M22 74C34 72 46 70 58 67" stroke="#C3CADB" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M76 72A7 6.4 0 0 1 90 72Z" fill="#FFC928" stroke="#1B1330" stroke-width="1.6" stroke-linejoin="round"/><path d="M83 65.6V63" stroke="#1B1330" stroke-width="1.6" stroke-linecap="round"/>
+      <path class="shine" d="M20 68h10L26 82H16z" fill="#fff" opacity=".7"/>`,
+    'kurklu-bot': `<defs><linearGradient id="${p}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#DDAE76"/><stop offset=".6" stop-color="#C08A52"/><stop offset="1" stop-color="#99683A"/></linearGradient></defs>
+      <ellipse cx="64" cy="104" rx="44" ry="5" fill="#0B1030" opacity=".15"/>
+      <path d="M34 30H76V70C76 75 80 78 86 79L98 81C106 83 110 88 110 94V98H30V38Z" fill="url(#${p}s)" ${K}/>
+      <path d="M30 98H110V100C110 102.4 108.4 104 106 104H34C31.6 104 30 102.4 30 100Z" fill="#7A5230" ${K2}/>
+      <path d="M76 72C70 78 60 82 46 82" stroke="#8C5E33" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".7"/>
+      <path d="M40 46V90" stroke="#fff" stroke-width="3" opacity=".3" stroke-linecap="round"/>
+      <path d="M28 18H82V31C82 35 79 37 75 37H35C31 37 28 35 28 31Z" fill="#F4E9D4" ${K}/>
+      <path d="M31 36Q35 41 39.5 36.6Q44 41 48.5 36.6Q53 41 57.5 36.6Q62 41 66.5 36.6Q71 41 75.5 36.6Q79 40 80.4 34.6" fill="#F4E9D4" stroke="#1B1330" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M36 24h4M48 22h4M60 25h4M70 22h4M42 30h4M56 30h4M68 30h3" stroke="#DCC9A6" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M32 22Q32 19 35 19" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".9"/>`,
+    'eagles-sapka': `<defs><linearGradient id="${p}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D58C2"/><stop offset=".6" stop-color="#1F2E78"/><stop offset="1" stop-color="#121B4E"/></linearGradient></defs>
+      <ellipse cx="60" cy="98" rx="48" ry="5" fill="#0B1030" opacity=".15"/>
+      <path d="M32 78C28 50 42 28 68 28C92 28 106 46 104 72C90 80 52 82 32 78Z" fill="url(#${p}n)" ${K}/>
+      <path d="M68 29V44M48 34C43 46 42 62 45 78M90 35C95 46 97 60 97 75" stroke="#121B4E" stroke-width="2.2" fill="none" opacity=".85"/>
+      <ellipse cx="68" cy="28.6" rx="5.4" ry="2.8" fill="#FFC928" ${K2}/>
+      <text x="68" y="70" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="30" fill="#FFC928" stroke="#121B4E" stroke-width="2.4" paint-order="stroke" stroke-linejoin="round">7</text>
+      <path d="M32 78C20 80 9 85 6 92C16 97 44 95 64 86C54 82 42 79 32 78Z" fill="#FFC928" ${K}/>
+      <path d="M12 91C26 92 44 89 58 85" stroke="#B57F00" stroke-width="2.2" fill="none" opacity=".7" stroke-linecap="round"/>
+      <path d="M42 46C47 37 56 33 64 33" stroke="#fff" stroke-width="3" fill="none" opacity=".35" stroke-linecap="round"/>`,
     'eagles-forma': `<defs><linearGradient id="${p}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D58C2"/><stop offset=".6" stop-color="#1F2E78"/><stop offset="1" stop-color="#121B4E"/></linearGradient></defs>
       <g transform="rotate(4 60 62)"><path d="M38 22L16 29C8 32 6 43 10 53L28 57L32 52V107H88V52L92 57L110 53C114 43 112 32 104 29L82 22C78 28 70 32 60 32C50 32 42 28 38 22Z" fill="url(#${p}n)" ${K}/>
       <path d="M16 29C24 24 31 22 38 22M104 29C96 24 89 22 82 22" fill="none" stroke="#fff" stroke-width="2.4" opacity=".45" stroke-linecap="round"/>
@@ -4514,7 +4608,7 @@ function lootHtml(it, { u = null, bal = 0, buy = true } = {}) {
   const owned = ownsItem(u, it.id), can = !!u && bal >= it.price, R = RARITY[it.rar] || RARITY.yaygin;
   const avBtn = owned && u && u === myAcc() ? (avKind(u) === 'urun' && u.urun === it.id ? '<span class="loot-av">Profil resmin</span>' : `<button type="button" class="buy can" data-g="av-urun" data-id="${esc(it.id)}">Profil resmi yap</button>`) : '';
   const btn = !buy || owned ? '' : `<button type="button" class="buy${can ? ' can' : ''}" data-g="buy" data-id="${esc(it.id)}"${u && !can ? ' disabled' : ''}>${u ? (can ? 'Satın al' : (it.price - bal) + ' kubbe eksik') : 'Hesap aç'}</button>`;
-  const sac = it.tur === 'sac', wearBtn = owned && u && u === myAcc() && (sac || GIY_SLOTS.includes(it.tur))
+  const sac = isDye(it), wearBtn = owned && u && u === myAcc() && (sac || GIY_SLOTS.includes(slotOf(it)))
     ? (isWorn(S.me, u, it.id) ? `<span class="loot-av">${sac ? 'Saçında' : 'Karakterinde'}</span>` : `<button type="button" class="buy can" data-g="wear" data-id="${esc(it.id)}">${sac ? 'Saçını boya' : 'Karakterine giy'}</button>`) : '';
   return `<article class="loot r-${it.rar}${owned ? ' owned' : ''}" data-loot>
     <div class="loot-stage">

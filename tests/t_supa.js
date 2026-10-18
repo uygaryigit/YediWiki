@@ -450,7 +450,9 @@ async function signup(t, be, local, prof) {
     await Dn.go('#/kubbe'); await sleep(150);
     Dn.ev("buyItem('kartal-kanatlari')"); await sleep(80);
     Dn.$('.modal [data-ok]').click(); await sleep(400);
-    { const u = await doc(be, 'users', Dn.ev('S.me')); ok(u.items && u.items['kartal-kanatlari'] && u.spent === 1500, 'ürün sunucuda alındı'); ok(u.giy && u.giy.taki === 'kartal-kanatlari', 'alınan kanat sunucuda karaktere takıldı'); }
+    { let u = await doc(be, 'users', Dn.ev('S.me'));
+      for (let i = 0; i < 20 && !(u.giy && u.giy.taki); i++) { await sleep(150); u = await doc(be, 'users', Dn.ev('S.me')); }   // giyme, alımdan sonra ayrı yazılır
+      ok(u.items && u.items['kartal-kanatlari'] && u.spent === 1500, 'ürün sunucuda alındı'); ok(u.giy && u.giy.taki === 'kartal-kanatlari', 'alınan kanat sunucuda karaktere takıldı'); }
     { const me = Dn.ev('S.me'), r = await Dn.cl.client.rpc('doc_update', { p_col: 'users', p_id: me, p_patch: { sac: 'topuz', sacr: 'ysari', giy: { ust: 'parlak-mont', el: 'kartal-kanatlari' } } });
       ok(!r.error, 'karakter güncellemesi geçti'); const u = await doc(be, 'users', me);
       ok(u.sac === 'topuz' && !u.sacr && u.giy && !u.giy.ust && !u.giy.el && u.giy.taki === 'kartal-kanatlari', 'sunucu: alınmamış ürün ve saç boyası düşer, türü tutmayan düşer, takı yerinde'); }
