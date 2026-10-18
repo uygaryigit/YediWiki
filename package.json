@@ -4,7 +4,7 @@
   "description": "Yeditepe öğrencileri için ders notları, bölüm ders planları, HocaÖlçer ve Kubbe.",
   "scripts": {
     "build": "node tools/build.js",
-    "test": "npm run build && node tests/t_katalog.js build/artifact.html",
+    "test": "npm run build && node tests/t_katalog.js build/artifact.html && node tests/t_seo.js",
     "test:site": "npm run build && bash supabase/tests/pg_yerel.sh && node tests/t_supa.js dist/index.html",
     "test:db": "bash supabase/tests/yerel.sh"
   },

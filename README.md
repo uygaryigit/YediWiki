@@ -13,6 +13,7 @@ Yeditepe Üniversitesi ile resmî bir bağı yoktur.
 | `supabase/tests/` | Kural testleri (`gen_kurallar.py` üretir), yerel PostgreSQL'de çalıştırıcı (`yerel.sh`) |
 | `tests/` | Sayfa testleri: `t_katalog.js` (claude.ai sürümü), `t_supa.js` (site sürümü, yerel PostgreSQL'e bağlı sahte supabase-js) |
 | `tools/` | Derleme (`build.js`), katalog ve kadro araçları |
+| `worker/` | Cloudflare Worker: `/ders/<kod>` adresinde sayfayı dersin başlığı, açıklaması ve önizlemesiyle yazar (`index.js`, `seo.js`); diğer bilinmeyen adreslerde 404 |
 
 Aynı `app.js` iki yerde çalışır: claude.ai artifact'i içinde (`window.claude` veritabanı) ve gerçek sitede (Supabase).
 
@@ -23,12 +24,16 @@ npm ci
 npm run build        # dist/index.html (yayımlanan site) ve build/artifact.html (claude.ai)
 ```
 
-Cloudflare (Workers, Git bağlantılı): derleme komutu `npm ci --omit=dev && npm run build`, yayın komutu `npx wrangler deploy` (ayar: `wrangler.jsonc`, `dist/` klasörü).
+Cloudflare (Workers, Git bağlantılı): derleme komutu `npm ci --omit=dev && npm run build`, yayın komutu `npx wrangler deploy` (ayar: `wrangler.jsonc`). `dist/` statik olarak sunulur; derleme ayrıca `dist/sitemap.xml`, `dist/robots.txt`, yasal sayfalar (`/gizlilik`, `/kvkk`, `/kosullar`) ve worker'ın okuduğu `build/seo-data.json`'u yazar.
+
+## Arama motorları
+
+Her ders `https://yediwiki.com/ders/<kod>` adresindedir (ör. `/ders/math131`). Worker bu adreste index.html'i dersin başlığı, açıklaması, canonical bağlantısı ve not başlıklarıyla yazar; uygulama da yol adresinden dersi açar. Giriş yapmamış ziyaretçi (ve arama motoru) dersin önizlemesini görür; nota, yorumlara ve hoca puanlarına girişle ulaşılır.
 
 ## Testler
 
 ```sh
-npm test             # claude.ai sürümü (jsdom)
+npm test             # claude.ai sürümü (jsdom) ve arama motoru çıktıları (tests/t_seo.js)
 npm run test:db      # veritabanı kuralları (yerel PostgreSQL 16, /var/tmp/ywpg soketi, 54329 portu)
 npm run test:site    # site sürümü: sayfa + gerçek SQL kuralları, RLS ve tetikleyiciler
 ```

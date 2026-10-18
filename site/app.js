@@ -822,8 +822,9 @@ function verReload() {
   return true;
 }
 async function init() {
-  window.addEventListener('hashchange', () => { if (!verReload()) route(); });
+  window.addEventListener('hashchange', () => { normPath(); if (!verReload()) route(); });
   if (!(window.claude && typeof window.claude.use === 'function') && window.YW_SUPA && window.supabase && window.YWSupa) { S.supa = true; S.authPending = true; }
+  normPath();
   route();
   if (S.supa) {
     document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVer(); });
@@ -1359,7 +1360,9 @@ const G = {
   'logout-shared': () => logoutShared(),
   'logout-base': () => logoutBase(),
   'logout': () => siteLogout(),
-  'share': (id, el) => shareLink(el.dataset.title || 'YediWiki', el.dataset.hash || location.hash),
+  'share': (id, el) => shareLink(el.dataset.title || 'YediWiki', el.dataset.hash || location.hash, el.dataset.path || ''),
+  'peek-login': () => openAuth({ reason: true }),
+  'peek-signup': () => openAuth({ signup: true }),
   'myc': id => toggleMyCourse(id),
   'bell': () => (nfPop() ? closeNotifs(true) : openNotifs()),
   'theme': () => toggleTheme(),
@@ -1980,9 +1983,10 @@ function kubbeFloat(n) {
 function introCls() { const t = Date.now(); if (!S.cardsIntroAt) S.cardsIntroAt = t; return t - S.cardsIntroAt < 1500 ? ' intro' : ''; }
 /* ================= Yeni özellikler: paylaşım, Derslerim, bildirimler, rozetler, tema ================= */
 const SITE_URL = 'https://claude.ai/artifact/QHmvx8rTtGNrcmijbjJAfy';
-const siteUrl = () => (S.supa ? location.origin + location.pathname : SITE_URL);
-async function shareLink(title, hash) {
-  const url = siteUrl() + (hash || '');
+const siteUrl = () => (S.supa ? location.origin + '/' : SITE_URL);
+/* Paylaşılan bağlantı: ders sayfasında Google'ın da gördüğü /ders/<kod> adresi (data-path), diğerlerinde #/ adresi */
+async function shareLink(title, hash, path) {
+  const url = S.supa && path ? location.origin + path : siteUrl() + (hash || '');
   if (navigator.share) { try { await navigator.share({ title, text: title, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
   copyText(url);
 }
@@ -2555,7 +2559,7 @@ function noteCard(n) {
       <span class="ncard-title">${esc(n.title)}</span>
       <span class="meta"><span>${whoHtml(n.by, n.anon, n.nick)}</span><span>${esc(ago(n.at))}</span>${voteBadge(n)}</span></span></a></li>`;
 }
-function noteRow(n, { showCourse = false } = {}) {
+function noteRow(n, { showCourse = false, peek = false } = {}) {
   if (isHidden(n) && !S.revealed.has(n.id)) return `<li><div class="is-hidden"><span>Bu not bildirimler nedeniyle gizlendi.</span><button type="button" class="btn btn-sm btn-ghost" data-g="reveal" data-id="${esc(n.id)}">Yine de göster</button></div></li>`;
   const type = noteType(n).name;
   const h = n.h && S.hocas.get(n.h);
@@ -2567,7 +2571,7 @@ function noteRow(n, { showCourse = false } = {}) {
     <div class="note-body">
       <div class="note-line">${showCourse ? `<a class="code" href="#/ders/${esc(n.cid)}">${esc(codeOf(n.cid))}</a>` : ''}<span class="kind kind-${noteType(n).k}">${esc(type)}</span></div>
       <a class="note-title" href="#/not/${esc(n.id)}">${esc(n.title)}</a>
-      <div class="meta">${n.tk ? `<span>${esc(termLabel(n.tk))}</span>` : ''}${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}<span>${whoHtml(n.by, n.anon, n.nick)}</span><span>${esc(ago(n.at))}</span></div>
+      <div class="meta">${n.tk ? `<span>${esc(termLabel(n.tk))}</span>` : ''}${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}${peek ? '' : `<span>${whoHtml(n.by, n.anon, n.nick)}</span>`}<span>${esc(ago(n.at))}</span></div>
     </div>
     <div class="note-side">
       <span class="chips">${photos.length ? `<span class="pill">${icon('camera')}${photos.length} sayfa</span>` : ''}${n.drive ? `<span class="pill">${icon('external')}${esc((driveInfo(n.drive) || { name: 'Drive' }).name)}</span>` : ''}</span>
@@ -2848,6 +2852,7 @@ function openAuth(opts = {}) {
       ${pwField('au-pw', 'Şifre belirle')}
       <p class="err" role="alert"></p>
       <button class="btn btn-primary btn-lg auth-main" type="submit">Doğrulama kodu gönder</button>
+      <p class="fine auth-legal">Kayıt olarak <a href="/kosullar" target="_blank" rel="noopener">Kullanım Koşulları</a>’nı kabul etmiş olursun. Kişisel verilerin <a href="/kvkk" target="_blank" rel="noopener">KVKK Aydınlatma Metni</a>’nde anlatıldığı gibi işlenir.</p>
       <p class="auth-alt">Hesabın var mı? <button type="button" class="linkbtn" data-r="to-login">Giriş yap</button></p></form>`;
     $('[data-r=to-login]', host).addEventListener('click', stepLogin);
     wireMailField($('#au-mail', host)); wirePwEye();
@@ -3110,6 +3115,7 @@ function openAuth(opts = {}) {
     setTimeout(() => { const i = $(st.loginMail ? '#au-lpw' : '#au-lmail', host); if (i) i.focus(); }, 40);
   }
   if (S.supa && S.session) step3();
+  else if (S.supa && opts.signup) stepSignup();
   else if (S.supa || S.readOnly || opts.login || S.out) stepLogin(); else step1();
 }
 function openProfileEdit() {
@@ -3439,8 +3445,9 @@ function commentsBlock(el, { tt, tid, ctx = '' }) {
 }
 
 /* ================= Yönlendirme ================= */
-let lastGate = null, curKey = null, curWait = false;
-const PUBLIC = new Set(['', 'hakkinda']);
+let lastGate = null, curKey = null, curWait = false, curUrl = '';
+// Herkese açık sayfalar: ana sayfa, Hakkında ve ders önizlemesi (giriş yapmamışa notların başlıkları görünür; nota, yoruma, hocalara girişle)
+const PUBLIC = new Set(['', 'hakkinda', 'ders']);
 async function tryLogin(mail, pw) {
   const em = String(mail || '').trim().toLowerCase();
   for (const [uid, u] of S.users) {
@@ -3483,15 +3490,58 @@ async function maybeProvisionAdmin() {
   } catch (e) { console.error(e); S.adminProv = 'fail'; changed(); }
 }
 function viewWait(root) { root.innerHTML = `<div class="wrap">${loadingHtml()}</div>`; return {}; }
+/* Ders sayfasının Google'a açık adresi: yediwiki.com/ders/<kod>. Sunucu (worker/) bu adreste başlığı, açıklamayı ve dersin
+   önizlemesini sayfaya yazar; uygulama da aynı dersi açar. Site içinde gezinti yine #/ ile; yol adresindeyken başka bir
+   sayfaya geçilince adres / + #/... olur (normPath). claude.ai sürümünde yol adresi yok. */
+const CANON = 'https://yediwiki.com';
+const COURSE_PATH = /^\/ders\/([^/?#]+)\/?$/;
+function pathRoute() {
+  if (!S.supa) return '';
+  const m = COURSE_PATH.exec(location.pathname || '');
+  if (!m) return '';
+  let raw = m[1];
+  try { raw = decodeURIComponent(raw); } catch (e) { /* olduğu gibi */ }
+  const pc = parseCode(raw);
+  return pc ? '#/ders/' + pc.id : '';
+}
+const routeHash = () => { const h = location.hash || ''; return h && h !== '#' ? h : (pathRoute() || h); };
+function normPath() {
+  if (!S.supa || (location.pathname || '/') === '/') return;
+  const h = location.hash || '';
+  if (h && h !== '#') { try { history.replaceState(null, '', '/' + h); } catch (e) { /* yok */ } }
+}
+const coursePath = cid => '/ders/' + String(cid || '').toLowerCase();
+/* Sekmenin başlığı, açıklaması ve canonical bağlantısı (yalnızca sitede; sunucunun yazdığıyla aynı biçim, bkz. worker/seo.js) */
+const BASE_DESC = 'Yeditepe öğrencileri için ders notları, bölüm ders planları, HocaÖlçer ve Kubbe.';
+function setDocMeta(title, desc, canon) {
+  if (!S.supa) return;
+  try {
+    if (document.title !== title) document.title = title;
+    const d = document.querySelector('meta[name="description"]');
+    if (d && d.getAttribute('content') !== desc) d.setAttribute('content', desc);
+    const c = document.querySelector('link[rel="canonical"]');
+    if (c && c.getAttribute('href') !== canon) c.setAttribute('href', canon);
+  } catch (e) { /* yok */ }
+}
+function courseMeta(cid, notes) {
+  const c = S.courses.get(cid) || {}, code = codeOf(cid), name = String(c.name || '').trim();
+  const title = `${code}${name ? ' ' + name : ''} Ders Notları · Yeditepe | YediWiki`;
+  const bits = [c.ects ? c.ects + ' AKTS' : '', c.kr != null ? fmtKr(c.kr) + ' kredi' : ''].filter(Boolean).join(', ');
+  const desc = `Yeditepe Üniversitesi ${code}${name ? ' ' + name : ''} ders notları ve çıkmış sınavlar${notes ? ` (${notes} not)` : ''}${bits ? ', ' + bits : ''}. Öğrencilerin paylaştığı notlar, hoca puanları ve ders yorumları YediWiki’de.`;
+  return { title, desc, canon: CANON + coursePath(cid) };
+}
 function parseHash() {
-  const h = (location.hash || '').replace(/^#/, '') || '/';
+  const h = routeHash().replace(/^#/, '') || '/';
   const qi = h.indexOf('?');
   const path = qi >= 0 ? h.slice(0, qi) : h, qs = qi >= 0 ? h.slice(qi + 1) : '';
   let parts = [];
   try { parts = path.split('/').filter(Boolean).map(decodeURIComponent); } catch (e) { parts = path.split('/').filter(Boolean); }
   return { parts, q: new URLSearchParams(qs) };
 }
-function setHashQuiet(h) { try { history.replaceState(null, '', h); } catch (e) { /* yok */ } }
+function setHashQuiet(h) {
+  try { history.replaceState(null, '', (S.supa && (location.pathname || '/') !== '/' ? '/' : '') + h); } catch (e) { /* yok */ }
+  curUrl = location.pathname + location.search + location.hash;
+}
 const ROUTES = {};
 function route() {
   const r = parseHash();
@@ -3502,10 +3552,14 @@ function route() {
   if (!PUBLIC.has(key) && lastGate !== 'open') {
     if (lastGate === 'wait') { fn = viewWait; waiting = true; }
     else {
-      S.pendingHash = location.hash;
+      S.pendingHash = routeHash();
       askLogin = true;
+      // herkese açık bir sayfadaysa (ana sayfa, ders önizlemesi) o sayfada kalınır, üstünde giriş penceresi açılır
+      if (curKey !== null && PUBLIC.has(curKey) && !curWait && view) {
+        try { history.replaceState(null, '', curUrl); } catch (e) { /* yok */ }
+        closeAllModals(); renderChrome(); openAuth({ reason: true }); return;
+      }
       setHashQuiet('#/');
-      if (curKey === '' && !curWait && view) { closeAllModals(); renderChrome(); openAuth({ reason: true }); return; }
       key = ''; fn = ROUTES[''];
     }
   }
@@ -3515,12 +3569,17 @@ function route() {
   if (view && view.cleanup) { try { view.cleanup(); } catch (e) { /* yok */ } }
   $$('.dview.max').forEach(x => dviewMax(x, false));
   const main = $('#main');
+  // sunucunun yazdığı ders önizlemesi (data-ssr) veriler gelene kadar yerinde kalır
+  const ssr = key === 'ders' && main.firstElementChild && main.firstElementChild.hasAttribute('data-ssr') ? main.firstElementChild : null;
   main.innerHTML = '';
+  if (ssr) main.appendChild(ssr);
+  if (key !== 'ders') setDocMeta('YediWiki', BASE_DESC, CANON + '/');
   try { view = fn(main, r) || {}; } catch (e) { console.error(e); view = {}; main.innerHTML = `<div class="wrap panel">${emptyHtml('Bir şeyler ters gitti', 'Sayfayı yenileyip tekrar dene.')}</div>`; }
   try { if (view.refresh) view.refresh(); } catch (e) { console.error(e); }
   $$('[data-nav]').forEach(a => { if (a.dataset.nav === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   try { window.scrollTo(0, 0); } catch (e) { /* yok */ }
   try { main.focus({ preventScroll: true }); } catch (e) { /* yok */ }
+  curUrl = location.pathname + location.search + location.hash;
   renderChrome();
   if (askLogin) openAuth({ reason: true });
 }
@@ -4672,13 +4731,13 @@ const plusCount = r => Object.values((r && r.plus) || {}).filter(Boolean).length
 const plusedByMe = r => { const k = okey(r); return !!(k && r && r.plus && r.plus[k]); };
 const demandOf = r => plusCount(r) + 1;
 function openRequests(cid) { return requestsWhere(r => !r.done && (!cid || r.cid === cid)).sort((a, b) => demandOf(b) - demandOf(a) || (b.at || 0) - (a.at || 0)); }
-function reqItemHtml(r, { showCourse = false } = {}) {
+function reqItemHtml(r, { showCourse = false, peek = false } = {}) {
   const mine = r.by === S.me, n = demandOf(r), on = plusedByMe(r) || mine;
   const acts = r.done
     ? (r.nid ? `<a class="btn btn-sm" href="#/not/${esc(r.nid)}">${icon('book')}Nota git</a>` : '')
     : `<button type="button" class="req-plus${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor">${UP_ARR}<span>Ben de</span><b>${n}</b></button><a class="btn btn-sm btn-primary" href="#/paylas?ders=${esc(r.cid)}&istek=${esc(r.id)}">${icon('up')}Ben paylaşırım</a>`;
   const cn = showCourse ? (S.courses.get(r.cid) || {}).name : '';
-  return `<li class="req${r.done ? ' done' : ''}" id="rq-${esc(r.id)}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${!r.done && n >= REQ_HOT ? gl('flame', 'rq-fire') : ''}${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span>${cn ? `<span class="req-cname">${esc(cn)}</span>` : ''}${r.why ? `<p class="req-why">${esc(r.why)}</p>` : ''}<span class="meta"><span>${whoHtml(r.by, false, '')}</span><span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${r.doneBy ? whoHtml(r.doneBy, false, '') : spyName()}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
+  return `<li class="req${r.done ? ' done' : ''}" id="rq-${esc(r.id)}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${!r.done && n >= REQ_HOT ? gl('flame', 'rq-fire') : ''}${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span>${cn ? `<span class="req-cname">${esc(cn)}</span>` : ''}${r.why ? `<p class="req-why">${esc(r.why)}</p>` : ''}<span class="meta">${peek ? '' : `<span>${whoHtml(r.by, false, '')}</span>`}<span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${r.doneBy ? whoHtml(r.doneBy, false, '') : spyName()}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
 }
 /* Ana sayfada istek tek satır: ders kodu, istek, (popülerse alev), + ve kaç kişinin istediği. Ayrıntı istekler sayfasında */
 const REQ_HOT = 3;
@@ -4688,9 +4747,9 @@ function reqLineHtml(r) {
   const mine = r.by === S.me, n = demandOf(r), on = plusedByMe(r) || mine, hot = n >= REQ_HOT;
   return `<li class="rq-line${hot ? ' hot' : ''}" data-id="${esc(r.id)}" data-n="${n}"><a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a><a class="rq-t" href="#/istekler?r=${esc(r.id)}">${esc(reqTitle(r))}</a>${hot ? gl('flame', 'rq-fire') : ''}<button type="button" class="rq-up${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled title="Senin isteğin"' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor">${UP_ARR}<b class="rq-n" aria-hidden="true">${n}</b></button></li>`;
 }
-function requestBoxHtml(cid) {
+function requestBoxHtml(cid, { peek = false } = {}) {
   const list = openRequests(cid), people = list.reduce((s, r) => s + demandOf(r), 0);
-  return `<div class="reqbox"><div class="reqbox-head"><span class="reqbox-ico" aria-hidden="true">${gl('megaphone')}</span><div><b>${list.length ? `${people} kişi bu dersten not bekliyor` : 'Aradığın notu bulamadın mı?'}</b><span>${list.length ? `Paylaşıp isteği karşılayan ${KUBBE.fill} kubbe kazanır.` : `İste; paylaşan arkadaşın ${KUBBE.fill} kubbe kazansın.`}</span></div><button type="button" class="btn btn-sm" data-g="req-new" data-id="${esc(cid)}">${icon('plus')}Not iste</button></div>${list.length ? `<ul class="reqs">${list.slice(0, 4).map(r => reqItemHtml(r)).join('')}</ul>` : ''}</div>`;
+  return `<div class="reqbox"><div class="reqbox-head"><span class="reqbox-ico" aria-hidden="true">${gl('megaphone')}</span><div><b>${list.length ? `${people} kişi bu dersten not bekliyor` : 'Aradığın notu bulamadın mı?'}</b><span>${list.length ? `Paylaşıp isteği karşılayan ${KUBBE.fill} kubbe kazanır.` : `İste; paylaşan arkadaşın ${KUBBE.fill} kubbe kazansın.`}</span></div><button type="button" class="btn btn-sm" data-g="req-new" data-id="${esc(cid)}">${icon('plus')}Not iste</button></div>${list.length ? `<ul class="reqs">${list.slice(0, 4).map(r => reqItemHtml(r, { peek })).join('')}</ul>` : ''}</div>`;
 }
 function openRequestModal(cid) {
   if (!needAcc()) return;
@@ -5536,7 +5595,11 @@ ROUTES['ders'] = function viewCourse(root, r) {
   let mode = null, tabView = null;
   function renderMode() {
     tabView = null;
-    if (mode === 'loading') { root.innerHTML = `<div class="wrap">${loadingHtml()}</div>`; return; }
+    if (mode === 'loading') {
+      const ssr = $('[data-ssr]', root);
+      if (ssr && ssr.dataset.ssr === cid) return;   // sunucunun yazdığı önizleme veriler gelene kadar kalır
+      root.innerHTML = `<div class="wrap">${loadingHtml()}</div>`; return;
+    }
     if (mode === 'nodb') { root.innerHTML = `<div class="wrap panel">${noDbHtml()}</div>`; return; }
     if (mode === 'missing') {
       root.innerHTML = `<div class="wrap panel"><a class="crumb" href="#/dersler">${icon('cl')}Dersler</a>
@@ -5554,7 +5617,7 @@ ROUTES['ders'] = function viewCourse(root, r) {
             <div class="head-actions">
               <a class="btn btn-primary" href="#/paylas?ders=${esc(cid)}">${icon('up')}Not paylaş</a>
               <button type="button" class="btn btn-ghost myc-btn" data-g="myc" data-id="${esc(cid)}" data-r="myc" aria-pressed="false" hidden>${icon('bookmark')}<span>Derslerime ekle</span></button>
-              <button type="button" class="btn btn-ghost" data-g="share" data-title="${esc(codeOf(cid))} ders notları" data-hash="#/ders/${esc(cid)}">${icon('share')}Paylaş</button>
+              <button type="button" class="btn btn-ghost" data-g="share" data-title="${esc(codeOf(cid))} ders notları" data-hash="#/ders/${esc(cid)}" data-path="${esc(coursePath(cid))}">${icon('share')}Paylaş</button>
               <button type="button" class="btn btn-ghost" data-g="edit-course" data-id="${esc(cid)}" data-r="edit" hidden>${icon('edit')}Düzenle</button>
             </div>
             <p class="head-facts" data-r="facts"></p>
@@ -5563,7 +5626,7 @@ ROUTES['ders'] = function viewCourse(root, r) {
         </div>
         ${tabsHtml(TABS, tab)}
       </div></section>
-      <div class="wrap"><div class="panel" role="tabpanel" data-r="panel"></div></div>`;
+      <div class="wrap">${mode === 'peek' ? peekCtaHtml() : ''}<div class="panel" role="tabpanel" data-r="panel"></div></div>`;
     $$('.tab', root).forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
     switchTab(tab, true);
   }
@@ -5573,7 +5636,10 @@ ROUTES['ders'] = function viewCourse(root, r) {
     $$('.tab', root).forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
     const panel = $('[data-r=panel]', root);
     panel.innerHTML = '';
-    tabView = t === 'notlar' ? courseNotesTab(panel, cid) : t === 'yorumlar' ? commentsBlock(panel, { tt: 'course', tid: cid, ctx: 'course' }) : courseHocasTab(panel, cid);
+    const peek = mode === 'peek';
+    tabView = t === 'notlar' ? courseNotesTab(panel, cid, { peek })
+      : peek ? peekTab(panel, t === 'yorumlar' ? ['Yorumlar giriş yapınca görünür', 'Bu dersi alanların yorumlarını okumak ve kendi yorumunu yazmak için Yeditepe hesabınla giriş yap.'] : ['Hocalar giriş yapınca görünür', 'Bu dersi veren hocaları ve HocaÖlçer puanlarını görmek için Yeditepe hesabınla giriş yap.'])
+      : t === 'yorumlar' ? commentsBlock(panel, { tt: 'course', tid: cid, ctx: 'course' }) : courseHocasTab(panel, cid);
     if (!first && tabView && tabView.refresh) tabView.refresh();
   }
   function refreshHead() {
@@ -5582,6 +5648,7 @@ ROUTES['ders'] = function viewCourse(root, r) {
     $('[data-r=dept]', root).textContent = [c.dept, c.kr != null ? fmtKr(c.kr) + ' kredi' : '', c.ects ? c.ects + ' AKTS' : ''].filter(Boolean).join(', ');
     $('[data-r=edit]', root).hidden = !canEditEntity(c);
     const notes = notesWhere(n => n.cid === cid && !isHidden(n)).length;
+    { const mt = courseMeta(cid, notes); setDocMeta(mt.title, mt.desc, mt.canon); }
     const gs = gradesOf(c), ds = distsOf(c);
     const counts = emptyCounts();
     ds.forEach(d => GRADES.forEach(({ g }) => { counts[g] += d.c[g]; }));
@@ -5598,13 +5665,23 @@ ROUTES['ders'] = function viewCourse(root, r) {
   return {
     refresh() {
       const st = waitState();
-      const want = st !== 'ok' ? st : !S.loaded.courses ? 'loading' : S.courses.has(cid) ? 'ok' : 'missing';
+      // hesap durumu belli olmadan (oturum ya da kullanıcılar yükleniyor) önizleme mi tam sayfa mı seçilmez
+      const accWait = (S.supa && S.authPending) || !S.loaded.users;
+      const want = st !== 'ok' ? st : !S.loaded.courses || accWait ? 'loading' : !S.courses.has(cid) ? 'missing' : hasAcc() ? 'ok' : 'peek';
       if (want !== mode) { mode = want; renderMode(); }
-      if (mode === 'ok') { refreshHead(); if (tabView && tabView.refresh) tabView.refresh(); }
+      if (mode === 'ok' || mode === 'peek') { refreshHead(); if (tabView && tabView.refresh) tabView.refresh(); }
     }
   };
 };
-function courseNotesTab(panel, cid) {
+/* Ders önizlemesi (giriş yapmamış ziyaretçi, Google): giriş çağrısı ve kapalı sekmeler */
+function peekCtaHtml() {
+  return `<div class="peek-cta"><div class="peek-txt"><b>Notları açmak, yorumları ve hoca puanlarını görmek için giriş yap.</b><span>YediWiki Yeditepe öğrencilerine açık; @std.yeditepe.edu.tr adresinle ücretsiz kayıt olursun.</span></div><div class="peek-btns"><button type="button" class="btn btn-go" data-g="peek-login">Giriş yap</button><button type="button" class="btn btn-new" data-g="peek-signup">Kayıt ol</button></div></div>`;
+}
+function peekTab(panel, [title, text]) {
+  panel.innerHTML = emptyHtml(title, text, '<button type="button" class="btn btn-primary" data-g="peek-login">Giriş yap</button>');
+  return {};
+}
+function courseNotesTab(panel, cid, { peek = false } = {}) {
   let type = 'all', term = 'all', sort = 'hot';
   panel.innerHTML = `
     <div data-r="reqs"></div>
@@ -5627,7 +5704,7 @@ function courseNotesTab(panel, cid) {
   const api = {
     refresh() {
       const el = $('[data-r=list]', panel);
-      { const rb = $('[data-r=reqs]', panel); if (rb) { const h = requestBoxHtml(cid); if (rb.dataset.h !== h) { rb.dataset.h = h; rb.innerHTML = h; } } }
+      { const rb = $('[data-r=reqs]', panel); if (rb) { const h = requestBoxHtml(cid, { peek }); if (rb.dataset.h !== h) { rb.dataset.h = h; rb.innerHTML = h; } } }
       if (!S.loaded.notes) { el.innerHTML = loadingHtml(); return; }
       const all = notesWhere(n => n.cid === cid);
       const terms = [...new Set(all.map(n => +n.tk).filter(Boolean))].sort((a, b) => b - a);
@@ -5638,7 +5715,7 @@ function courseNotesTab(panel, cid) {
       list.sort(sort === 'top' ? byScore : sort === 'new' ? (a, b) => b.at - a.at : byHot);
       if (!all.length) { el.innerHTML = emptyHtml('Bu derse henüz not paylaşılmadı', 'Notunu Google Drive’a yükleyip linkini paylaşabilirsin.', `<a class="btn btn-primary" href="#/paylas?ders=${esc(cid)}">${icon('up')}İlk notu paylaş</a>`); return; }
       if (!list.length) { el.innerHTML = emptyHtml('Bu seçimde not yok', 'Türü ya da dönemi değiştir.'); return; }
-      el.innerHTML = `<ul class="list">${list.map(n => noteRow(n)).join('')}</ul>`;
+      el.innerHTML = `<ul class="list">${list.map(n => noteRow(n, { peek })).join('')}</ul>`;
       lazyPhotos(el);
     }
   };
@@ -5941,7 +6018,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
         <div class="form-sec">
           <fieldset class="field"><legend class="label">Tür</legend><div class="typepick">${NOTE_TYPES.map((t, i) => `<label><input type="radio" name="type" value="${t.k}"${i === 0 ? ' checked' : ''}><span>${esc(t.name)}</span></label>`).join('')}</div></fieldset>
           <div class="field"><span class="label">Paylaşan adı</span><div class="chips"><button type="button" class="chip" data-anon="0" aria-pressed="true" data-r="asme"></button><button type="button" class="chip" data-anon="1" aria-pressed="false">${gl('spy')}Anonim</button></div><p class="help" data-r="who"></p></div>
-          <label class="check"><input type="checkbox" data-r="rules"><span>Bu içerik kişisel bilgi, telifli kitap ya da devam eden bir sınavın sorularını içermiyor. <a href="#/hakkinda">Kurallar</a></span></label>
+          <label class="check"><input type="checkbox" data-r="rules"><span>Bu içerik kişisel bilgi, telifli kitap ya da devam eden bir sınavın sorularını içermiyor. <a href="${S.supa ? '/kosullar' : '#/hakkinda'}"${S.supa ? ' target="_blank" rel="noopener"' : ''}>Kurallar</a></span></label>
           <p class="err mt" role="alert" data-r="err"></p>
           <div class="modal-foot"><button class="btn btn-primary" type="submit" data-r="submit">${icon('up')}Notu paylaş</button></div>
         </div>
@@ -6106,6 +6183,7 @@ ROUTES['hakkinda'] = function viewAbout(root) {
       <li>Telifli kitapların PDF’leri ve devam eden sınavların soruları paylaşılmaz.</li>
       <li>Üç bildirim alan içerik otomatik gizlenir ve moderatör tarafından incelenir.</li>
     </ol>
+    ${S.supa ? '<p>Kuralların tamamı <a href="/kosullar">Kullanım Koşulları</a>’nda, kişisel verilerin nasıl işlendiği <a href="/kvkk">KVKK Aydınlatma Metni</a>’nde. Hakkında yazılan bir içeriğin kaldırılmasını istemek için <a href="mailto:iletisim@yediwiki.com">iletisim@yediwiki.com</a> adresine yaz.</p>' : ''}
     <h2>Devam kuralı</h2>
     <p>Yönetmeliğin 24. maddesine göre haklı bir nedene dayanan devamsızlık derslerin %20’sini geçemez; devam zorunluluğunu yerine getirmeyen öğrenci dersten başarısız sayılır.</p>
     <h2>Google Drive linki nasıl paylaşılır?</h2>

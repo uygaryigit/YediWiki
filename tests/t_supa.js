@@ -26,15 +26,15 @@ function prep(html) {
 }
 const HTML = prep(HTML0);
 
-async function tab(be, { hash = '#/', session = null, name = 'sekme' } = {}) {
+async function tab(be, { hash = '#/', path: urlPath = '/', html = HTML, session = null, name = 'sekme' } = {}) {
   const cl = makeClient(be);
   if (session) cl.st.session = session;
   const errors = [];
   const vc = new VirtualConsole();
   vc.on('error', (...a) => errors.push([name, 'console.error', ...a.map(x => (x && x.stack) || (x && x.message) || JSON.stringify(x))]));
   vc.on('jsdomError', e => errors.push([name, 'jsdomError', (e && e.detail && e.detail.stack) || (e && e.stack) || String(e)]));
-  const dom = new JSDOM(HTML, {
-    url: 'https://yediwiki.test/' + hash, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc,
+  const dom = new JSDOM(html, {
+    url: 'https://yediwiki.test' + urlPath + hash, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc,
     beforeParse(w) {
       w.supabase = { createClient: () => cl.client };
       w.scrollTo = () => {};
@@ -507,7 +507,63 @@ async function signup(t, be, local, prof) {
     be.minPw = 0; be.noRateLimit = false;
     noErr(B, 'şifreyle giriş'); noErr(F, 'şifre yenileme');
 
-    for (const t of [v, A, B, C, Dn, B2, F]) t.close();
+    console.log('11) ders önizlemesi: girişsiz ziyaretçi ve arama motoru (/ders/<kod>)');
+    const seo = await import(path.join(ROOT, 'worker/seo.js'));
+    const SD = JSON.parse(fs.readFileSync(path.join(ROOT, 'build/seo-data.json'), 'utf8'));
+    const G = await tab(be, { name: 'önizleme', path: '/ders/cse211', hash: '' });
+    await G.until(() => G.$('#main .peek-cta') && G.text('#main .course-head h1'), 'yol adresinden ders önizlemesi açıldı');
+    eq(G.w.location.pathname + G.w.location.hash, '/ders/cse211', 'adres yol olarak kaldı');
+    ok(!G.$('.modal'), 'önizlemede giriş penceresi kendiliğinden açılmaz');
+    await G.until(() => /Bagli liste ozeti/.test(G.text('#main [data-r=list]') || ''), 'not başlığı önizlemede görünür');
+    ok(!/aliveli|Ali Veli/.test(G.text('#main')), 'önizlemede paylaşanın adı yazmaz');
+    ok(G.$('#main [data-g=myc]').hidden && G.$('#main [data-g=edit-course]').hidden, 'Derslerime ekle ve Düzenle önizlemede yok');
+    { const n = G.ev("notesWhere(n => n.cid === 'CSE211' && !isHidden(n)).length");
+      const mt = seo.courseMeta(SD, 'CSE211', n);
+      eq(G.w.document.title, mt.title, 'sekme başlığı sunucunun yazdığıyla aynı');
+      eq(G.$('meta[name=description]').getAttribute('content'), mt.desc, 'açıklama sunucunun yazdığıyla aynı');
+      eq(G.$('link[rel=canonical]').getAttribute('href'), 'https://yediwiki.com/ders/cse211', 'canonical ders adresi'); }
+    eq(G.$('#main [data-g=share]').dataset.path, '/ders/cse211', 'Paylaş ders adresini verir');
+    G.$('#main .tab[data-tab=yorumlar]').click(); await sleep(60);
+    ok(/giriş yapınca görünür/.test(G.text('#main [data-r=panel]')) && !G.$('#main [data-r=panel] textarea'), 'yorumlar girişle açılır');
+    G.$('#main .tab[data-tab=hocalar]').click(); await sleep(60);
+    ok(/giriş yapınca görünür/.test(G.text('#main [data-r=panel]')), 'hocalar girişle açılır');
+    G.$('#main .tab[data-tab=notlar]').click(); await sleep(60);
+    await G.until(() => G.$('#main .note-title'), 'notlar sekmesine dönüldü');
+    { const href = G.$('#main .note-title').getAttribute('href'), url0 = G.w.location.pathname + G.w.location.hash;
+      await G.go(href); await sleep(80);
+      await G.until(() => G.$('.modal #au-lmail'), 'nota basınca giriş istenir');
+      eq(G.w.location.pathname + G.w.location.hash, url0, 'giriş istenirken ders sayfasında kalınır');
+      ok(!!G.$('#main .peek-cta'), 'önizleme arkada duruyor');
+      eq(G.ev('S.pendingHash'), href, 'girişten sonra nota gidilecek');
+      G.ev('closeAllModals()'); await sleep(40); }
+    G.$('#main .peek-cta [data-g=peek-signup]').click(); await sleep(60);
+    ok(G.text('.modal-head h2') === 'Kayıt ol' && /KVKK Aydınlatma Metni/.test(G.text('.modal .auth-legal')) && G.$('.modal .auth-legal a[href="/kvkk"]') && G.$('.modal .auth-legal a[href="/kosullar"]'), 'Kayıt ol: koşullar ve KVKK bağlantısı');
+    G.ev('closeAllModals()'); await sleep(40);
+    ok(!!G.$('footer a[href="/kvkk"]') && !!G.$('footer a[href="/kosullar"]'), 'alt menüde KVKK ve kullanım koşulları');
+    { const url0 = G.w.location.pathname + G.w.location.hash;
+      await G.go('#/dersler'); await sleep(80);
+      await G.until(() => G.$('.modal #au-lmail'), 'Dersler yine giriş ister');
+      eq(G.w.location.pathname + G.w.location.hash, url0, 'giriş istenince adres ders sayfasında kalır'); }
+    noErr(G, 'önizleme');
+    const H = await tab(be, { name: 'önizleme #', hash: '#/ders/MATH131' });
+    await H.until(() => H.$('#main .peek-cta') && /Kalkulus anonim/.test(H.text('#main [data-r=list]') || ''), '#/ders/ adresiyle de önizleme');
+    ok(!/Anonim/.test(H.text('#main [data-r=list]')), 'önizlemede anonim etiketi de yazmaz');
+    noErr(H, 'önizleme #');
+    { // sunucunun yazdığı önizleme (data-ssr) uygulama açılınca yerini gerçek sayfaya bırakır
+      const html = HTML.replace('<main id="main" tabindex="-1"></main>', () => '<main id="main" tabindex="-1">' + seo.courseBody(SD, 'CSE211', []) + '</main>');
+      const S2 = await tab(be, { name: 'sunucu önizlemesi', path: '/ders/cse211', hash: '', html });
+      await S2.until(() => S2.$('#main .peek-cta') && !S2.$('#main [data-ssr]'), 'sunucu önizlemesinin yerini uygulama aldı');
+      noErr(S2, 'sunucu önizlemesi'); S2.close(); }
+    const A2 = await tab(be, { name: 'A yol adresi', path: '/ders/math131', hash: '', session: A.cl.st.session });
+    await A2.until(() => A2.$('#main .course-head') && !A2.$('#main .peek-cta') && A2.$('#main [data-g=myc]') && !A2.$('#main [data-g=myc]').hidden, 'giriş yapmış öğrenci yol adresinde tam sayfayı görür');
+    await A2.go('#/dersler'); await sleep(80);
+    eq(A2.w.location.pathname + A2.w.location.hash, '/#/dersler', 'başka sayfaya geçince adres köke taşınır');
+    await A2.until(() => A2.ev("curKey") === 'dersler' && !A2.$('.modal'), 'Dersler açıldı');
+    eq(A2.w.document.title, 'YediWiki', 'ders dışı sayfada başlık YediWiki');
+    eq(A2.$('link[rel=canonical]').getAttribute('href'), 'https://yediwiki.com/', 'ders dışı sayfada canonical ana sayfa');
+    noErr(A2, 'yol adresi');
+
+    for (const t of [v, A, B, C, Dn, B2, F, G, H, A2]) t.close();
   } catch (e) {
     fail++; console.log('  ✗ beklenmeyen hata: ' + (e && e.stack || e));
   } finally {

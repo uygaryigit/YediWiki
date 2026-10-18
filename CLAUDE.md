@@ -2,7 +2,7 @@
 
 Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma kurallarını tutar.
 
-## Durum (18 Ekim 2026)
+## Durum (19 Ekim 2026)
 
 - **Kod:** bu depo, `main` dalı.
 - **Supabase (canlı):** proje `efyrrbqdiilpqnqzsphk`.
@@ -21,8 +21,18 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - `deneme123@std.yeditepe.edu.tr`: ortak deneme hesabı, şifreyle girer. 18 Ekim'de kullanıcının isteğiyle hediye kubbesine 90.000 eklendi (`gift` 10.000 → 100.000), ürünleri deneyebilsin diye.
   - Karakter vücutları (17 Ekim, kullanıcının isteğiyle elle): `deneme123` erkek; `azrock` (Azra) ve `dilara.bahtiyar` kadın. Seçmeyen eski hesaplar "diğer" çizilir.
   - Öğrenciler kayıt olurken şifre belirler ve şifreyle girer; kod yalnızca kayıtta ve şifre yenilemede gider. 17 Ekim'den önce yalnızca kodla açılmış hesaplar bir kez “Şifremi unuttum” ile şifre belirler.
-- **Yayın:** Cloudflare Workers, yalnızca statik dosya (`wrangler.jsonc`, `dist/`). GitHub `main`'den otomatik derlenir; dağıtım çalışıyor.
+- **Yayın:** Cloudflare Workers (`wrangler.jsonc`): `dist/` statik dosyaları doğrudan sunulur, dosyası olmayan adreslerde `worker/index.js` çalışır. GitHub `main`'den otomatik derlenir (derleme `build/seo-data.json`'u da üretir; worker onu içe aktarır).
   - `yediwiki.uygaryigit.workers.dev` Türkiye'den açılmıyor (erişim sorunu); site yediwiki.com üzerinden kullanılacak.
+- **Arama motorları (19 Ekim):** Her dersin Google'a açık adresi `yediwiki.com/ders/<kod küçük harf>` (ör. `/ders/math131`); not başına sayfa yok, kullanıcı öyle istedi.
+  - Worker bu adreste index.html'i `HTMLRewriter` ile yazar: başlık "MATH 131 Kalkülüs I Ders Notları · Yeditepe | YediWiki", açıklama, canonical, og etiketleri ve `#main` içine önizleme (`worker/seo.js` `courseBody`: kod, ad, AKTS/kredi, not başlıkları ve sayısı, dersin olduğu bölüm planları, aynı dönemin derslerine `/ders/` bağlantıları). Notlar Supabase REST'ten herkese açık anahtarla (yalnızca gereken alanlar, 2,5 sn sınır); sonuç veri merkezinde 15 dk önbellekte (`caches.default`, anahtarda sürüm). Notlar okunamazsa sayısız yazılır, önbelleğe alınmaz.
+  - Büyük harfli ya da tireli adres (`/ders/MATH-131`) 301 ile küçük harfe; katalogda olmayan ders ve bilinmeyen adresler 404 (noindex); `/ders` → `/#/dersler`.
+  - Başlık ve açıklama biçimi `app.js` `courseMeta` ile aynı (site testi karşılaştırır); uygulama ders dışı sayfada başlığı "YediWiki", canonical'ı ana sayfa yapar (`setDocMeta`).
+  - Uygulama yol adresini tanır (`pathRoute`, `routeHash`); yol adresindeyken #/ ile başka sayfaya geçilince adres `/#/...` olur (`normPath`, `setHashQuiet`). Ders sayfasındaki Paylaş `/ders/<kod>` verir (`data-path`).
+  - Sunucu önizlemesi (`[data-ssr]`) veriler gelene kadar yerinde kalır (`route`, `viewCourse` loading).
+  - Derleme `dist/sitemap.xml` (ana sayfa + katalogdaki 2823 ders) ve `dist/robots.txt` yazar.
+  - Google Search Console: `uygaryigt@gmail.com` hesabında `yediwiki.com` alan adı mülkü, Cloudflare'de `google-site-verification` TXT kaydıyla doğrulandı (kaydı silme).
+- **Ders önizlemesi (19 Ekim):** `ders` herkese açık (`PUBLIC`). Giriş yapmamışa (Google dahil) `peek` kipi: başlık, DersÖlçer, not başlıkları (paylaşanın adı ve Anonim yazmaz; `noteRow`/`reqItemHtml` `peek`), sarı giriş kutusu (`peekCtaHtml`: Giriş yap / Kayıt ol); Yorumlar ve Hocalar sekmesi "giriş yapınca görünür". Nota, Not paylaş'a ya da başka kapalı sayfaya basınca önizlemede kalınır, giriş penceresi açılır (`route`, `curUrl`); girişten sonra o sayfaya gidilir.
+- **Yasal sayfalar (19 Ekim):** `/kvkk` (aydınlatma metni; veri sorumlusu Uygar Yiğit), `/kosullar` (kullanım koşulları, kaldırma talebi: kişilik hakkı iddiasına 24 saatte yanıt, 5651), `/gizlilik` güncellendi. Alt menüde, Kayıt ol penceresinde (`.auth-legal`), Hakkında'da ve paylaşma formundaki "Kurallar"da bağlantı.
 - **Alan adları (13 Ekim):** `yediwiki.com` ve `yediwiki.xyz` Cloudflare'e eklendi (Free). Natro'da isim sunucuları `colin.ns.cloudflare.com` ve `wren.ns.cloudflare.com` yapıldı; .com kaydında görünüyor, Cloudflare'in etkinleştirmesi bekleniyor.
   - `yediwiki.com`: Worker'a özel alan adı olarak bağlı. Always Use HTTPS açık.
   - `www.yediwiki.com`: A 192.0.2.1 (proxied) ve Redirect Rule ile `https://yediwiki.com`'a 301.
@@ -34,6 +44,8 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - "Magic link or OTP" ve "Confirm sign up" şablonları Türkçe; gövdede ve konuda `{{ .Token }}` (kod) var, bağlantı yok.
   - Supabase Site URL `https://yediwiki.com`.
   - Gerçek bir okul adresiyle denendi (14 Ekim): kod geliyor, hesap açılıyor. Resend ücretsiz planı günde 100 e-posta.
+  - Auth hız sınırları (19 Ekim, kullanıcı onayıyla): e-posta saatte 100 (önce 25), aynı IP'den 5 dakikada kayıt/giriş 150 ve kod doğrulama 150 (önce 30; kampüs Wi-Fi'ında herkes tek IP). Aynı kişiye 60 saniyede bir.
+  - Gelen e-posta (19 Ekim): Cloudflare Email Routing, `iletisim@yediwiki.com` → `uygaryigt@gmail.com`. MX (route1-3.mx.cloudflare.net) ve `cf2024-1._domainkey` eklendi; kök SPF Natro'nunki yerine `v=spf1 include:_spf.mx.cloudflare.net ~all`.
 - **Ayhan Abi turu:** Pencere değil, sayfa değişince kapanmayan 7 duraklı tur (`openWelcome`, `TOUR`); her durakta ilgili öğe ışıkla gösterilir.
   - 17 Ekim'den beri yalnızca yeni açılan hesapta, hesap açılır açılmaz bir kez başlar (`S.newAcc`, `createAcc`). Önceden cihaza bağlıydı (localStorage `welcomed:`): var olan hesaplar ve ortak deneme hesabı her yeni tarayıcıda yeniden turu görüyordu. Elle: Hakkında sayfasındaki düğme.
   - Yeditepe'nin Selçuklu kapısında başlar (`GATE_SVG`, `gateOpen`): kapıya dokununca kanatlar açılır, Ayhan Abi kapıda kendini tanıtır. Kartta önden konuşan yüz (`AYHAN_FACE`, `tourTalk`); yazı kelime kelime belirir, tırnaktaki düğme adları sarı, kubbe miktarları mavi (`tourSay`).
@@ -130,10 +142,11 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
 ## Sıradaki işler
 
 1. **Drive seçiciyi dene:** yediwiki.com'da "Drive'dan seç" ile gerçek bir Google hesabından dosya seç; paylaşım ayarı ve önizleme.
-2. **Hız sınırı:** Supabase Auth → Rate Limits'te e-posta sınırını kullanıma göre ayarla (Resend ücretsiz planı günde 100).
-3. **Deneme:** Yönetici ve deneme hesabıyla şifreli giriş; yeni öğrenci hesabında Ayhan Abi turu; Supabase advisors.
+2. **Search Console:** birkaç gün sonra Sayfalar raporunda dizine eklenen ders sayısına bak; "Taranan, dizine eklenmeyen" çoksa nedenine bak.
+3. **Büyüme:** her ziyaretçi bütün kullanıcıları, son 1000 notu ve yorumu indiriyor (`subscribe`). Supabase ücretsiz planında aylık 5 GB çıkış; yüzlerce aktif kullanıcıya gelince sayfa başına yüklemeye geç. Resend ücretsiz planı günde 100 e-posta: açılışta kayıt bunu geçerse ücretli plan ya da ikinci sağlayıcı.
+4. **Yedek:** ücretsiz planda otomatik yedek yok.
 
-Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları.
+Supabase advisors (19 Ekim): performans temiz; güvenlikte yalnızca bilinçli tercihler (yw_private'ta politikasız RLS, istemcinin çağırdığı SECURITY DEFINER RPC'ler) ve sızdırılmış şifre denetimi (Pro planında).
 
 ## Çalışma kuralları
 
@@ -156,4 +169,5 @@ Daha sonra: KVKK, kullanım koşulları ve kaldırma talebi sayfaları.
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1616/1616, `npm run test:site` 145/145, `npm run test:db` 138/138.
+- **Beklenen sonuçlar:** `npm test` 1616/1616 ve 60/60 (`tests/t_seo.js`: site haritası, robots, worker verisi, yasal sayfalar, `worker/seo.js`), `npm run test:site` 169/169, `npm run test:db` 138/138.
+- **Worker'ı yerelde denemek:** `npx wrangler dev` (önce `npm run build`); yerelde Supabase'e ulaşılamazsa önizleme notsuz yazılır.

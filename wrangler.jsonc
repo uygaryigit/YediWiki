@@ -1,9 +1,13 @@
-// Cloudflare: yalnızca statik dosya sunan Worker (dist/ klasörü). Derleme: npm ci --omit=dev && npm run build
+// Cloudflare: dist/ klasöründeki statik dosyalar doğrudan sunulur; dosyası olmayan adreslerde (ör. /ders/<kod>) worker/index.js çalışır.
+// Derleme: npm ci --omit=dev && npm run build (build/seo-data.json'u da üretir), yayın: npx wrangler deploy
 {
   "name": "yediwiki",
+  "main": "worker/index.js",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "none"
-  }
+  },
+  "observability": { "enabled": true }
 }

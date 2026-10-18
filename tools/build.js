@@ -77,7 +77,26 @@ fs.mkdirSync(P('dist'), { recursive: true });
 fs.mkdirSync(P('build'), { recursive: true });
 fs.writeFileSync(P('dist', 'index.html'), site);
 fs.writeFileSync(P('dist', 'ver.txt'), ver + '\n');
-fs.writeFileSync(P('dist', 'gizlilik.html'), read(P('site', 'gizlilik.html')));
+for (const f of ['gizlilik.html', 'kvkk.html', 'kosullar.html']) fs.writeFileSync(P('dist', f), read(P('site', f)));
+
+// Arama motorları: her ders /ders/<kod> adresinde (worker/index.js sayfayı dersin başlığı ve önizlemesiyle yazar)
+const SITE = String(cfg.siteUrl || 'https://yediwiki.com/').replace(/\/+$/, '');
+must(/^https:\/\/[a-z0-9.-]+$/.test(SITE), 'config.json siteUrl');
+const courseIds = Object.keys(catMin.c).filter(id => /^[A-Z]{2,6}\d{3}[A-Z]?$/.test(id)).sort();
+must(courseIds.length >= 1000, 'site haritası için ders sayısı');
+fs.writeFileSync(P('dist', 'robots.txt'), ['User-agent: *', 'Allow: /', '', 'Sitemap: ' + SITE + '/sitemap.xml', ''].join('\n'));
+fs.writeFileSync(P('dist', 'sitemap.xml'), '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+  + [SITE + '/'].concat(courseIds.map(id => SITE + '/ders/' + id.toLowerCase())).map(u => '  <url><loc>' + u + '</loc></url>').join('\n') + '\n</urlset>\n');
+// Worker'ın okuduğu veri (yayımlanmaz): dersler, bölüm planları, Supabase'in herkese açık adresi ve anahtarı
+{
+  const plans = {};
+  for (const slug of Object.keys(catMin.p || {})) {
+    const b = catMin.b[slug];
+    if (!b) continue;
+    plans[slug] = [b[0], catMin.p[slug][0] ? 1 : 0, catMin.p[slug][1].map(([n, ids]) => [n, ids])];
+  }
+  fs.writeFileSync(P('build', 'seo-data.json'), JSON.stringify({ v: ver, site: SITE, sb: { url: cfg.url, key: cfg.key }, f: catMin.f, c: catMin.c, p: plans }));
+}
 fs.writeFileSync(P('dist', '_headers'), [
   '/*',
   '  X-Content-Type-Options: nosniff',
@@ -86,6 +105,8 @@ fs.writeFileSync(P('dist', '_headers'), [
   '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
   '/ver.txt',
   '  Cache-Control: no-store',
+  '/sitemap.xml',
+  '  Cache-Control: public, max-age=3600',
   ''].join('\n'));
 fs.writeFileSync(P('build', 'artifact.html'), artifact);
 console.log('dist/index.html', Buffer.byteLength(site), 'bayt; build/artifact.html', Buffer.byteLength(artifact), 'bayt');
