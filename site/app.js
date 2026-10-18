@@ -65,7 +65,7 @@ const MARKET = [
   { id: 'kampus-mafya', name: 'Kampüs Mafya', desc: 'Kampüsün asıl sahibi tekir kedi. Kantinin önünden geçenlerden haracını sosisle alır.', price: 1000, rar: 'efsane', kind: 'Yoldaş', tur: 'yoldas', pet: 'cat', mini: 0, yeni: 1 },
   { id: 'parlak-mont', name: 'Parlak Mont', desc: 'Nevada’da takılanların vazgeçilmezi; kampüsün bitmeyen geyik muhabbeti.', price: 950, rar: 'epik', kind: 'Üst', tur: 'ust', mini: 0 },
   { id: 'kampus-sneaker', name: 'Kampüs Sneaker’ı', desc: 'Yeditepe’de herkesin ayağında olan beyaz deri sneaker. Koridorda görmeyen kalmadı.', price: 850, rar: 'epik', kind: 'Ayakkabı', tur: 'ayakkabi', mini: 0, yeni: 1 },
-  { id: 'kurklu-bot', name: 'Kürklü Bot', desc: 'İçi kürklü süet bot. Kayışdağı’nın kış rüzgârına karşı kampüsün bir numaralı tercihi.', price: 750, rar: 'epik', kind: 'Ayakkabı', tur: 'ayakkabi', mini: 0, yeni: 1 },
+  { id: 'kurklu-bot', name: 'Kürklü Bot', desc: 'İçi kürklü kısa deri bot. Kayışdağı’nın kış rüzgârına karşı kampüsün bir numaralı tercihi.', price: 750, rar: 'epik', kind: 'Ayakkabı', tur: 'ayakkabi', mini: 0, yeni: 1 },
   { id: 'altin-ring', name: 'Altın Ring Bileti', desc: 'Tıklım tıklım ringde yer bulmanın efsanevi yolu. Adının yanında altın bilet, karakterinin elinde.', price: 700, rar: 'epik', kind: 'Elde', tur: 'el', mini: 1 },
   { id: 'eagles-forma', name: 'Eagles Forması', desc: 'Amerikan futbolu takımı Yeditepe Eagles’ın omuz pedli forması. Takım 2001’den beri sahada, 2020’de lig şampiyonu.', price: 700, rar: 'epik', kind: 'Üst', tur: 'ust', mini: 0 },
   { id: 'ponpon-kiyafeti', name: 'Ponpon Kız Kıyafeti', desc: 'Eagles maçlarında tribünün ritmi: lacivert üst, sarı pileli etek ve iki ponpon.', price: 650, rar: 'epik', kind: 'Elbise', tur: 'elbise', mini: 0, yeni: 1 },
@@ -73,7 +73,7 @@ const MARKET = [
   { id: 'bahar-elbisesi', name: 'Bahar Şenliği Elbisesi', desc: 'Şenlikte çimlere yakışan çiçekli sarı elbise.', price: 480, rar: 'nadir', kind: 'Elbise', tur: 'elbise', mini: 0 },
   { id: 'futbol-forma', name: 'Futbol Forması', desc: 'Sarı lacivert, göğsünde 7 numara: yedi tepe için. Halı sahada pas istemenin en kısa yolu.', price: 450, rar: 'nadir', kind: 'Üst', tur: 'ust', mini: 0 },
   { id: 'basket-forma', name: 'Basketbol Forması', desc: 'Spor salonunun parkesine yakışan beyaz atlet; sarı lacivert şeritli, 7 numara.', price: 450, rar: 'nadir', kind: 'Üst', tur: 'ust', mini: 0 },
-  { id: 'voleybol-forma', name: 'Voleybol Forması', desc: 'Filenin önünde Yeditepe: lacivert sarı, çapraz kesim, göğsünde 7.', price: 450, rar: 'nadir', kind: 'Üst', tur: 'ust', mini: 0, yeni: 1 },
+  { id: 'voleybol-forma', name: 'Voleybol Forması', desc: 'Filenin önünde Yeditepe: dar kesim lacivert sarı forma ve kısa tayt şort, göğsünde 7.', price: 450, rar: 'nadir', kind: 'Elbise', tur: 'elbise', mini: 0, yeni: 1 },
   { id: 'steteskop', name: 'Stetoskop', desc: 'Tıp fakültesinin olmazsa olmazı. Boynunda durunca herkes seni doktor sanar.', price: 450, rar: 'nadir', kind: 'Takı', tur: 'taki', g: 'steto', mini: 0, yeni: 1 },
   { id: 'ani-makinesi', name: 'Anı Makinesi', desc: 'Hazırlıktan mezuniyete üniversite anılarını biriktiren fotoğraf makinesi.', price: 380, rar: 'nadir', kind: 'Elde', tur: 'el', mini: 0, yeni: 1 },
   { id: 'yokus-canavari', name: 'Yokuş Canavarı', desc: 'Kayışdağı yokuşunu “oy anam” demeden çıkanlara verilir. Karakterine yeşil sırt çantası.', price: 350, rar: 'nadir', kind: 'Rozet', tur: 'taki', g: 'pack', mini: 1 },
@@ -3678,7 +3678,7 @@ function mtGear(u) {
   return { wings: t === 'wings', pack: t === 'pack', steto: t === 'steto', pet: q.yoldas ? MARKET_BY_ID[q.yoldas].pet || 'dog' : '', hand: q.el || '', foot: q.ayak || '', shoe: q.ayakkabi || '', hat: q.bas || '', top: q.ust || '', bottom: q.alt || '', dress: q.elbise || '' };
 }
 /* Giyilen ürünün karakterdeki görünümü. Üst ve elbise: c gövde rengi, fit kol biçimi (tisort kısa kol, atlet kolsuz, ped omuz pedli,
-   mont kabarık uzun kol, cubbe geniş uzun kol), tr kol bandı. Alt: p pantolon renkleri (açık, koyu, ışık, bel), st yan şerit, sort şort.
+   mont kabarık uzun kol, cubbe geniş uzun kol, kep çok kısa kol), tr kol bandı. Elbisenin kendi şortu olabilir (p, st, sort; sl şortun boyu). Alt: p pantolon renkleri (açık, koyu, ışık, bel), st yan şerit, sort şort.
    Elbisenin eteği (etek): kisa diz üstü, uzun bileğe kadar */
 const CLOTH = {
   'yeditepe-tisort': { c: '#1F2E78', fit: 'tisort', tr: '#FFC928' },
@@ -3691,16 +3691,16 @@ const CLOTH = {
   'bahar-elbisesi': { c: '#FFD24A', fit: 'tisort', etek: 'kisa' },
   'mezuniyet-cubbesi': { c: '#26252F', fit: 'cubbe', etek: 'uzun' },
   'ponpon-kiyafeti': { c: '#1F2E78', fit: 'atlet', etek: 'pli' },
-  'voleybol-forma': { c: '#1F2E78', fit: 'tisort', tr: '#FFC928' }
+  'voleybol-forma': { c: '#1F2E78', fit: 'kep', tr: '#FFC928', p: ['#22306E', '#1A2558', '#4A5BB0', '#141E52'], st: '#FFC928', sort: 1, sl: .42 }
 };
 const MT_PANTS_DEF = [MT_PANTS, MT_PANTS2, MT_PANTS_HI, '#22357A'];
 /* Çizim için karakterin özeti: vücut, saç, renkler ve takılanlar. Profilde, kartta, sıralamada ve düzenleyicide aynı */
 function charSpec(uid, u, more) {
-  const g = mtGear(u), wear = CLOTH[g.dress || g.top] || null, bot = g.dress ? null : CLOTH[g.bottom] || null;
+  const g = mtGear(u), wear = CLOTH[g.dress || g.top] || null, bot = g.dress ? (wear && wear.p ? wear : null) : CLOTH[g.bottom] || null;
   return Object.assign({
     body: govdeOf(u), sac: sacOf(u), hair: hairOf(uid, u), shine: sacrOf(uid, u) === 'ysari', g,
     c: wear ? wear.c : avColor(u), fit: wear ? wear.fit : fitOf(u), tr: wear ? wear.tr || '' : '', wear: g.dress || g.top || '',
-    pants: bot ? bot.p : MT_PANTS_DEF, stripe: bot ? bot.st || '' : '', sort: !!(bot && bot.sort),
+    pants: bot ? bot.p : MT_PANTS_DEF, stripe: bot ? bot.st || '' : '', sort: !!(bot && bot.sort), sl: (bot && bot.sl) || 0,
     etek: g.dress ? (wear && wear.etek) || '' : !bot && altOf(u) === 'etek' ? 'mini' : ''
   }, more);
 }
@@ -3722,7 +3722,7 @@ function mtArm(s, e, h, shirt, fit = 'tisort', tr = '') {
   if (!long) {
     o += `<path d="${mtPl([[fa[0] - 1.2, fa[1] - 1], [h[0] - 1.2, h[1] - 1]])}" stroke="${MT_SKIN_HI}" stroke-width="1.6" opacity=".8" ${MT_J}/>`;
     if (fit !== 'atlet') {
-      const ped = fit === 'ped', sl = mtAt(s, e, ped ? .64 : .58), sw = ped ? 8.8 : 7.6;
+      const ped = fit === 'ped', sl = mtAt(s, e, ped ? .64 : fit === 'kep' ? .34 : .58), sw = ped ? 8.8 : fit === 'kep' ? 7.2 : 7.6;
       o += `<path d="${mtPl([s, sl])}" stroke="${MT_K}" stroke-width="${mtN(sw + 2.8)}" ${MT_J}/><path d="${mtPl([s, sl])}" stroke="${shirt}" stroke-width="${sw}" ${MT_J}/>`
         + (tr ? `<path d="${mtPl([mtAt(s, sl, ped ? .5 : .74), mtAt(s, sl, ped ? .78 : 1)])}" stroke="${tr}" stroke-width="${mtN(sw - .2)}"/>` : '')
         + `<path d="${mtPl([[s[0] - 1.2, s[1] - 1.2], [sl[0] - 1.2, sl[1] - 1.2]])}" stroke="#fff" stroke-width="1.5" opacity=".4" ${MT_J}/>`;
@@ -3745,16 +3745,17 @@ const mtShoe = (x, y, rot, k = '') => `<g transform="translate(${mtN(x)} ${mtN(y
     : k === 'bot' ? `<ellipse rx="6.9" ry="4.1" fill="#C99561" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.4 1.6Q0 4.4 6.4 1.6" stroke="#7A5230" stroke-width="1.8" ${MT_J}/><path d="M-3.6 -2Q-.4 -3.4 2.8 -2.8" stroke="#E8C9A0" stroke-width="1.2" ${MT_J}/>`
     : `<ellipse rx="6.8" ry="3.9" fill="#2E2A44" stroke="${MT_K}" stroke-width="1.8"/><path d="M-6.2 1.6Q0 4.4 6.2 1.6" stroke="#E9ECF5" stroke-width="1.6" ${MT_J}/><path d="M-3.6 -2Q-.4 -3.4 2.8 -2.8" stroke="#77739C" stroke-width="1.2" ${MT_J}/>`)
   + '</g>';
-// kürklü botun konçu: dizin biraz üstünden bileğe süet, ağzında kabarık kürk (a diz, b ayak bileği; uçlar düz kesilir)
+// kürklü botun konçu: kısa bot, baldırın ortasından bileğe deri, ağzında kabarık kürk (a diz, b ayak bileği; uçlar düz kesilir)
 function mtBoot(a, b) {
-  const B = 'fill="none" stroke-linecap="butt" stroke-linejoin="round"', t = mtAt(a, b, -.22), e = mtAt(a, b, 1.1), m = mtAt(a, b, .45);
-  const c0 = mtAt(a, b, -.26), c1 = mtAt(a, b, .2), f0 = mtAt(a, b, -.2), f1 = mtAt(a, b, .14);
+  const B = 'fill="none" stroke-linecap="butt" stroke-linejoin="round"', t = mtAt(a, b, .3), e = mtAt(a, b, 1.1), m = mtAt(a, b, .62);
+  const c0 = mtAt(a, b, .24), c1 = mtAt(a, b, .56), f0 = mtAt(a, b, .28), f1 = mtAt(a, b, .52);
   return `<path d="${mtPl([t, e])}" stroke="${MT_K}" stroke-width="12.6" ${B}/><path d="${mtPl([t, e])}" stroke="#C99561" stroke-width="9.6" ${B}/>`
     + `<path d="${mtPl([[m[0] + 2.2, m[1]], [e[0] + 2.2, e[1] - 1]])}" stroke="#A8743F" stroke-width="2.2" opacity=".6" ${B}/>`
-    + `<path d="${mtPl([c0, c1])}" stroke="${MT_K}" stroke-width="14.4" ${B}/><path d="${mtPl([f0, f1])}" stroke="#F4E9D4" stroke-width="11.4" ${B}/>`
-    + `<path d="${mtPl([[f0[0] - 3.4, f0[1] + .6], [f1[0] - 3.4, f1[1] - .4]])}" stroke="#fff" stroke-width="1.4" opacity=".8" ${B}/>`
-    + `<circle cx="${mtN(f0[0] + 1.6)}" cy="${mtN(f0[1] + .9)}" r=".8" fill="#D9C6A2"/><circle cx="${mtN(f1[0] + 3)}" cy="${mtN(f1[1] - .5)}" r=".8" fill="#D9C6A2"/>`;
+    + `<path d="${mtPl([c0, c1])}" stroke="${MT_K}" stroke-width="14.2" ${B}/><path d="${mtPl([f0, f1])}" stroke="#F4E9D4" stroke-width="11.2" ${B}/>`
+    + `<path d="${mtPl([[f0[0] - 3.4, f0[1] + .4], [f1[0] - 3.4, f1[1] - .2]])}" stroke="#fff" stroke-width="1.4" opacity=".8" ${B}/>`
+    + `<circle cx="${mtN(f0[0] + 2)}" cy="${mtN(f0[1] + .7)}" r=".75" fill="#D9C6A2"/>`;
 }
+
 
 const MT_WING = '<path d="M0 0C-14 -16 -32 -30 -56 -34C-52 -28 -51 -24 -52 -19C-46 -20 -42 -18 -40 -15C-44 -10 -45 -6 -46 -1C-40 -3 -35 -1 -33 2C-36 7 -36 11 -37 15C-31 12 -26 13 -23 16C-24 20 -24 24 -25 28C-18 24 -10 18 2 12Z" fill="url(#@wg)" stroke="#7A4A00" stroke-width="3.2" stroke-linejoin="round"/>'
   + '<path d="M-40 -15C-30 -10 -18 -4 -6 2M-33 2C-26 5 -18 8 -6 9M-23 16C-18 14 -12 12 -4 11" stroke="#B86E06" stroke-width="2" stroke-linecap="round" fill="none" opacity=".75"/>'
@@ -3772,7 +3773,10 @@ const MT_ITEM = {
       + `<path d="M5.4 -3.6A6.4 6.4 0 0 1 2 6.2" stroke="#C9D2EA" stroke-width="1.8" opacity=".8" ${MT_J}/><circle r="7.6" fill="none" stroke="${MT_K}" stroke-width="1.5"/>`;
   })(),
   'altin-ring': `<g transform="rotate(-18)"><path d="M-8 -5.4H8V-1.7A1.7 1.7 0 0 0 8 1.7V5.4H-8V1.7A1.7 1.7 0 0 0 -8 -1.7Z" fill="#FFCB45" stroke="#6B4200" stroke-width="1.3" stroke-linejoin="round"/><path d="M-3.8 -5V5" stroke="#6B4200" stroke-width=".9" stroke-dasharray="1.3 1"/><rect x="-1.6" y="-2.6" width="7.4" height="4.6" rx="1.2" fill="#2E44B8" stroke="#0B1238" stroke-width=".8"/><path d="M-.4 -1.6h1.6M1.8 -1.6h1.6" stroke="#CFE0FF" stroke-width="1"/><path d="M-6.6 -4V4" stroke="#fff" stroke-width="1.1" opacity=".6"/></g><path class="mt-glint" d="M8.6 -9.4l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="#fff"/>`,
-  'cikis-birasi': `<path d="M-5 -7.6H5L4 7.6Q3.9 8.8 2.6 8.8H-2.6Q-3.9 8.8 -4 7.6Z" fill="#F2A93B" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><path d="M-3.2 -5.6L-2.6 6.6" stroke="#FFD27A" stroke-width="1.4" opacity=".9" ${MT_J}/><circle cx="1.4" cy="2" r=".7" fill="#FFE6A8"/><circle cx="2.4" cy="-1.4" r=".55" fill="#FFE6A8"/><circle cx=".6" cy="5.2" r=".5" fill="#FFE6A8"/><path d="M-5.6 -7.4C-6.2 -10.4 -3.4 -11.4 -1.8 -10.2C-.8 -12 2.4 -12 3 -10C4.8 -10.8 6.4 -9.2 5.6 -7.4Z" fill="#FFFFFF" stroke="${MT_K}" stroke-width="1.1" stroke-linejoin="round"/><path d="M5 -3.6H6.6A2.8 2.8 0 0 1 6.6 2H4.6" stroke="${MT_K}" stroke-width="2.8" ${MT_J}/><path d="M5 -3.6H6.6A2.8 2.8 0 0 1 6.6 2H4.6" stroke="#F7E7C6" stroke-width="1.2" ${MT_J}/>`,
+  'cikis-birasi': `<path d="M6.2 -3.8H8.4A3.2 3.2 0 0 1 11.6 -.6V1.4A3.2 3.2 0 0 1 8.4 4.6H6.2" stroke="${MT_K}" stroke-width="3.2" ${MT_J}/><path d="M6.2 -3.8H8.4A3.2 3.2 0 0 1 11.6 -.6V1.4A3.2 3.2 0 0 1 8.4 4.6H6.2" stroke="#F7E7C6" stroke-width="1.3" ${MT_J}/>`
+    + `<path d="M-7.4 -6.4H6.6V7.2Q6.6 8.8 5 8.8H-5.8Q-7.4 8.8 -7.4 7.2Z" fill="#F2A93B" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><path d="M-7 6.2H6.2" stroke="#D98A16" stroke-width="1.4"/>`
+    + `<path d="M-5 -4.4V4.6M-2.2 -4.4V4.6" stroke="#FFD27A" stroke-width="1.2" opacity=".85" ${MT_J}/><circle cx="2.6" cy="1.6" r=".7" fill="#FFE6A8"/><circle cx="3.6" cy="-2" r=".55" fill="#FFE6A8"/><circle cx="1" cy="4.6" r=".5" fill="#FFE6A8"/>`
+    + `<path d="M-8.2 -6C-9 -9.6 -5.8 -11.2 -3.8 -9.8C-2.8 -11.8 1 -12.2 2.2 -10C4.2 -11.2 7.6 -9.8 7.4 -6Z" fill="#FFFFFF" stroke="${MT_K}" stroke-width="1.1" stroke-linejoin="round"/><path d="M-6.8 -6.2Q-7.2 -3.6 -6 -2.8" stroke="#fff" stroke-width="1.6" ${MT_J}/>`,
   'yediwiki-notu': `<g transform="rotate(-12)"><rect x="-6.4" y="-8.6" width="12.8" height="16.8" rx="1.2" fill="#FFFFFF" stroke="${MT_K}" stroke-width="1.3"/><path d="M-4.2 -1.6H4.2M-4.2 1.4H4.2M-4.2 4.4H2.4" stroke="#8B97BD" stroke-width="1"/><path d="M-4.4 1.4H2.4" stroke="#FFE14D" stroke-width="2.2" opacity=".8"/><path d="M-3 -3.4a3 2.8 0 0 1 6 0z" fill="#FFD23F" stroke="${MT_K}" stroke-width=".9" stroke-linejoin="round"/><path d="M0 -6.2V-7.6" stroke="${MT_K}" stroke-width=".9"/><path d="M3.6 -8.6V-4.4L4.8 -5.4L6 -4.4V-8.6" fill="#E5383B"/></g>`,
   'ani-makinesi': `<rect x="-8" y="-5.8" width="16" height="11.6" rx="2.2" fill="#F3E3C3" stroke="${MT_K}" stroke-width="1.3"/><path d="M-8 -2.6H8" stroke="#E5383B" stroke-width="1.6"/><rect x="-6.4" y="-4.6" width="3.6" height="2" rx=".6" fill="#DDE3F5" stroke="${MT_K}" stroke-width=".7"/><circle cx="1.4" cy=".8" r="4" fill="#26262E" stroke="${MT_K}" stroke-width="1.1"/><circle cx="1.4" cy=".8" r="2.2" fill="#4A6BFF"/><circle cx=".6" cy="0" r=".8" fill="#fff" opacity=".85"/><circle cx="6" cy="-6.2" r="1.2" fill="#E5383B" stroke="${MT_K}" stroke-width=".8"/><path d="M-7 4.6H-3.4" stroke="#fff" stroke-width=".9" opacity=".6"/>`,
   'kirmizi-sufle': `<path class="mt-steam" d="M-1.6 -9.6c-1.6-2 1.6-3.2 0-5.4M2 -9.6c-1.6-2 1.6-3.2 0-5.4" stroke="#DDE3F5" stroke-width="1.2" ${MT_J}/><path d="M-6.6 -5.6C-6.6 -11 6.6 -11 6.6 -5.6Z" fill="#5A2E1A" stroke="${MT_K}" stroke-width="1.2" stroke-linejoin="round"/><circle cx="-2.6" cy="-8" r=".55" fill="#fff"/><circle cx="1" cy="-8.8" r=".5" fill="#fff"/><circle cx="3.4" cy="-7.4" r=".55" fill="#fff"/><circle cx="-.4" cy="-6.8" r=".45" fill="#fff"/><path d="M-7.2 -5.6H7.2L6 3.4Q5.8 4.8 4.4 4.8H-4.4Q-5.8 4.8 -6 3.4Z" fill="#E5383B" stroke="${MT_K}" stroke-width="1.3" stroke-linejoin="round"/><path d="M-4.6 -3.8V3M-1.6 -3.8V3.4M1.6 -3.8V3.4M4.6 -3.8V3" stroke="#B02130" stroke-width=".8"/><path d="M2.8 -5.8Q3.6 -3.4 2.8 -2" stroke="#3A1A0C" stroke-width="1.6" ${MT_J}/><path d="M-5.6 -4.4V2.6" stroke="#fff" stroke-width="1" opacity=".55" ${MT_J}/>`,
@@ -3856,6 +3860,14 @@ const PET_WALK = {
     + '<path d="M83.2 17.4c0-4 2.6-6.4 6.4-6.4s6.4 2.4 6.4 6.4z" fill="#2B2A33" stroke="#1B1330" stroke-width="1.1"/><path d="M83.4 15.8h12.4" stroke="#B4452B" stroke-width="1.5"/><ellipse cx="89.6" cy="17.6" rx="9.4" ry="1.8" fill="#2B2A33" stroke="#1B1330" stroke-width="1"/>'
     + '<path d="M96 30.4l6 .8M96 31.6l5.4 2" stroke="#EDE6DA" stroke-width=".6"/></g></g></g>'
 };
+// eldeki eşya: yumruğun üstünde durur (MT_HOLD: yumruğa göre yeri; toplar avuçta), parmaklar eşyanın altını önden sarar
+const MT_HOLD = { 'karsi-durum': [1.2, -8.6], 'altin-ring': [4.4, -6.4], 'cikis-birasi': [.8, -7.4], 'yediwiki-notu': [3, -8.4], 'ani-makinesi': [1.8, -6.6], 'kirmizi-sufle': [.4, -6.6], 'amerikan-topu': [1.6, -6.4] };
+const mtGrip = h => `<path d="M${mtN(h[0] - 4.4)} ${mtN(h[1] - 1)}a2.2 2.2 0 0 1 4.4 0a2.2 2.2 0 0 1 4.4 0v1.4a4.4 3 0 0 1 -8.8 0z" fill="${MT_SKIN}" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/>`
+  + `<path d="M${mtN(h[0])} ${mtN(h[1] - 1)}v1.8" stroke="#CF8A5C" stroke-width="1" stroke-linecap="round"/><path d="M${mtN(h[0] - 3.2)} ${mtN(h[1] - 1.6)}a1.2 1.2 0 0 1 1.6 -.9" stroke="#fff" stroke-width=".9" opacity=".7" ${MT_J}/>`;
+function mtHeld(id, h) {
+  const d = MT_HOLD[id] || [.6, -7.8];
+  return `<g transform="translate(${mtN(h[0] + d[0])} ${mtN(h[1] + d[1])})">${MT_ITEM[id] || ''}</g>` + mtGrip(h);
+}
 const mtPetSit = (k, tf) => `<g transform="${tf}"><g class="mt-dogsit">${PET_SIT[k] || PET_SIT.dog}</g></g>`;
 const mtPetWalk = (k, tf) => `<g transform="${tf}"><g class="ay walk mt-dog">${PET_WALK[k] || PET_WALK.dog}</g></g>`;
 // stetoskop: boynun iki yanından göğse iner; bir ucunda gümüş göğüs başlığı, öbüründe kulaklık metali. Yandan: göğüste başlık
@@ -3910,10 +3922,12 @@ const HAIR_F = {
     hl: 'M-7 -82.6C-2 -85.4 5.2 -85.8 10.8 -83.8',
     bl: 'M19.6 -59.4Q20.4 -57.6 21 -56.6M-19.6 -59.4Q-20.4 -57.6 -21 -56.6', fl: 'M-2.2 -73.4C2 -79.6 10.6 -81.4 16.4 -76.4M1.2 -77.2C7.2 -82.6 14 -81.6 17.8 -77M-4.2 -75.2C-7.8 -79.6 -13 -78.4 -15.8 -73.6'
   },
-  uzun: {
-    back: 'M-18.8 -64C-20.4 -78.4 -11.2 -83.2 0 -83.2C11.2 -83.2 20.4 -78.4 18.8 -64C19.8 -56.6 20.4 -49.4 19.4 -42.6C17.2 -41.2 13.8 -41.2 11.6 -42.6L-11.6 -42.6C-13.8 -41.2 -17.2 -41.2 -19.4 -42.6C-20.4 -49.4 -19.8 -56.6 -18.8 -64Z',
-    front: 'M-17.2 -61.6C-18.4 -75 -10 -81.8 0 -81.8C10 -81.8 18.4 -75 17.2 -61.6C17.6 -56.6 17 -52.2 15.4 -48.8C14 -50.6 13.6 -53.2 13.8 -56.4C13.4 -62.6 11 -68 6.2 -71.4C3.8 -71.8 1.6 -71.2 0 -69.6C-1.6 -71.2 -3.8 -71.8 -6.2 -71.4C-11 -68 -13.4 -62.6 -13.8 -56.4C-13.6 -53.2 -14 -50.6 -15.4 -48.8C-17 -52.2 -17.6 -56.6 -17.2 -61.6Z',
-    bl: 'M-17.4 -52Q-18.4 -47.6 -17.6 -44M17.4 -52Q18.4 -47.6 17.6 -44'
+  uzun: { ears: 1,
+    back: 'M-18.6 -64C-20.4 -78.6 -11.2 -84 0 -84C11.2 -84 20.4 -78.6 18.6 -64C19.4 -58.4 19.8 -53 19.8 -48.6L21.4 -45.2L18.2 -46.6L16.8 -44.2L15.2 -48.2L-15.2 -48.2L-16.8 -44.2L-18.2 -46.6L-21.4 -45.2L-19.8 -48.6C-19.8 -53 -19.4 -58.4 -18.6 -64Z',
+    front: 'M-17.4 -61.6C-18.6 -75.2 -10.4 -83.2 0 -83.2C10.4 -83.2 18.6 -75.2 17.4 -61.6C16.4 -66 14 -69.6 10.2 -72.2C7 -74.2 3.6 -74.8 0 -74.8C-3.6 -74.8 -7 -74.2 -10.2 -72.2C-14 -69.6 -16.4 -66 -17.4 -61.6Z',
+    hl: 'M-8.4 -80.2C-3.6 -82.6 3.6 -82.6 8.4 -80.2',
+    bl: 'M-17.8 -57Q-18.8 -52.6 -18 -48.6M17.8 -57Q18.8 -52.6 18 -48.6',
+    fl: 'M-7.6 -73.4C-6.4 -77.2 -3.6 -80.6 .4 -82.6M0 -74.8C1 -78.6 3.6 -81.4 7.4 -82.4M7.6 -73.4C9.4 -76.6 12 -78.8 15 -79.4M-13.4 -69C-14.6 -72.6 -14 -76 -11.6 -78.8'
   },
   kivircik: {
     back: mtScal([[-18.6, -40.2], [-22.4, -46.6], [-23.6, -54], [-23.8, -61.6], [-22.6, -69.2], [-19.4, -75.8], [-14.2, -81.2], [-7.6, -84.6], [0, -85.6], [7.6, -84.6], [14.2, -81.2], [19.4, -75.8], [22.6, -69.2], [23.8, -61.6], [23.6, -54], [22.4, -46.6], [18.6, -40.2], [12.4, -40.8], [6.2, -42.2], [-6.2, -42.2], [-12.4, -40.8], [-18.6, -40.2]]),
@@ -3949,7 +3963,7 @@ function mtFitFront(c, fit) {
   if (fit === 'mont') return `<path d="M-13 -35.4Q0 -32.6 13 -35.4M-12.6 -29.4Q0 -26.6 12.6 -29.4" stroke="${MT_K}" stroke-width="1.3" opacity=".35" ${MT_J}/>`
     + `<path d="M0 -42.4V-21.6" stroke="${dd}" stroke-width="1.3"/><rect x="-1.2" y="-39.6" width="2.4" height="3.4" rx=".8" fill="#E9ECF5" stroke="${MT_K}" stroke-width=".8"/>`
     + `<path d="M-8 -45.6Q0 -41.8 8 -45.6L7.4 -41.6Q0 -38.4 -7.4 -41.6Z" fill="${mtMix(c, '#ffffff', .25)}" stroke="${MT_K}" stroke-width="1.4" stroke-linejoin="round"/>`;
-  if (fit === 'atlet' || fit === 'ped' || fit === 'cubbe') return '';
+  if (fit === 'atlet' || fit === 'ped' || fit === 'cubbe' || fit === 'kep') return '';
   return `<path d="M-6.2 -44.2Q0 -39.6 6.2 -44.2" stroke="${dd}" stroke-width="1.6" ${MT_J}/>`;
 }
 // forma numarası (yedi tepe için hep 7)
@@ -4036,7 +4050,7 @@ function mtLegs(legs, o, w) {
     else s += `<path d="${mtPl(pts)}" stroke="${P[i]}" stroke-width="${w}" ${MT_J}/><path d="${mtPl(hl)}" stroke="${P[2]}" stroke-width="2.2" opacity="${i ? .6 : .7}" ${MT_J}/>`
       + (o.stripe ? `<path d="${mtPl(pts.map(q => [q[0] + sx, q[1] + sy]))}" stroke="${o.stripe}" stroke-width="1.6" ${MT_J}/>` : '');
     if (o.sort) {
-      const up = [pts[0], mtAt(pts[0], pts[1], .8)];
+      const up = [pts[0], mtAt(pts[0], pts[1], o.sl || .8)];
       s += `<path d="${mtPl(up)}" stroke="${MT_K}" stroke-width="${mtN(w + 5.6)}" ${MT_J}/><path d="${mtPl(up)}" stroke="${P[i]}" stroke-width="${mtN(w + 2.4)}" ${MT_J}/>`
         + (o.stripe ? `<path d="${mtPl(up.map(q => [q[0] + sx * 1.3, q[1] + sy]))}" stroke="${o.stripe}" stroke-width="1.8" ${MT_J}/>` : '');
     }
@@ -4107,7 +4121,7 @@ function mtFront(p, o) {
       + `<circle cx="-22.4" cy="-112.6" r="2.8" fill="#FFD23F" stroke="${MT_K}" stroke-width="1.6"/>`
       + mtArm([-sh, -38.6], [-(sh + 8.2), -47.4], [-22.4, -61], c, fit, o.tr);
   } else s += `<g class="mt-wave">${mtArm([-sh, -38.6], [-(sh + 8.8), -46.4], [-(sh + 11.4), -60.4], c, fit, o.tr)}${pom ? mtPom(-(sh + 11.6), -62.4, 6.6) : ''}</g>`;
-  if (g.hand) s += `<g transform="translate(${mtN(sh + 14.6)} -45)">${MT_ITEM[g.hand] || ''}</g>` + mtArm([sh, -38.6], [sh + 9.2, -31.4], [sh + 13.2, -41.6], c, fit, o.tr);
+  if (g.hand) s += mtArm([sh, -38.6], [sh + 9.2, -31.4], [sh + 13.2, -41.6], c, fit, o.tr) + mtHeld(g.hand, [sh + 13.2, -41.6]);
   else if (flag) s += mtArm([sh, -38.6], [sh + 9, -30.8], [sh + 1.4, -23.6], c, fit, o.tr) + (pom ? mtPom(sh + 2.6, -22.4, 6.2) : '');
   else s += mtArm([sh, -38.6], [sh + 3.4, -30.2], [sh + 3.8, -21.4], c, fit, o.tr) + (pom ? mtPom(sh + 4.6, -20.2, 6.2) : '');
   if (g.pet) s += mtPetSit(g.pet, 'translate(17.4 -33.6) scale(.27)');
@@ -4120,7 +4134,7 @@ const HAIR_S = {
   kel: { ghost: 1, d: 'M-15.6 4.4C-15.4 6.8 -14.4 8.6 -12.8 9.8C-12.8 7.6 -11.8 5.8 -10.4 4.8Z' },
   kisa: { d: 'M-15.6 4.4C-15.8 8.2 -14 11 -11 12.4C-12 9.2 -11.2 6.6 -9.2 5Z' },
   orta: { d: 'M-15.6 4.4C-17 8 -17.6 10.8 -19.2 12.8C-16.8 13.8 -14 13.4 -12.4 12C-11.2 9.8 -10 7.6 -9.4 5.4Z' },
-  uzun: { d: 'M-15.6 4.4C-17.8 11.4 -17 18.4 -12.6 24.2C-11.8 19.6 -10.6 15 -8.6 11.4C-8.8 9 -9.2 7 -9.4 5.2Z' },
+  uzun: { d: 'M-15.6 4.4C-17.6 10.4 -17.6 15.6 -15.4 20.4L-13.6 17.6L-12 20.8L-10.6 16.4C-9.6 12.8 -9 9 -9.4 5.2Z' },
   duz: { d: 'M-14.4 2.2C-21.6 1 -27.4 6 -27.6 14.2C-26 11.2 -23 9.6 -19.6 9.6C-22 13.2 -21.6 18 -18.6 20.6C-19.2 15.4 -16.6 11 -12 8.6ZM-15.6 4.4C-15.4 7.4 -13.8 9.4 -11.6 10.2L-9.4 5.2Z', tie: [-14.6, 4.4] },
   dalgali: { d: 'M-15.6 4.4C-20.6 8.6 -14.2 12.6 -19.2 17.4C-22.4 20.6 -17.4 24.4 -13.6 24.2C-16.4 21.4 -12 18.6 -14.4 15C-16.2 12.2 -10.6 9.6 -9.4 5.2Z' },
   kivircik: { d: mtScal([[-9.4, 5.2], [-8.4, 9.6], [-9.4, 14], [-12.4, 17.4], [-16.6, 17.8], [-19.8, 14.8], [-20.6, 10.2], [-18.8, 6], [-15.6, 4.4], [-9.4, 5.2]], .6) },
@@ -4148,7 +4162,7 @@ function mtClimb(p, o) {
   let s = '';
   if (g.pet) s += mtPetWalk(g.pet, 'translate(-24 20) rotate(-34) scale(.27) translate(-60 -57)');
   if (g.wings) s += mtWing(p, 8.4, -39, 14, .5, .5) + mtWing(p, 5.4, -37, -10, .56, .56);
-  s += `<g${reach ? ' class="mt-reach"' : ''}>${reach && g.hand ? `<g transform="translate(${mtN(far[2][0] + 2)} ${mtN(far[2][1] - 4)})">${MT_ITEM[g.hand] || ''}</g>` : ''}${mtArm(far[0], far[1], far[2], mtMix(o.c, '#000000', .14), fit, o.tr)}</g>`;
+  s += `<g${reach ? ' class="mt-reach"' : ''}>${mtArm(far[0], far[1], far[2], mtMix(o.c, '#000000', .14), fit, o.tr)}${reach && g.hand ? mtHeld(g.hand, far[2]) : ''}</g>`;
   if (g.pack) s += `<g transform="translate(-1.4 -35.2) rotate(30)"><rect x="-7" y="-9.6" width="13.4" height="18.6" rx="4" fill="url(#${p}pk)" stroke="${MT_K}" stroke-width="2"/><path d="M-7 -4.4Q-.3 -.8 6.4 -4.4V-6.2Q6.4 -9.6 3 -9.6H-3.6Q-7 -9.6 -7 -6.2Z" fill="#1A7A50" stroke="${MT_K}" stroke-width="1.5" stroke-linejoin="round"/><path d="M-3.2 5L-.3 .8L2.6 5Z" fill="#fff" opacity=".85"/><path d="M-5 -2V6" stroke="#fff" stroke-width="1.2" opacity=".4" stroke-linecap="round"/></g>`;
   s += `<path d="${mtPl(BL)}" stroke="${MT_K}" stroke-width="${robe ? 14 : 12.4}" ${MT_J}/><path d="${mtPl(FL)}" stroke="${MT_K}" stroke-width="${robe ? 14 : 12.4}" ${MT_J}/>`
     + (SK ? `<path d="${SK}" fill="${MT_K}" stroke="${MT_K}" stroke-width="3.6" stroke-linejoin="round"/>` : '')
@@ -4374,13 +4388,13 @@ function prodArt(id, pfx) {
       <path d="M50 46Q56 51 62 46" fill="none" stroke="#1B1330" stroke-width="5" stroke-linecap="round"/><path d="M50 46Q56 51 62 46" fill="none" stroke="#C9CFDD" stroke-width="2.4" stroke-linecap="round"/>
       <circle cx="84" cy="57" r="11" fill="url(#${p}m)" ${K}/><circle cx="84" cy="57" r="6.4" fill="#AEB6CC" stroke="#8C94AB" stroke-width="1.6"/><path d="M77.6 52.4a8.4 8.4 0 0 1 6-3.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`,
     'cikis-birasi': `<defs><linearGradient id="${p}b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFCD66"/><stop offset="1" stop-color="#E08A12"/></linearGradient></defs>
-      <g transform="rotate(-14 42 74)"><path d="M58 52H63A9 9 0 0 1 63 82H58" fill="none" stroke="#1B1330" stroke-width="7.4"/><path d="M58 52H63A9 9 0 0 1 63 82H58" fill="none" stroke="#F7EBD0" stroke-width="3.6"/>
-      <path d="M26 42H58L56 104Q55.6 108 51.6 108H32.4Q28.4 108 28 104Z" fill="url(#${p}b)" ${K}/><path d="M33 50L34.4 100" stroke="#FFE6A8" stroke-width="3" opacity=".8" stroke-linecap="round"/>
-      <circle cx="46" cy="78" r="1.8" fill="#FFE6A8"/><circle cx="50" cy="64" r="1.4" fill="#FFE6A8"/><circle cx="42" cy="92" r="1.3" fill="#FFE6A8"/>
-      <path d="M24 43C22 33 30 30 34 33C36 26 46 26 48 32C53 28 61 32 59 43Z" fill="#FFFFFF" ${K}/></g>
-      <g transform="rotate(14 80 74)"><path d="M64 42H94L92 104Q91.6 108 87.6 108H70.4Q66.4 108 66 104Z" fill="url(#${p}b)" ${K}/><path d="M71 50L72.4 100" stroke="#FFE6A8" stroke-width="3" opacity=".8" stroke-linecap="round"/>
-      <circle cx="84" cy="74" r="1.8" fill="#FFE6A8"/><circle cx="80" cy="88" r="1.4" fill="#FFE6A8"/><circle cx="86" cy="60" r="1.3" fill="#FFE6A8"/>
-      <path d="M62 43C60 33 68 30 72 33C74 26 84 26 86 32C91 28 97 32 95 43Z" fill="#FFFFFF" ${K}/></g>
+      <g transform="rotate(-14 40 74)"><path d="M60 52H65A9 9 0 0 1 65 84H60" fill="none" stroke="#1B1330" stroke-width="7.4"/><path d="M60 52H65A9 9 0 0 1 65 84H60" fill="none" stroke="#F7EBD0" stroke-width="3.6"/>
+      <path d="M18 42H60V104Q60 108 56 108H22Q18 108 18 104Z" fill="url(#${p}b)" ${K}/><path d="M18.8 98H59.2" stroke="#D98A16" stroke-width="3"/><path d="M25 50V94M32 50V94" stroke="#FFE6A8" stroke-width="3" opacity=".8" stroke-linecap="round"/>
+      <circle cx="46" cy="78" r="1.8" fill="#FFE6A8"/><circle cx="50" cy="64" r="1.4" fill="#FFE6A8"/><circle cx="42" cy="90" r="1.3" fill="#FFE6A8"/>
+      <path d="M15 43C13 33 21 30 25 33C27 26 37 26 39 32C44 28 50 29 51 33C56 30 64 33 62 43Z" fill="#FFFFFF" ${K}/></g>
+      <g transform="rotate(14 82 74)"><path d="M60 42H102V104Q102 108 98 108H64Q60 108 60 104Z" fill="url(#${p}b)" ${K}/><path d="M60.8 98H101.2" stroke="#D98A16" stroke-width="3"/><path d="M67 50V94M74 50V94" stroke="#FFE6A8" stroke-width="3" opacity=".8" stroke-linecap="round"/>
+      <circle cx="88" cy="74" r="1.8" fill="#FFE6A8"/><circle cx="84" cy="88" r="1.4" fill="#FFE6A8"/><circle cx="90" cy="60" r="1.3" fill="#FFE6A8"/>
+      <path d="M57 43C55 33 63 30 67 33C69 26 79 26 81 32C86 28 92 29 93 33C98 30 106 33 104 43Z" fill="#FFFFFF" ${K}/></g>
       <path class="spark" d="M60 10l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#FFD27A" stroke="#B57F00" stroke-width="1"/><circle class="spark s2" cx="50" cy="18" r="2.6" fill="#FFE6A8" stroke="#B57F00" stroke-width="1"/><circle class="spark s3" cx="71" cy="16" r="2.2" fill="#FFE6A8" stroke="#B57F00" stroke-width="1"/>`,
     'yediwiki-notu': `<g transform="translate(88 32)"><circle r="21" fill="#FFFFFF" ${K}/><circle r="15.5" fill="none" stroke="#E5383B" stroke-width="10.4" stroke-dasharray="12.17 12.17"/><circle r="10.2" fill="#E9ECF5" ${K2}/><path d="M-14 -8A16 16 0 0 1 -6 -15" fill="none" stroke="#fff" stroke-width="2.4" opacity=".7" stroke-linecap="round"/></g>
       <g transform="rotate(-6 50 64)"><rect x="16" y="20" width="66" height="88" rx="4" fill="#FFFFFF" ${K}/>
@@ -4469,15 +4483,15 @@ function prodArt(id, pfx) {
       <text x="60" y="94" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="42" fill="#1F2E78" stroke="#FFC928" stroke-width="2.8" paint-order="stroke" stroke-linejoin="round">7</text>
       <path d="M33 52V98" stroke="#fff" stroke-width="3.2" opacity=".7" stroke-linecap="round"/>
       <path class="shine" d="M26 20h12L20 102H10z" fill="#fff" opacity=".4"/></g>`,
-    'voleybol-forma': `<defs><linearGradient id="${p}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D58C2"/><stop offset=".6" stop-color="#1F2E78"/><stop offset="1" stop-color="#121B4E"/></linearGradient><clipPath id="${p}c"><path d="M42 16L20 25L9 51L27 58L32 51V106H88V51L93 58L111 51L100 25L78 16C75 24 68 28 60 28C52 28 45 24 42 16Z"/></clipPath></defs>
-      <g transform="rotate(-4 60 62)"><path d="M42 16L20 25L9 51L27 58L32 51V106H88V51L93 58L111 51L100 25L78 16C75 24 68 28 60 28C52 28 45 24 42 16Z" fill="url(#${p}n)"/>
-      <g clip-path="url(#${p}c)"><path d="M0 116L120 26V120H0Z" fill="#FFC928"/><path d="M0 116L120 26" stroke="#fff" stroke-width="3.4"/><path d="M0 123L120 33" stroke="#B57F00" stroke-width="2" opacity=".45"/></g>
-      <path d="M42 16L20 25L9 51L27 58L32 51V106H88V51L93 58L111 51L100 25L78 16C75 24 68 28 60 28C52 28 45 24 42 16Z" fill="none" ${K}/>
-      <path d="M42 16L60 36L78 16" fill="none" stroke="#FFC928" stroke-width="5" stroke-linejoin="round"/>
-      <path d="M12.6 43.6L29.6 50.6M107.4 43.6L90.4 50.6" stroke="#FFC928" stroke-width="5"/>
-      <text x="60" y="52" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="8" fill="#FFC928" textLength="34" lengthAdjust="spacingAndGlyphs">YEDİTEPE</text>
-      <text x="60" y="96" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="40" fill="#fff" stroke="#1F2E78" stroke-width="2.8" paint-order="stroke" stroke-linejoin="round">7</text>
-      <path class="shine" d="M24 22h12L18 102H8z" fill="#fff" opacity=".28"/></g>`,
+    'voleybol-forma': `<defs><linearGradient id="${p}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D58C2"/><stop offset=".6" stop-color="#1F2E78"/><stop offset="1" stop-color="#121B4E"/></linearGradient><clipPath id="${p}c"><path d="M42 14L30 18L22 30L33 37L36 33C37 40 35 48 34 56L36 62H84L86 56C85 48 83 40 84 33L87 37L98 30L90 18L78 14C75 21 68 25 60 25C52 25 45 21 42 14Z"/></clipPath></defs>
+      <path d="M37 66H83L87 95Q75 99 64 96L60 85L56 96Q45 99 33 95Z" fill="url(#${p}n)" ${K}/><path d="M37.6 67.6H82.4" stroke="#141E52" stroke-width="3.4"/><path d="M35.6 71L33.8 93M84.4 71L86.2 93" stroke="#FFC928" stroke-width="2.8"/>
+      <path d="M42 14L30 18L22 30L33 37L36 33C37 40 35 48 34 56L36 62H84L86 56C85 48 83 40 84 33L87 37L98 30L90 18L78 14C75 21 68 25 60 25C52 25 45 21 42 14Z" fill="url(#${p}n)"/>
+      <g clip-path="url(#${p}c)"><path d="M0 92L120 8V120H0Z" fill="#FFC928"/><path d="M0 92L120 8" stroke="#fff" stroke-width="3"/><path d="M0 98L120 14" stroke="#B57F00" stroke-width="2" opacity=".4"/></g>
+      <path d="M42 14L30 18L22 30L33 37L36 33C37 40 35 48 34 56L36 62H84L86 56C85 48 83 40 84 33L87 37L98 30L90 18L78 14C75 21 68 25 60 25C52 25 45 21 42 14Z" fill="none" ${K}/>
+      <path d="M44 15L60 32L76 15" fill="none" stroke="#FFC928" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M24.6 29.6L33.4 35.2M95.4 29.6L86.6 35.2" stroke="#FFC928" stroke-width="3.6"/>
+      <text x="60" y="56" text-anchor="middle" font-family="Bricolage Grotesque,Arial,sans-serif" font-weight="800" font-size="24" fill="#fff" stroke="#1F2E78" stroke-width="2.4" paint-order="stroke" stroke-linejoin="round">7</text>
+      <path d="M41 24C39 32 39 44 38 54" stroke="#fff" stroke-width="2.6" opacity=".35" fill="none" stroke-linecap="round"/>`,
     'voleybol-topu': `<defs><radialGradient id="${p}b" cx="36%" cy="30%" r="78%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".7" stop-color="#EEF1F8"/><stop offset="1" stop-color="#BFC7DD"/></radialGradient><clipPath id="${p}c"><circle cx="60" cy="58" r="38"/></clipPath></defs>
       <ellipse cx="60" cy="106" rx="30" ry="5" fill="#0B1030" opacity=".15"/>
       <path d="M8 48h14M4 60h16M8 72h14" stroke="#8B97BD" stroke-width="3" stroke-linecap="round" opacity=".6"/>
@@ -4496,14 +4510,14 @@ function prodArt(id, pfx) {
       <path class="shine" d="M20 68h10L26 82H16z" fill="#fff" opacity=".7"/>`,
     'kurklu-bot': `<defs><linearGradient id="${p}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#DDAE76"/><stop offset=".6" stop-color="#C08A52"/><stop offset="1" stop-color="#99683A"/></linearGradient></defs>
       <ellipse cx="64" cy="104" rx="44" ry="5" fill="#0B1030" opacity=".15"/>
-      <path d="M34 30H76V70C76 75 80 78 86 79L98 81C106 83 110 88 110 94V98H30V38Z" fill="url(#${p}s)" ${K}/>
+      <path d="M34 54H76V72C76 76 80 79 86 80L98 82C106 84 110 89 110 95V98H30V60Z" fill="url(#${p}s)" ${K}/>
       <path d="M30 98H110V100C110 102.4 108.4 104 106 104H34C31.6 104 30 102.4 30 100Z" fill="#7A5230" ${K2}/>
-      <path d="M76 72C70 78 60 82 46 82" stroke="#8C5E33" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".7"/>
-      <path d="M40 46V90" stroke="#fff" stroke-width="3" opacity=".3" stroke-linecap="round"/>
-      <path d="M28 18H82V31C82 35 79 37 75 37H35C31 37 28 35 28 31Z" fill="#F4E9D4" ${K}/>
-      <path d="M31 36Q35 41 39.5 36.6Q44 41 48.5 36.6Q53 41 57.5 36.6Q62 41 66.5 36.6Q71 41 75.5 36.6Q79 40 80.4 34.6" fill="#F4E9D4" stroke="#1B1330" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M36 24h4M48 22h4M60 25h4M70 22h4M42 30h4M56 30h4M68 30h3" stroke="#DCC9A6" stroke-width="2.6" stroke-linecap="round"/>
-      <path d="M32 22Q32 19 35 19" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".9"/>`,
+      <path d="M76 75C70 80 60 83 46 83" stroke="#8C5E33" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".7"/>
+      <path d="M40 68V90" stroke="#fff" stroke-width="3" opacity=".3" stroke-linecap="round"/>
+      <path d="M28 44H82V55C82 59 79 61 75 61H35C31 61 28 59 28 55Z" fill="#F4E9D4" ${K}/>
+      <path d="M31 60Q35 65 39.5 60.6Q44 65 48.5 60.6Q53 65 57.5 60.6Q62 65 66.5 60.6Q71 65 75.5 60.6Q79 64 80.4 58.6" fill="#F4E9D4" stroke="#1B1330" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M36 50h4M48 48h4M60 51h4M70 48h4M42 55h4M56 55h4M68 55h3" stroke="#DCC9A6" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M32 48Q32 45 35 45" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".9"/>`,
     'eagles-sapka': `<defs><linearGradient id="${p}n" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D58C2"/><stop offset=".6" stop-color="#1F2E78"/><stop offset="1" stop-color="#121B4E"/></linearGradient></defs>
       <ellipse cx="60" cy="98" rx="48" ry="5" fill="#0B1030" opacity=".15"/>
       <path d="M32 78C28 50 42 28 68 28C92 28 106 46 104 72C90 80 52 82 32 78Z" fill="url(#${p}n)" ${K}/>

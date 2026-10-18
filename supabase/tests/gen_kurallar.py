@@ -171,6 +171,7 @@ step('Aynı ürün iki kez alınamaz', A, "select public.buy_item('kartal-kanatl
 step('Market ürünleri türleriyle; kalkan ürünler yok, bilet elde, futbol topu ayakta', A, "select 1",
      'ok', "(select count(*) from yw_private.market where slot in ('ust','alt','elbise','ayakkabi','el','ayak','taki','yoldas','sac','bas')) = 30 and (select slot from yw_private.market where id = 'futbol-forma') = 'ust' "
            "and (select slot from yw_private.market where id = 'eagles-sapka') = 'bas' and (select slot from yw_private.market where id = 'kurklu-bot') = 'ayakkabi' "
+           "and (select slot from yw_private.market where id = 'voleybol-forma') = 'elbise' "
            "and (select slot from yw_private.market where id = 'altin-ring') = 'el' and (select slot from yw_private.market where id = 'futbol-topu') = 'ayak' "
            "and (select slot from yw_private.market where id = 'kampus-mafya') = 'yoldas' and not exists (select 1 from yw_private.market where id in ('son-sosisli','selcuklu-kapi','gunes-aurasi','nevada-kahve','ikinci-ev'))")
 step('Sahip olunan ürün karaktere takılır; türü tutmayan, olmayan ve boş yuva düşer', A,
