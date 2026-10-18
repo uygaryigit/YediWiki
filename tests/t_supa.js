@@ -561,6 +561,14 @@ async function signup(t, be, local, prof) {
     await A2.until(() => A2.ev("curKey") === 'dersler' && !A2.$('.modal'), 'Dersler açıldı');
     eq(A2.w.document.title, 'YediWiki', 'ders dışı sayfada başlık YediWiki');
     eq(A2.$('link[rel=canonical]').getAttribute('href'), 'https://yediwiki.com/', 'ders dışı sayfada canonical ana sayfa');
+    await A2.go('#/'); await sleep(120);
+    eq(A2.w.document.title, 'YediWiki: Yeditepe Ders Notları, Çıkmış Sınavlar ve Hoca Yorumları', 'ana sayfada arama motoru başlığı');
+    await A2.until(() => A2.$('#main a[href^="/ders/"]'), 'ana sayfadaki ders bağlantıları /ders/<kod> adresi');
+    ok(!A2.$('#main a[href^="#/ders/"]'), 'ana sayfada #/ders/ bağlantısı kalmadı');
+    { const a = A2.$('#main a[href^="/ders/"]'), href = a.getAttribute('href');
+      a.click(); await sleep(150);
+      await A2.until(() => A2.ev('curKey') === 'ders' && A2.text('#main .course-head .code-xl'), 'ders bağlantısına basınca sayfa yenilenmeden ders açıldı');
+      eq(A2.w.location.hash.toLowerCase(), '#' + href.toLowerCase(), 'ders #/ders/ ile açıldı: ' + href); }
     noErr(A2, 'yol adresi');
 
     for (const t of [v, A, B, C, Dn, B2, F, G, H, A2]) t.close();

@@ -49,20 +49,25 @@ const supa = read(P('site', 'supa.js'));
 const g = cfg.google || null;
 must(!g || (/^AIza[0-9A-Za-z_-]{35}$/.test(g.apiKey) && /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(g.clientId) && /^\d+$/.test(g.appId) && !('secret' in g) && !('clientSecret' in g)), 'Google ayarı: yalnızca tarayıcı anahtarı, istemci kimliği ve proje numarası');
 const conf = 'window.YW_SUPA=' + JSON.stringify({ url: cfg.url, key: cfg.key }) + ';' + (g ? 'window.YW_GOOGLE=' + JSON.stringify({ apiKey: g.apiKey, clientId: g.clientId, appId: g.appId }) + ';' : '');
-const desc = 'Yeditepe öğrencileri için ders notları, bölüm ders planları, HocaÖlçer ve Kubbe.';
+// Ana sayfanın arama motoru başlığı ve açıklaması (app.js HOME_TITLE / BASE_DESC ile aynı); ders sayfalarında worker kendi başlığını yazar
+const HOME_TITLE = 'YediWiki: Yeditepe Ders Notları, Çıkmış Sınavlar ve Hoca Yorumları';
+const desc = 'Yeditepe öğrencilerinin paylaştığı ders notları, çıkmış sınavlar, bölüm ders planları ve HocaÖlçer hoca yorumları tek yerde. Ders kodunu yaz, notlara ulaş.';
+const siteLd = JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'YediWiki', alternateName: ['Yedi Wiki', 'YediWiki Yeditepe'], url: cfg.siteUrl || 'https://yediwiki.com/', inLanguage: 'tr' });
 const icon = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Cpath d=%22M4 26a16 15 0 0 1 32 0z%22 fill=%22%23FFD23F%22 stroke=%22%23111C4E%22 stroke-width=%222.5%22/%3E%3Cpath d=%22M20 11V5%22 stroke=%22%23111C4E%22 stroke-width=%222.5%22 stroke-linecap=%22round%22/%3E%3Ccircle cx=%2220%22 cy=%224%22 r=%222.5%22 fill=%22%23FFD23F%22 stroke=%22%23111C4E%22 stroke-width=%222%22/%3E%3C/svg%3E';
 const headExtra =
   `<meta name="description" content="${desc}">\n` +
   '<meta name="theme-color" content="#111C4E">\n' +
-  '<meta property="og:title" content="YediWiki">\n' +
+  `<meta property="og:title" content="${HOME_TITLE}">\n` +
+  '<meta property="og:site_name" content="YediWiki">\n' +
   `<meta property="og:description" content="${desc}">\n` +
   '<meta property="og:type" content="website">\n' +
   `<meta property="og:url" content="${cfg.siteUrl || ''}">\n` +
   `<link rel="canonical" href="${cfg.siteUrl || ''}">\n` +
-  `<link rel="icon" href="${icon}">\n`;
+  `<link rel="icon" href="${icon}">\n` +
+  `<script type="application/ld+json">${siteLd}</script>\n`;
 let pre = parts['pre.html'];
 must(count(pre, '<title>YediWiki</title>') === 1, 'pre.html başlığı');
-pre = pre.replace('<title>YediWiki</title>', () => '<title>YediWiki</title>\n' + headExtra);
+pre = pre.replace('<title>YediWiki</title>', () => '<title>' + HOME_TITLE + '</title>\n' + headExtra);
 const cut = mid.trimEnd().lastIndexOf('<script>');
 const siteMid = mid.slice(0, cut) + '<script id="yw-sb">' + jsSafe(umd) + '</script>\n<script>' + jsSafe(supa) + '</script>\n<script>' + conf + 'window.YW_VER="__YWVER__";</script>\n<script>';
 const site0 = pre + parts['style.css'] + siteMid + parts['app.js'] + parts['post.html'];

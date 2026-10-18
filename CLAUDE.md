@@ -30,6 +30,9 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - Uygulama yol adresini tanır (`pathRoute`, `routeHash`); yol adresindeyken #/ ile başka sayfaya geçilince adres `/#/...` olur (`normPath`, `setHashQuiet`). Ders sayfasındaki Paylaş `/ders/<kod>` verir (`data-path`).
   - Sunucu önizlemesi (`[data-ssr]`) veriler gelene kadar yerinde kalır (`route`, `viewCourse` loading).
   - Derleme `dist/sitemap.xml` (ana sayfa + katalogdaki 2823 ders) ve `dist/robots.txt` yazar.
+  - Ana sayfa başlığı "YediWiki: Yeditepe Ders Notları, Çıkmış Sınavlar ve Hoca Yorumları" ve yeni açıklama (`tools/build.js` `HOME_TITLE`, app.js'te aynısı; ders dışı diğer sayfalarda sekme başlığı "YediWiki"); `WebSite` yapılandırılmış verisi (ad YediWiki, diğer adlar Yedi Wiki), og:site_name.
+  - Sitedeki ders bağlantıları gerçek adres (`courseHref`: sitede `/ders/<kod>`, claude.ai'da `#/ders/<kod>`), böylece Google ana sayfadan derslere geçer. Tıklama dinleyicisi bunları sayfa yenilenmeden `#/ders/<KOD>` (+ `?tab=`) olarak açar; ctrl/cmd ile yeni sekmede yol adresi açılır. Son aramalar ve son yorumlardaki ders bağlantıları da öyle.
+  - Ana sayfa 19 Ekim 01:56'da dizindeydi (Search Console). Bing Webmaster Tools'u kullanıcı kendi açacak (hesap açma).
   - Google Search Console: `uygaryigt@gmail.com` hesabında `yediwiki.com` alan adı mülkü, Cloudflare'de `google-site-verification` TXT kaydıyla doğrulandı (kaydı silme).
 - **Ders önizlemesi (19 Ekim):** `ders` herkese açık (`PUBLIC`). Giriş yapmamışa (Google dahil) `peek` kipi: başlık, DersÖlçer, not başlıkları (paylaşanın adı ve Anonim yazmaz; `noteRow`/`reqItemHtml` `peek`), sarı giriş kutusu (`peekCtaHtml`: Giriş yap / Kayıt ol); Yorumlar ve Hocalar sekmesi "giriş yapınca görünür". Nota, Not paylaş'a ya da başka kapalı sayfaya basınca önizlemede kalınır, giriş penceresi açılır (`route`, `curUrl`); girişten sonra o sayfaya gidilir.
 - **Yasal sayfalar (19 Ekim):** `/kvkk` (aydınlatma metni; veri sorumlusu Uygar Yiğit), `/kosullar` (kullanım koşulları, kaldırma talebi: kişilik hakkı iddiasına 24 saatte yanıt, 5651), `/gizlilik` güncellendi. Alt menüde, Kayıt ol penceresinde (`.auth-legal`), Hakkında'da ve paylaşma formundaki "Kurallar"da bağlantı.
@@ -169,5 +172,5 @@ Supabase advisors (19 Ekim): performans temiz; güvenlikte yalnızca bilinçli t
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1616/1616 ve 60/60 (`tests/t_seo.js`: site haritası, robots, worker verisi, yasal sayfalar, `worker/seo.js`), `npm run test:site` 169/169, `npm run test:db` 138/138.
+- **Beklenen sonuçlar:** `npm test` 1616/1616 ve 62/62 (`tests/t_seo.js`: site haritası, robots, worker verisi, yasal sayfalar, `worker/seo.js`), `npm run test:site` 172/172, `npm run test:db` 138/138.
 - **Worker'ı yerelde denemek:** `npx wrangler dev` (önce `npm run build`); yerelde Supabase'e ulaşılamazsa önizleme notsuz yazılır.

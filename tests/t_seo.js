@@ -30,8 +30,11 @@ const eq = (a, b, msg) => ok(a === b, `${msg}: beklenen ${JSON.stringify(b)}, ge
   const rb = fs.readFileSync(P('dist', 'robots.txt'), 'utf8');
   ok(/User-agent: \*/.test(rb) && /Sitemap: https:\/\/yediwiki\.com\/sitemap\.xml/.test(rb) && !/Disallow: \/\s*$/m.test(rb), 'robots.txt site haritasını gösterir, siteyi kapatmaz');
   const idx = fs.readFileSync(P('dist', 'index.html'), 'utf8');
-  for (const s of ['<title>YediWiki</title>', '<meta name="description"', '<meta property="og:title"', '<meta property="og:url"', '<link rel="canonical"', '<main id="main" tabindex="-1"></main>'])
-    ok(idx.includes(s), 'worker\'ın değiştirdiği öğe sayfada: ' + s);
+  for (const s of ['<title>YediWiki: Yeditepe Ders Notları, Çıkmış Sınavlar ve Hoca Yorumları</title>', '<meta name="description" content="Yeditepe öğrencilerinin paylaştığı ders notları', '<meta property="og:title"', '<meta property="og:url"', '<link rel="canonical" href="https://yediwiki.com/">', '<main id="main" tabindex="-1"></main>'])
+    ok(idx.includes(s), 'ana sayfanın başlığı ve worker\'ın değiştirdiği öğeler: ' + s);
+  { const m = /<script type="application\/ld\+json">([^<]+)<\/script>/.exec(idx); let ld = null; try { ld = m && JSON.parse(m[1]); } catch (e) { ld = null; }
+    ok(ld && ld['@type'] === 'WebSite' && ld.name === 'YediWiki' && ld.url === 'https://yediwiki.com/' && ld.alternateName.includes('Yedi Wiki'), 'site adı yapılandırılmış veride (WebSite)'); }
+  ok(!fs.readFileSync(P('build', 'artifact.html'), 'utf8').includes('application/ld+json'), 'claude.ai sürümünde yapılandırılmış veri yok');
   const hd = fs.readFileSync(P('dist', '_headers'), 'utf8');
   ok(/\/sitemap\.xml\n  Cache-Control: public, max-age=3600/.test(hd), 'site haritası bir saat önbellekte');
   const wr = fs.readFileSync(P('wrangler.jsonc'), 'utf8');

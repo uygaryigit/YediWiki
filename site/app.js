@@ -1388,6 +1388,17 @@ const G = {
   'unrate': id => removeRating(id),
 };
 document.addEventListener('click', e => {
+  // /ders/<kod> bağlantıları sitede sayfayı yeniden yüklemeden #/ders/<kod> ile açılır (yeni sekmede açmak için ctrl/cmd serbest)
+  if (S.supa && !e.defaultPrevented && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+    const a = e.target.closest('a[href^="/ders/"]');
+    if (a && !a.target) {
+      let u = null, pc = null;
+      try { u = new URL(a.getAttribute('href') || '', location.origin); } catch (er) { u = null; }
+      const m = u ? COURSE_PATH.exec(u.pathname) : null;
+      try { pc = m ? parseCode(decodeURIComponent(m[1])) : null; } catch (er) { pc = null; }
+      if (pc) { e.preventDefault(); location.hash = '#/ders/' + pc.id + (u.search || ''); return; }
+    }
+  }
   const b = e.target.closest('[data-g]');
   if (!b) return;
   const fn = G[b.dataset.g];
@@ -1426,7 +1437,7 @@ function elTaken(bol, P, except) {
 function elOptHtml(k, id, pick, taken) {
   const c = S.courses.get(id) || {}, sel = id === pick, code = c.code || codeOf(id), by = !sel && taken ? taken.get(id) : '';
   const cls = [sel ? 'sel' : '', by ? 'taken' : ''].filter(Boolean).join(' ');
-  return `<li${cls ? ` class="${cls}"` : ''} data-k="${esc(id.toLowerCase() + ' ' + foldName(c.name))}"><button type="button" class="el-opt" data-g="el-pick" data-id="${esc(k)}" data-c="${esc(id)}" aria-pressed="${sel}"${by ? ' disabled' : ''}><span class="code">${esc(code)}</span><span class="el-opt-t">${esc(c.name || '')}${by ? `<small>${esc(by)} için seçtin</small>` : ''}</span><span class="el-opt-e">${loadText(c) ? `<span class="ects">${loadText(c)}</span>` : ''}${sel ? '<span class="el-ok">Seçildi</span>' : ''}</span></button><a class="el-go" href="#/ders/${esc(id)}" aria-label="${esc(code)} ders sayfası" title="Ders sayfası">${icon('cr')}</a></li>`;
+  return `<li${cls ? ` class="${cls}"` : ''} data-k="${esc(id.toLowerCase() + ' ' + foldName(c.name))}"><button type="button" class="el-opt" data-g="el-pick" data-id="${esc(k)}" data-c="${esc(id)}" aria-pressed="${sel}"${by ? ' disabled' : ''}><span class="code">${esc(code)}</span><span class="el-opt-t">${esc(c.name || '')}${by ? `<small>${esc(by)} için seçtin</small>` : ''}</span><span class="el-opt-e">${loadText(c) ? `<span class="ects">${loadText(c)}</span>` : ''}${sel ? '<span class="el-ok">Seçildi</span>' : ''}</span></button><a class="el-go" href="${esc(courseHref(id))}" aria-label="${esc(code)} ders sayfası" title="Ders sayfası">${icon('cr')}</a></li>`;
 }
 function elPanelHtml(bol, P, e, k, pick) {
   const pool = poolOf(e), taken = elTaken(bol, P, k);
@@ -2569,7 +2580,7 @@ function noteRow(n, { showCourse = false, peek = false } = {}) {
   return `<li class="note-row">
     ${ico}
     <div class="note-body">
-      <div class="note-line">${showCourse ? `<a class="code" href="#/ders/${esc(n.cid)}">${esc(codeOf(n.cid))}</a>` : ''}<span class="kind kind-${noteType(n).k}">${esc(type)}</span></div>
+      <div class="note-line">${showCourse ? `<a class="code" href="${esc(courseHref(n.cid))}">${esc(codeOf(n.cid))}</a>` : ''}<span class="kind kind-${noteType(n).k}">${esc(type)}</span></div>
       <a class="note-title" href="#/not/${esc(n.id)}">${esc(n.title)}</a>
       <div class="meta">${n.tk ? `<span>${esc(termLabel(n.tk))}</span>` : ''}${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}${peek ? '' : `<span>${whoHtml(n.by, n.anon, n.nick)}</span>`}<span>${esc(ago(n.at))}</span></div>
     </div>
@@ -3332,7 +3343,7 @@ function commentHtml(c) {
   if (isHidden(c) && !S.revealed.has(c.id)) return `<li class="cm"><div class="is-hidden"><span>Bu yorum bildirimler nedeniyle gizlendi.</span><button type="button" class="btn btn-sm btn-ghost" data-g="reveal" data-id="${esc(c.id)}">Yine de göster</button></div></li>`;
   const bits = [];
   if (c.tt === 'course' && c.h && S.hocas.has(c.h)) bits.push(`<a href="#/hoca/${esc(c.h)}">${esc(hocaFull(S.hocas.get(c.h)))}</a>`);
-  if (c.tt === 'hoca' && c.c && S.courses.has(c.c)) bits.push(`<a class="code" href="#/ders/${esc(c.c)}">${esc(codeOf(c.c))}</a>`);
+  if (c.tt === 'hoca' && c.c && S.courses.has(c.c)) bits.push(`<a class="code" href="${esc(courseHref(c.c))}">${esc(codeOf(c.c))}</a>`);
   if (c.tk) bits.push(`<span>${esc(termLabel(c.tk))}</span>`);
   let rate = '';
   if (c.r && typeof c.r === 'object' && CRIT.every(k => typeof c.r[k.k] === 'number')) {
@@ -3502,7 +3513,7 @@ function pathRoute() {
   let raw = m[1];
   try { raw = decodeURIComponent(raw); } catch (e) { /* olduğu gibi */ }
   const pc = parseCode(raw);
-  return pc ? '#/ders/' + pc.id : '';
+  return pc ? '#/ders/' + pc.id + (location.search || '') : '';   // ?tab=yorumlar gibi seçenekler de geçer
 }
 const routeHash = () => { const h = location.hash || ''; return h && h !== '#' ? h : (pathRoute() || h); };
 function normPath() {
@@ -3511,8 +3522,11 @@ function normPath() {
   if (h && h !== '#') { try { history.replaceState(null, '', '/' + h); } catch (e) { /* yok */ } }
 }
 const coursePath = cid => '/ders/' + String(cid || '').toLowerCase();
+/* Ders bağlantısı: sitede Google'ın izleyebildiği /ders/<kod> (tıklanınca sayfa yenilenmeden açılır, bkz. tıklama dinleyicisi), claude.ai'da #/ders/<kod> */
+const courseHref = cid => (S.supa ? coursePath(cid) : '#/ders/' + cid);
 /* Sekmenin başlığı, açıklaması ve canonical bağlantısı (yalnızca sitede; sunucunun yazdığıyla aynı biçim, bkz. worker/seo.js) */
-const BASE_DESC = 'Yeditepe öğrencileri için ders notları, bölüm ders planları, HocaÖlçer ve Kubbe.';
+const BASE_DESC = 'Yeditepe öğrencilerinin paylaştığı ders notları, çıkmış sınavlar, bölüm ders planları ve HocaÖlçer hoca yorumları tek yerde. Ders kodunu yaz, notlara ulaş.';
+const HOME_TITLE = 'YediWiki: Yeditepe Ders Notları, Çıkmış Sınavlar ve Hoca Yorumları';   // tools/build.js ile aynı
 function setDocMeta(title, desc, canon) {
   if (!S.supa) return;
   try {
@@ -3573,7 +3587,7 @@ function route() {
   const ssr = key === 'ders' && main.firstElementChild && main.firstElementChild.hasAttribute('data-ssr') ? main.firstElementChild : null;
   main.innerHTML = '';
   if (ssr) main.appendChild(ssr);
-  if (key !== 'ders') setDocMeta('YediWiki', BASE_DESC, CANON + '/');
+  if (key !== 'ders') setDocMeta(key === '' ? HOME_TITLE : 'YediWiki', BASE_DESC, CANON + '/');
   try { view = fn(main, r) || {}; } catch (e) { console.error(e); view = {}; main.innerHTML = `<div class="wrap panel">${emptyHtml('Bir şeyler ters gitti', 'Sayfayı yenileyip tekrar dene.')}</div>`; }
   try { if (view.refresh) view.refresh(); } catch (e) { console.error(e); }
   $$('[data-nav]').forEach(a => { if (a.dataset.nav === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -4737,7 +4751,7 @@ function reqItemHtml(r, { showCourse = false, peek = false } = {}) {
     ? (r.nid ? `<a class="btn btn-sm" href="#/not/${esc(r.nid)}">${icon('book')}Nota git</a>` : '')
     : `<button type="button" class="req-plus${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor">${UP_ARR}<span>Ben de</span><b>${n}</b></button><a class="btn btn-sm btn-primary" href="#/paylas?ders=${esc(r.cid)}&istek=${esc(r.id)}">${icon('up')}Ben paylaşırım</a>`;
   const cn = showCourse ? (S.courses.get(r.cid) || {}).name : '';
-  return `<li class="req${r.done ? ' done' : ''}" id="rq-${esc(r.id)}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${!r.done && n >= REQ_HOT ? gl('flame', 'rq-fire') : ''}${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span>${cn ? `<span class="req-cname">${esc(cn)}</span>` : ''}${r.why ? `<p class="req-why">${esc(r.why)}</p>` : ''}<span class="meta">${peek ? '' : `<span>${whoHtml(r.by, false, '')}</span>`}<span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${r.doneBy ? whoHtml(r.doneBy, false, '') : spyName()}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
+  return `<li class="req${r.done ? ' done' : ''}" id="rq-${esc(r.id)}"><div class="req-main"><span class="req-top">${showCourse ? `<a class="code" href="${esc(courseHref(r.cid))}">${esc(codeOf(r.cid))}</a>` : ''}<b>${esc(reqTitle(r))}</b>${!r.done && n >= REQ_HOT ? gl('flame', 'rq-fire') : ''}${r.done ? '<span class="req-ok">Karşılandı</span>' : ''}</span>${cn ? `<span class="req-cname">${esc(cn)}</span>` : ''}${r.why ? `<p class="req-why">${esc(r.why)}</p>` : ''}<span class="meta">${peek ? '' : `<span>${whoHtml(r.by, false, '')}</span>`}<span>${esc(ago(r.at))}</span>${r.done && (r.doneBy || (S.supa && r.nid)) ? `<span>karşılayan: ${r.doneBy ? whoHtml(r.doneBy, false, '') : spyName()}</span>` : ''}</span></div><div class="req-acts">${acts}${(mine || S.owner) && !r.done ? `<button type="button" class="iconbtn" data-g="req-del" data-id="${esc(r.id)}" aria-label="İsteği sil">${icon('trash')}</button>` : ''}</div></li>`;
 }
 /* Ana sayfada istek tek satır: ders kodu, istek, (popülerse alev), + ve kaç kişinin istediği. Ayrıntı istekler sayfasında */
 const REQ_HOT = 3;
@@ -4745,7 +4759,7 @@ const REQ_HOT = 3;
 const UP_ARR = '<svg class="up-arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.4V6M6 11.8 12 5.6l6 6.2" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function reqLineHtml(r) {
   const mine = r.by === S.me, n = demandOf(r), on = plusedByMe(r) || mine, hot = n >= REQ_HOT;
-  return `<li class="rq-line${hot ? ' hot' : ''}" data-id="${esc(r.id)}" data-n="${n}"><a class="code" href="#/ders/${esc(r.cid)}">${esc(codeOf(r.cid))}</a><a class="rq-t" href="#/istekler?r=${esc(r.id)}">${esc(reqTitle(r))}</a>${hot ? gl('flame', 'rq-fire') : ''}<button type="button" class="rq-up${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled title="Senin isteğin"' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor">${UP_ARR}<b class="rq-n" aria-hidden="true">${n}</b></button></li>`;
+  return `<li class="rq-line${hot ? ' hot' : ''}" data-id="${esc(r.id)}" data-n="${n}"><a class="code" href="${esc(courseHref(r.cid))}">${esc(codeOf(r.cid))}</a><a class="rq-t" href="#/istekler?r=${esc(r.id)}">${esc(reqTitle(r))}</a>${hot ? gl('flame', 'rq-fire') : ''}<button type="button" class="rq-up${on ? ' on' : ''}" data-g="req-plus" data-id="${esc(r.id)}" aria-pressed="${on}"${mine ? ' disabled title="Senin isteğin"' : ''} aria-label="Ben de istiyorum, ${n} kişi istiyor">${UP_ARR}<b class="rq-n" aria-hidden="true">${n}</b></button></li>`;
 }
 function requestBoxHtml(cid, { peek = false } = {}) {
   const list = openRequests(cid), people = list.reduce((s, r) => s + demandOf(r), 0);
@@ -4970,7 +4984,7 @@ function pushRecent(q, h) {
 }
 function recentHtml() {
   const list = (ls.get('recent', []) || []).filter(x => x && x.q && typeof x.h === 'string' && x.h.startsWith('#/'));
-  return list.length ? `<span class="rc-lbl">Son aramaların:</span>${list.map(x => `<a class="rc" href="${esc(x.h)}">${esc(x.q)}</a>`).join('')}<button type="button" class="rc-clear" data-g="recent-clear" aria-label="Son aramaları temizle">${icon('x')}</button>` : '';
+  return list.length ? `<span class="rc-lbl">Son aramaların:</span>${list.map(x => `<a class="rc" href="${esc(/^#\/ders\/[A-Z0-9]+$/.test(x.h) ? courseHref(x.h.slice(7)) : x.h)}">${esc(x.q)}</a>`).join('')}<button type="button" class="rc-clear" data-g="recent-clear" aria-label="Son aramaları temizle">${icon('x')}</button>` : '';
 }
 /* Hoş geldin turu: Ayhan Abi sayfadan sayfaya gezdirir, her durakta anlattığı yeri ışıkla gösterir.
    Tur bir pencere değildir; sayfa değişince kapanmaz. Işığın dışındaki alan tıklamaya kapalıdır, ışıktaki öğe kullanılabilir. */
@@ -5335,7 +5349,7 @@ ROUTES[''] = function viewHome(root) {
       const top = [...act.entries()].sort((a, b) => b[1].total - a[1].total).map(x => x[0]);
       const tryList = (top.length ? top : [...S.courses.keys()]).slice(0, 4);
       R('try').hidden = !tryList.length;
-      R('try').innerHTML = tryList.length ? 'Hızlı erişim: ' + tryList.map(id => `<a class="code" href="#/ders/${esc(id)}">${esc(codeOf(id))}</a>`).join('') : '';
+      R('try').innerHTML = tryList.length ? 'Hızlı erişim: ' + tryList.map(id => `<a class="code" href="${esc(courseHref(id))}">${esc(codeOf(id))}</a>`).join('') : '';
       { const rc = R('recent'), h = recentHtml(); rc.hidden = !h; if (rc.dataset.h !== h) { rc.dataset.h = h; rc.innerHTML = h; } }
       { const list = openRequests().slice(0, 5), h = list.length ? `<ul class="rq-lines">${list.map(reqLineHtml).join('')}</ul>` : '<p class="req-empty">Şu an açık istek yok. Aradığın notu bulamazsan “İSTE”ye bas; arkadaşların görsün.</p>', el2 = R('reqs');
         if (el2.dataset.h !== h) {   // sayı artınca küçük bir sıçrama
@@ -5351,7 +5365,7 @@ ROUTES[''] = function viewHome(root) {
       lazyPhotos(R('notes'));
       const cms = commentsWhere(c => !isHidden(c)).sort((a, b) => b.at - a.at).slice(0, 3);
       R('cms').innerHTML = cms.length ? `<ul class="list cm-list">${cms.map(c => {
-        const where = c.tt === 'course' ? { href: '#/ders/' + c.tid + '?tab=yorumlar', label: codeOf(c.tid), k: 'ders' }
+        const where = c.tt === 'course' ? { href: courseHref(c.tid) + '?tab=yorumlar', label: codeOf(c.tid), k: 'ders' }
           : c.tt === 'hoca' ? { href: '#/hoca/' + c.tid, label: hocaFull(S.hocas.get(c.tid)) || 'Hoca', k: 'hoca' }
           : { href: '#/not/' + c.tid, label: ((S.notes.get(c.tid) || {}).title || 'Not'), k: 'not' };
         const avg = c.r && CRIT.every(k => typeof c.r[k.k] === 'number') ? critAll(c.r) : null;
@@ -5363,7 +5377,7 @@ ROUTES[''] = function viewHome(root) {
       const hot = top.slice(0, 6);
       R('hot').innerHTML = hot.length ? `<ul class="list">${hot.map(id => {
         const a = act.get(id);
-        return `<li><a class="row-link" href="#/ders/${esc(id)}"><span class="code">${esc(codeOf(id))}</span><span class="row-main"><span class="row-title">${esc(courseName(id) || 'Ders adı girilmemiş')}</span></span><span class="row-end">${a.notes} not, ${a.comments} yorum</span></a></li>`;
+        return `<li><a class="row-link" href="${esc(courseHref(id))}"><span class="code">${esc(codeOf(id))}</span><span class="row-main"><span class="row-title">${esc(courseName(id) || 'Ders adı girilmemiş')}</span></span><span class="row-end">${a.notes} not, ${a.comments} yorum</span></a></li>`;
       }).join('')}</ul>` : emptyHtml('Henüz gündemde ders yok', 'Ders kodunu arayıp ilk notu paylaşan sen ol.');
     }
   };
@@ -5382,7 +5396,7 @@ const codePrefix = id => (/^[A-Z]+/.exec(String(id || '')) || [''])[0];
 // name: ders adı yerine (vurgulu) HTML; sub: alt satır HTML; fresh: Derslerim'de yeni not sayısı
 function courseCardHtml(id, { name = '', sub = '', fresh = 0 } = {}) {
   const c = S.courses.get(id) || {}, a = courseActivity().get(id) || { notes: 0 }, kr = loadText(c);
-  return `<li><a class="ccard" href="#/ders/${esc(id)}" style="--hc:${tintOf(codePrefix(id))}"><span class="cc-top"><span class="code">${esc(c.code || codeOf(id))}</span>${fresh ? `<span class="fresh-n">${fresh} yeni not</span>` : ''}</span>`
+  return `<li><a class="ccard" href="${esc(courseHref(id))}" style="--hc:${tintOf(codePrefix(id))}"><span class="cc-top"><span class="code">${esc(c.code || codeOf(id))}</span>${fresh ? `<span class="fresh-n">${fresh} yeni not</span>` : ''}</span>`
     + `<span class="cc-name">${name || esc(c.name || 'Ders adı yükleniyor')}</span>${sub ? `<span class="cc-sub">${sub}</span>` : ''}`
     + `<span class="cc-foot">${zchipHtml(id)}${kr ? `<span class="ects">${kr}</span>` : ''}${a.notes ? `<span class="cc-n">${a.notes} not</span>` : ''}</span></a></li>`;
 }
@@ -5456,7 +5470,7 @@ ROUTES['dersler'] = function viewCourses(root, r) {
   const courseRow = (id, extra = '') => {
     const c = S.courses.get(id) || {};
     const a = (actCache || (actCache = courseActivity())).get(id) || { notes: 0 };
-    return `<li><a class="row-link" href="#/ders/${esc(id)}"><span class="code">${esc(c.code || codeOf(id))}</span><span class="row-main"><span class="row-title">${esc(c.name || 'Ders adı yükleniyor')}</span>${extra}</span><span class="row-end">${zchipHtml(id)}${loadText(c) ? `<span class="ects">${loadText(c)}</span>` : ''}${a.notes ? `<span>${a.notes} not</span>` : ''}</span></a></li>`;
+    return `<li><a class="row-link" href="${esc(courseHref(id))}"><span class="code">${esc(c.code || codeOf(id))}</span><span class="row-main"><span class="row-title">${esc(c.name || 'Ders adı yükleniyor')}</span>${extra}</span><span class="row-end">${zchipHtml(id)}${loadText(c) ? `<span class="ects">${loadText(c)}</span>` : ''}${a.notes ? `<span>${a.notes} not</span>` : ''}</span></a></li>`;
   };
   /* Derslerim: hesabı olan öğrencide, aramıyorken listenin üstünde kutu kutu; ilk 6 ders, gerisi "Tümünü göster" ile */
   const MY_N = 6;
@@ -5906,7 +5920,7 @@ function hocaCoursesTab(panel, hid) {
       el.innerHTML = `<ul class="list">${rows.map(([cid, o]) => {
         const avg = o.rs.length ? o.rs.reduce((s, r) => s + critAll(r), 0) / o.rs.length : 0;
         const bits = [o.son ? `son: ${yilAd(o.son)}` : '', o.ratings ? `${o.ratings} puan` : '', o.notes ? `${o.notes} not` : '', o.comments ? `${o.comments} yorum` : ''].filter(Boolean).join(', ');
-        return `<li><a class="row-link" href="#/ders/${esc(cid)}"><span class="code">${esc(codeOf(cid))}</span><span class="row-main"><span class="row-title">${esc(courseName(cid) || 'Ders adı girilmemiş')}</span><span class="row-sub">${esc(bits)}</span></span><span class="row-end">${o.rs.length ? `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>` : ''}</span></a></li>`;
+        return `<li><a class="row-link" href="${esc(courseHref(cid))}"><span class="code">${esc(codeOf(cid))}</span><span class="row-main"><span class="row-title">${esc(courseName(cid) || 'Ders adı girilmemiş')}</span><span class="row-sub">${esc(bits)}</span></span><span class="row-end">${o.rs.length ? `<span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span>` : ''}</span></a></li>`;
       }).join('')}</ul>`;
       applyWidths(el);
     }
@@ -5936,7 +5950,7 @@ ROUTES['not'] = function viewNote(root, r) {
     const n = S.notes.get(nid);
     root.innerHTML = `
       <section class="page-head"><div class="wrap">
-        <a class="crumb" href="#/ders/${esc(n.cid)}">${icon('cl')}<span data-r="crumb"></span></a>
+        <a class="crumb" href="${esc(courseHref(n.cid))}">${icon('cl')}<span data-r="crumb"></span></a>
         <div class="note-line"><span class="kind kind-${noteType(n).k}">${esc(noteType(n).name)}</span>${n.tk ? `<span class="pill">${esc(termLabel(n.tk))}</span>` : ''}</div>
         <h1 class="mt-s">${esc(n.title)}</h1>
         <div class="meta" data-r="meta"></div>
