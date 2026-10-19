@@ -187,8 +187,17 @@ async function signup(t, be, local, prof) {
       ok(u && u.username === 'aliveli' && u.first === '' && u.last === '' && u.bonus === 50 && u.kb && u.kb.all === 50, 'açık profil (ad gizli): ' + JSON.stringify(u && { f: u.first, kb: u.kb }));
       ok(p && p.first === 'Ali' && p.last === 'Veli' && p.kb && p.kb.all === 50, 'ad ve tam kubbe özel kayıtta');
       eq(u && u.govde, 'e', 'karakter vücudu sunucuda'); }
-    await A.until(() => A.text('[data-r=acc] .acc-name') === 'aliveli', 'üst çubukta kullanıcı adı');
+    await A.until(() => A.text('[data-r=acc] .acc-name') === 'Profil' && /@aliveli/.test(A.$('[data-r=acc]').getAttribute('aria-label')), 'üst çubukta Profil');
     await A.until(() => A.text('[data-r=kubbechip] b') === '50', 'kubbe 50');
+    A.$('[data-r=acc]').click(); await sleep(40);
+    eq(A.$$('#acc-pop [role=menuitem]').map(x => x.textContent.trim()).join('|'), 'Profil|Karakter|Çıkış yap', 'Profil menüsü: Profil, Karakter, Çıkış yap');
+    ok(A.$('#acc-pop a[href="#/profil"]') && A.$('#acc-pop [data-g=char-edit]') && A.$('#acc-pop [data-g=logout]') && A.$('[data-r=acc]').getAttribute('aria-expanded') === 'true', 'menünün bağlantıları');
+    A.$('#acc-pop [data-g=char-edit]').click(); await sleep(80);
+    ok(!A.$('#acc-pop') && !!A.$('.ce-modal'), 'Karakter düzenleyiciyi açar, menü kapanır');
+    A.ev('closeAllModals()'); await sleep(20);
+    A.$('[data-r=acc]').click(); await sleep(40);
+    A.ev("document.querySelector('#main').dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))"); await sleep(20);
+    ok(!A.$('#acc-pop'), 'dışarı basınca menü kapanır');
     await A.go('#/profil');
     await A.until(() => /Ali Veli/.test(A.text('#main')) && /ali\.veli@std\.yeditepe\.edu\.tr/.test(A.text('#main')), 'profilde gizli ad (yalnızca sana) ve e-posta');
     ok(!!A.$('#main [data-g=logout]'), 'çıkış düğmesi');
@@ -211,15 +220,15 @@ async function signup(t, be, local, prof) {
     }
     const n1 = await share(A, { code: 'CSE211', title: 'Bagli liste ozeti', anon: false });
     { const d = await doc(be, 'notes', n1); ok(d && d.by === aid && !d.byk, 'adıyla not: yazar kimliği'); }
-    await A.until(() => A.text('[data-r=kubbechip] b') === '55', 'kubbe 55 (not 5)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '125', 'kubbe 125 (not 75)');
     const usersCtid = async uid => (await q1(be, "select ctid::text as c from public.docs where col = 'users' and id = $1", [uid])).c;
     const ct0 = await usersCtid(aid);
     A.$('[data-anon]') ;
     const n2 = await share(A, { code: 'MATH131', title: 'Kalkulus anonim', anon: true });
     { const d = await doc(be, 'notes', n2);
       ok(d && d.by === '' && d.anon === true && d.byk === A.ev(`pk('notes', ${JSON.stringify(n2)})`), 'anonim not: yazar boş, anahtar tarayıcıdakiyle aynı'); }
-    eq(await usersCtid(aid), ct0, 'anonim not açık profilde değişiklik yapmadı');
-    await A.until(() => A.text('[data-r=kubbechip] b') === '60', 'bakiye 60 (anonim not dahil)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '200', 'bakiye 200 (anonim not dahil)');
+    { const u = await doc(be, 'users', aid); eq(u.kb.all, 200, 'anonim not sıralamaya da hemen sayıldı'); ok(await usersCtid(aid) !== ct0, 'açık profil güncellendi'); }
     ok(/\(sen\)/.test(A.text('[data-r=meta]')), 'anonim notunda "(sen)" yalnızca sana');
     ok(!!A.$('[data-g=del-note]') && !A.$('[data-g=report-note]'), 'kendi anonim notunu silebilir, bildiremez');
     await A.go('#/katkilarim');
@@ -320,19 +329,18 @@ async function signup(t, be, local, prof) {
     B.$('#main [data-g=vote-up]').click(); await sleep(300);
     const k2 = B.ev(`pk('notes', ${JSON.stringify(n2)})`);
     { const d = await doc(be, 'notes', n2); ok(d.likes && d.likes[k2] === true && !d.likes[bid] && !(d.downs && d.downs[k2]), '▲ B\'nin bu nottaki takma adıyla'); }
-    eq(await usersCtid(aid), ct0, 'anonim nota ▲ de açık profili değiştirmedi');
-    await A.until(() => A.text('[data-r=kubbechip] b') === '70', 'A\'nın bakiyesi canlı güncellendi (70: ▲ 10 kubbe)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '235', 'A\'nın bakiyesi canlı güncellendi (235: ▲ 35 kubbe)');
     await B.until(() => B.$('#main .vote.is-up') && B.text('#main .vote .vnum') === '1', 'B ▲ verdiğini görüyor');
     B.$('#main [data-g=vote-down]').click(); await sleep(300);
     { const d = await doc(be, 'notes', n2); ok(d.downs && d.downs[k2] === true && d.likes[k2] === null, '▼ verince sunucuda ▲ kalktı'); }
-    await A.until(() => A.text('[data-r=kubbechip] b') === '60', '▼ kubbe vermez, ▲ kubbesi geri gitti (60)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '200', '▼ kubbe vermez, ▲ kubbesi geri gitti (200)');
     await B.until(() => B.$('#main .vote.is-down') && B.text('#main .vote .vnum') === '-1', 'B ▼ verdiğini görüyor');
     B.$('#main [data-g=vote-up]').click(); await sleep(300);
-    await A.until(() => A.text('[data-r=kubbechip] b') === '70', 'yeniden ▲ (70)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '235', 'yeniden ▲ (235)');
     await B.go('#/not/' + n1); await sleep(150);
     B.$('#main [data-g=vote-up]').click(); await sleep(300);
-    await A.until(() => A.text('[data-r=kubbechip] b') === '80', 'adıyla nota ▲ (80)');
-    { const u = await doc(be, 'users', aid); eq(u.kb.all, 65, 'açık kubbe: hesap + adıyla not + ▲'); eq(u.kb.ups, 1, 'açık profilde ▲ sayısı'); eq(u.kb.likes, 0, 'yorum beğenisi yok'); }
+    await A.until(() => A.text('[data-r=kubbechip] b') === '270', 'adıyla nota ▲ (270)');
+    { const u = await doc(be, 'users', aid); eq(u.kb.all, 270, 'açık kubbe: hesap + iki not + iki ▲'); eq(u.kb.ups, 2, 'açık profilde ▲ sayısı'); eq(u.kb.likes, 0, 'yorum beğenisi yok'); }
     await A.go('#/not/' + n1); await sleep(150);
     A.$('#main [data-g=vote-down]').click(); await sleep(200);
     await A.until(() => /Kendi notuna oy veremezsin/.test(A.text('#toasts')), 'kendi notuna ▼ verilemez');
@@ -360,7 +368,7 @@ async function signup(t, be, local, prof) {
     { const h = await doc(be, 'hocas', hid), k = B.ev(`pk('hocas', ${JSON.stringify(hid)})`);
       ok(h && h.ratings && h.ratings[k] && h.ratings[k].c === 'CSE211' && !h.ratings[bid], 'puan bu hocaya özel takma adla');
       const own = await q1(be, "select count(*)::int as n from yw_private.doc_owner where col = 'hocas'"); eq(own.n, 0, 'hoca kaydının sahibi tutulmuyor'); }
-    { const u = await doc(be, 'users', bid), p = await doc(be, 'private', bid); eq(u.kb.ratings, 0, 'açık profilde puan sayısı yok'); eq(p.kb.ratings, 1, 'özel kayıtta puan sayıldı'); }
+    { const u = await doc(be, 'users', bid), p = await doc(be, 'private', bid); eq(u.kb.ratings, 1, 'puan sıralamaya da sayıldı'); eq(p.kb.ratings, 1, 'özel kayıtta puan sayıldı'); }
     await B.until(() => /Puanını güncelle/.test(B.text('[data-r=rate]')), 'B kendi puanını tanıyor');
     await A.go('#/hoca/' + hid);
     await A.until(() => A.ev(`hocaStats(S.hocas.get(${JSON.stringify(hid)})).cnt`) === 1, 'A puanı canlı görüyor');
@@ -412,7 +420,7 @@ async function signup(t, be, local, prof) {
     B.$('[data-anon="1"]').click();
     await B.submit('[data-r=form]', 600);
     { const r = await doc(be, 'requests', rq.id); ok(r.done === true && r.doneBy === '' && !!r.nid, 'karşılandı, karşılayan boş: ' + JSON.stringify({ d: r.done, b: r.doneBy })); }
-    { const p = await doc(be, 'private', bid), u = await doc(be, 'users', bid); eq(p.kb.fills, 1, 'karşılama kubbesi özel kayıtta'); eq(u.kb.fills, 0, 'açık profilde değil'); }
+    { const p = await doc(be, 'private', bid), u = await doc(be, 'users', bid); eq(p.kb.fills, 1, 'karşılama kubbesi özel kayıtta'); eq(u.kb.fills, 1, 'sıralamada da'); }
     await A.until(() => A.ev('notifItems().some(x => x.r && !x.r.doneBy)'), 'A\'ya karşılandı bildirimi');
     A.$('[data-g=bell]').click(); await sleep(60);
     ok(/Anonim biri/.test(A.text('#nf-pop')), 'bildirimde karşılayan anonim');

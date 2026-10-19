@@ -316,9 +316,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       { const d = t.store.get('notes/seed-n1'); ok(d.likes[me] === true && !(d.downs && d.downs[me]), '▲ yazıldı'); }
       eq(t.text('#main .vote .vnum'), String(ups0 + 1), 'puan 1 arttı');
       ok(t.$('#main .vote').classList.contains('is-up') && t.$('#main .vup').getAttribute('aria-pressed') === 'true', '▲ basılı görünüyor');
-      { const kb = JSON.parse(t.ev(`JSON.stringify(kubbeOf(${JSON.stringify(au)}))`)); eq(kb.all - kb0.all, 10, 'yazar ▲ başına 10 kubbe'); eq(kb.ups - kb0.ups, 1, 'yazarın ▲ sayısı'); }
-      eq(t.ev('[0, 9, 10, 29, 30, 99, 100, 500].map(kbLevel).join()'), '1,1,2,2,3,3,4,4', 'paylaşımcı seviyesi notlara gelen ▲ ile: 10, 30, 100');
-      { const h = t.ev('levelHtml({ lv: 2, ups: 12 })'); ok(/Seviye 2/.test(h) && /Notçu/.test(h) && /×1,25/.test(h) && /Usta notçu için notlarına 18 <svg/.test(h) && /data-w="10"/.test(h), 'seviye kartı: ad, çarpan, sonraki seviyeye kalan ▲'); }
+      { const kb = JSON.parse(t.ev(`JSON.stringify(kubbeOf(${JSON.stringify(au)}))`)); eq(kb.all - kb0.all, 35, 'yazar ▲ başına 35 kubbe'); eq(kb.ups - kb0.ups, 1, 'yazarın ▲ sayısı'); }
       t.$('#main [data-g=vote-down]').click(); await t.wait(120);
       { const d = t.store.get('notes/seed-n1'); ok(d.downs[me] === true && d.likes[me] !== true, '▼ verince ▲ kalktı'); }
       eq(t.text('#main .vote .vnum'), String(ups0 - 1), 'puan ▼ ile düştü');
@@ -1194,7 +1192,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     t.$('[data-g=wear][data-id="kartal-kanatlari"]').click(); await t.wait(250);
     { const g = t.store.get('users/deneme123').giy || {}; ok(g.taki === 'kartal-kanatlari' && g.ust === 'futbol-forma', 'markette Karakterine giy: kanat geri takıldı, forma yerinde'); }
     t.ev("openUserCard('deneme123')"); await t.wait(40);
-    ok(t.$('.modal .uc-fig') && t.$$('.modal .uc-rank').length === 2 && !/Aldıkları/.test(t.text('.modal')), 'kartta karakter ve iki sıra kutusu, Aldıkları yok');
+    ok(t.$('.modal .uc-stage .uc-fig') && t.$('.modal .uc-stage svg.uc-pod') && t.$$('.modal .uc-rank').length === 2 && !/Aldıkları/.test(t.text('.modal')), 'kartta karakter ve iki sıra kutusu, Aldıkları yok');
     t.$('.modal [data-close]').click(); await t.wait(30);
     { const bid = t.ev('[...S.users.keys()].find(id => earnedBadges(id).length >= 2) || ""');
       ok(!!bid, 'rozetli bir kullanıcı var'); t.ev(`openUserCard('${bid}')`); await t.wait(40);

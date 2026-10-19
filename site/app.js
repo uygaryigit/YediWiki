@@ -37,13 +37,9 @@ function mailOf(raw) {
   return v + MAIL_DOMAIN;
 }
 const mailLocal = mail => String(mail || '').replace(MAIL_DOMAIN, '');
-/* Kubbe: paylaşmak az, notun gördüğü ilgi çok kazandırır (sunucuda yw_private.kb_calc ile aynı). up: notuna gelen her ▲,
-   ncm: notuna yorum yazan her kişi (not başına bir kez, kendi yorumun sayılmaz), rating: HocaÖlçer puanı (ilk rateCap hoca). ▼ kubbe vermez, düşürmez. */
-const KUBBE = { signup: 50, note: 5, up: 10, ncm: 5, comment: 2, like: 2, rating: 5, rateCap: 30, fill: 10 };
-/* Paylaşımcı seviyesi notlarına gelen toplam ▲ ile yükselir; ▲ ve yorum kubbesi seviyenin çarpanıyla (x) çarpılır */
-const KB_LV = [{ min: 0, x: 1, ad: 'Çaylak' }, { min: 10, x: 1.25, ad: 'Notçu' }, { min: 30, x: 1.5, ad: 'Usta notçu' }, { min: 100, x: 2, ad: 'Efsane' }];
-const kbLevel = ups => KB_LV.reduce((lv, l, i) => (ups >= l.min ? i + 1 : lv), 1);
-const kbX = x => String(x).replace('.', ',');
+/* Kubbe (sunucuda yw_private.kb_calc ile aynı): not paylaşmak en değerlisi. up: notuna gelen her ▲, ncm: notuna başkasının
+   yazdığı her yorum; ▼ kubbe vermez, düşürmez. */
+const KUBBE = { signup: 50, note: 75, up: 35, ncm: 35, comment: 15, like: 2, rating: 10, fill: 10 };
 const AV_EMOJI = ['🦉', '🦊', '🐼', '🐧', '🦁', '🐢', '🐝', '🦄', '🐳', '🦖', '🐙', '🦕', '🌵', '🍀', '⚡', '🎧', '📚', '☕', '🧩', '🚀', '🎸', '🧠', '🛰️', '🥐'];
 const AV_COLORS = ['#FFE14D', '#9DB0FF', '#8ED6B2', '#FFB4A2', '#C9B6FF', '#9AD8FF', '#F7C1E0', '#E3E7F2'];
 const RARITY = {
@@ -102,6 +98,9 @@ const REPORT_LIMIT = 3;
 const CM_LIMIT = 3;
 
 const ICONS = {
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+  shirt: '<path d="M8.5 3.5L3 6.5l2 4.5 2.5-1.2V20.5h9V9.8l2.5 1.2 2-4.5-5.5-3c-.6 1.6-2 2.7-3.5 2.7s-2.9-1.1-3.5-2.7z"/>',
+  chev: '<path d="M6 9l6 6 6-6"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
   heart: '<path d="M12 20s-7.2-4.4-7.2-10.1A4.1 4.1 0 0 1 12 7.4a4.1 4.1 0 0 1 7.2 2.5C19.2 15.6 12 20 12 20z"/>',
   vup: '<path d="M12 4.5 20 14h-4.6v5.5H8.6V14H4z"/>',
@@ -714,30 +713,23 @@ function itemAvSrc(id) {
 }
 function currentTk(now = new Date()) { const l = termList(now); return l.length ? l[0] : 0; }
 function termStartMs(tk) { const y = Math.floor(tk / 10), k = tk % 10; return (k === 1 ? new Date(y, 8, 1) : k === 2 ? new Date(y + 1, 1, 1) : new Date(y + 1, 6, 1)).getTime(); }
-/* Paylaşımcı seviyesi: adı, çarpanı ve bir sonraki seviyeye kalan ▲ */
-function levelHtml(k, cls = '') {
-  const lv = clamp(k.lv || kbLevel(k.ups), 1, KB_LV.length), cur = KB_LV[lv - 1], nx = KB_LV[lv];
-  return `<div class="kb-lv${cls ? ' ' + cls : ''}"><span class="kb-lv-b">Seviye ${lv}</span><b>${esc(cur.ad)}</b><span class="kb-lv-x" title="▲ ve yorum kubbesi çarpanı">×${kbX(cur.x)}</span>`
-    + (nx ? `<span class="kb-lv-bar" aria-hidden="true"><i data-w="${Math.round(100 * (k.ups - cur.min) / (nx.min - cur.min))}"></i></span><span class="kb-lv-n">${esc(nx.ad)} için notlarına ${nx.min - k.ups} ${gl('up', 'gl-in')} daha (×${kbX(nx.x)})</span>`
-      : '<span class="kb-lv-n">En üst seviye</span>') + '</div>';
-}
 function kubbeStats() {
   return memoized('kubbe', () => {
-    const start = termStartMs(currentTk()), acc = new Map(), cmBy = new Map();
-    const ent = uid => { let o = acc.get(uid); if (!o) { o = { n: 0, nT: 0, up: 0, upT: 0, cm: 0, cmT: 0, c: 0, cT: 0, lk: 0, lkT: 0, r: [], f: 0, fT: 0 }; acc.set(uid, o); } return o; };
+    const start = termStartMs(currentTk()), acc = new Map(), cmOn = new Map();
+    const ent = uid => { let o = acc.get(uid); if (!o) { o = { n: 0, nT: 0, up: 0, upT: 0, cm: 0, cmT: 0, c: 0, cT: 0, lk: 0, lkT: 0, r: 0, rT: 0, f: 0, fT: 0 }; acc.set(uid, o); } return o; };
     for (const c of S.comments.values()) {
       if (!c || isHidden(c) || !c.by) continue;
       const o = ent(c.by), lk = likeCount(c), t = (c.at || 0) >= start;
       o.c++; o.lk += lk; if (t) { o.cT++; o.lkT += lk; }
-      if (c.tt === 'note') { let s = cmBy.get(c.tid); if (!s) cmBy.set(c.tid, s = new Set()); s.add(c.by); }
+      if (c.tt === 'note') { let a = cmOn.get(c.tid); if (!a) cmOn.set(c.tid, a = []); a.push(c.by); }
     }
     for (const n of S.notes.values()) {
       if (!n || isHidden(n) || !n.by) continue;
-      const o = ent(n.by), up = likeCount(n), s = cmBy.get(n.id), cm = s ? s.size - (s.has(n.by) ? 1 : 0) : 0;   // ▼ kubbe almaz
+      const o = ent(n.by), up = likeCount(n), cm = (cmOn.get(n.id) || []).filter(by => by !== n.by).length;   // ▼ kubbe almaz
       o.n++; o.up += up; o.cm += cm;
       if ((n.at || 0) >= start) { o.nT++; o.upT += up; o.cmT += cm; }
     }
-    for (const h of S.hocas.values()) for (const r of ratingsOf(h)) ent(r.key).r.push(r.at);
+    for (const h of S.hocas.values()) for (const r of ratingsOf(h)) { const o = ent(r.key); o.r++; if (r.at >= start) o.rT++; }
     for (const r of S.requests.values()) {
       const n = r && S.notes.get(r.nid);
       if (r && r.done && r.doneBy && r.doneBy !== r.by && n && !isHidden(n)) { const o = ent(r.doneBy); o.f++; if ((r.doneAt || r.at || 0) >= start) o.fT++; }
@@ -745,29 +737,25 @@ function kubbeStats() {
     for (const uid of S.users.keys()) ent(uid);
     const m = new Map();
     for (const [uid, o] of acc) {
-      const u = S.users.get(uid), b = Math.max(0, +(u && u.bonus) || 0), lv = kbLevel(o.up), x = KB_LV[lv - 1].x;
-      const pi = Math.floor((o.up * KUBBE.up + o.cm * KUBBE.ncm) * x), rT = o.r.filter(a => a >= start).length;
-      const rp = Math.min(o.r.length, KUBBE.rateCap) * KUBBE.rating, rpT = Math.min(rT, Math.max(0, KUBBE.rateCap - (o.r.length - rT))) * KUBBE.rating;
+      const u = S.users.get(uid), b = Math.max(0, +(u && u.bonus) || 0);
       m.set(uid, Object.assign(ZK(), {
-        all: b + o.n * KUBBE.note + pi + o.c * KUBBE.comment + o.lk * KUBBE.like + rp + o.f * KUBBE.fill,
-        term: (u && u.at && u.at >= start ? Math.min(b, KUBBE.signup) : 0) + o.nT * KUBBE.note + Math.floor((o.upT * KUBBE.up + o.cmT * KUBBE.ncm) * x)
-          + o.cT * KUBBE.comment + o.lkT * KUBBE.like + rpT + o.fT * KUBBE.fill,
-        notes: o.n, ups: o.up, ncm: o.cm, pi, lv, comments: o.c, likes: o.lk, ratings: o.r.length, fills: o.f
+        all: b + o.n * KUBBE.note + o.up * KUBBE.up + o.cm * KUBBE.ncm + o.c * KUBBE.comment + o.lk * KUBBE.like + o.r * KUBBE.rating + o.f * KUBBE.fill,
+        term: (u && u.at && u.at >= start ? Math.min(b, KUBBE.signup) : 0) + o.nT * KUBBE.note + o.upT * KUBBE.up + o.cmT * KUBBE.ncm
+          + o.cT * KUBBE.comment + o.lkT * KUBBE.like + o.rT * KUBBE.rating + o.fT * KUBBE.fill,
+        notes: o.n, ups: o.up, ncm: o.cm, comments: o.c, likes: o.lk, ratings: o.r, fills: o.f
       }));
     }
     return m;
   });
 }
-/* likes: yorum beğenisi, ups: not ▲, ncm: notlarına yorum yazan kişi, pi: ▲ ve yorum kubbesi (çarpanla), lv: paylaşımcı seviyesi */
-const ZK = () => ({ all: 0, term: 0, notes: 0, comments: 0, ratings: 0, grades: 0, likes: 0, ups: 0, fills: 0, ncm: 0, pi: 0, lv: 1 });
-/* Sitede kubbe sunucuda sayılır. private.kb yalnızca sahibine: her şey, anında (bakiye). users.kb herkese açık (sıralama):
-   adıyla yapılanlar anında; anonim paylaşımların ve hoca puanlarının kubbesi all ve term'e her gece toplu eklenir, böylece
-   hangi anonim paylaşımın ya da puanın kime ait olduğu anlaşılmaz. Sayaçlar (notes, comments...) yalnızca adıyla yapılanlar. */
+/* likes: yorum beğenisi, ups: not ▲, ncm: notlarına başkalarının yazdığı yorum */
+const ZK = () => ({ all: 0, term: 0, notes: 0, comments: 0, ratings: 0, grades: 0, likes: 0, ups: 0, fills: 0, ncm: 0 });
+/* Sitede kubbe sunucuda sayılır: users.kb (herkese açık, sıralama) ile private.kb (yalnızca sahibine, bakiye) aynı tam sayım;
+   anonim paylaşımlar ve hoca puanları da hemen sayılır. */
 function kbNorm(k) {
   const o = ZK();
   if (!k || typeof k !== 'object') return o;
   for (const f of Object.keys(o)) o[f] = Math.max(0, +k[f] || 0);
-  if (!o.lv) o.lv = kbLevel(o.ups);
   if (!(+k.ts >= termStartMs(currentTk()) - 2 * 864e5)) o.term = 0;   // yeni dönem başladı, sunucu henüz yeniden saymadı
   return o;
 }
@@ -1101,6 +1089,7 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (nfPop()) closeNotifs(true);
+  if (accPop()) closeAccMenu(true);
 });
 
 function combobox(input, { source, onPick }) {
@@ -2135,6 +2124,7 @@ function notifState() {
 }
 function openNotifs() {
   if (!needAcc()) return;
+  closeAccMenu();
   const st = notifState();
   const rows = st.items.map(x => {
     if (x.r) return `<li class="nf-row${x.at > st.seenAt ? ' new' : ''}"><a href="#/not/${esc(x.r.nid)}" data-close>${avatarHtml(x.r.doneBy, { anon: !x.r.doneBy, cls: 'sm' })}<span><span><b>${esc(x.r.doneBy ? displayName(x.r.doneBy, false, '') : 'Anonim biri')}</b>, ${esc(codeOf(x.r.cid))} not isteğini karşıladı ${gl('party', 'gl-in')}</span><span class="nf-time">${esc(ago(x.at))}</span></span></a></li>`;
@@ -2159,6 +2149,44 @@ function openNotifs() {
 /* Bildirimler ortadaki pencerede değil, zilin hemen altında açılan küçük panelde (üst çubukla birlikte durur).
    Zile yeniden basınca, dışarı basınca, Esc'te ya da bir bildirime gidince kapanır. */
 function nfPop() { return document.getElementById('nf-pop'); }
+/* Sağ üstteki Profil menüsü: Profil, Karakter, Çıkış yap. Düğmenin altında açılır; dışarı basınca, Esc'te ya da seçince kapanır. */
+function accPop() { return document.getElementById('acc-pop'); }
+function logoutKey() {
+  const u = myAcc();
+  if (!u) return '';
+  if (S.supa) return 'logout';
+  if (u.shared) return 'logout-shared';
+  return u.role === 'admin' && S.login && S.login.hash && S.me === S.baseMe ? 'logout-base' : '';
+}
+function openAccMenu() {
+  closeNotifs(); closeAccMenu();
+  const b = $('[data-r=acc]'), lk = logoutKey(), p = document.createElement('div');
+  p.id = 'acc-pop'; p.className = 'acc-pop'; p.setAttribute('role', 'menu'); p.setAttribute('aria-label', 'Profil menüsü');
+  p.innerHTML = `<a role="menuitem" href="#/profil">${icon('user')}Profil</a><button type="button" role="menuitem" data-g="char-edit">${icon('shirt')}Karakter</button>`
+    + (lk ? `<button type="button" role="menuitem" class="acc-out" data-g="${lk}">${icon('out')}Çıkış yap</button>` : '');
+  p.addEventListener('click', e => { if (e.target.closest('a, button')) setTimeout(() => closeAccMenu(), 0); });
+  b.after(p); b.setAttribute('aria-expanded', 'true');
+  placeAccMenu();
+  try { p.querySelector('[role=menuitem]').focus({ preventScroll: true }); } catch (e) { /* yok */ }
+}
+function closeAccMenu(focusBtn) {
+  const p = accPop(); if (!p) return;
+  p.remove();
+  const b = $('[data-r=acc]');
+  if (b) { b.setAttribute('aria-expanded', 'false'); if (focusBtn) { try { b.focus({ preventScroll: true }); } catch (e) { /* yok */ } } }
+}
+function placeAccMenu() {
+  const p = accPop(), b = $('[data-r=acc]');
+  if (!p) return;
+  if (!b || b.hidden) { closeAccMenu(); return; }
+  const r = b.getBoundingClientRect(), op = p.offsetParent, o = op ? op.getBoundingClientRect() : { left: 0, top: 0 };
+  const vw = document.documentElement.clientWidth || innerWidth, w = Math.min(220, vw - 24);
+  const x = Math.min(Math.max(12, r.right - w), vw - 12 - w);   // sağ kenarı düğmenin sağıyla hizalı
+  Object.assign(p.style, { width: w + 'px', left: (x - o.left) + 'px', top: (r.bottom - o.top + 10) + 'px' });
+  p.style.setProperty('--ax', Math.round(r.left + r.width / 2 - x) + 'px');
+}
+document.addEventListener('pointerdown', e => { const p = accPop(), t = e.target; if (p && t && t.closest && !p.contains(t) && !t.closest('[data-r=acc]')) closeAccMenu(); }, true);
+window.addEventListener('resize', placeAccMenu);
 function closeNotifs(focusBell) {
   const p = nfPop(); if (!p) return;
   p.remove();
@@ -3411,6 +3439,22 @@ function toggleVis(k) {
 }
 /* Birinin profiline basınca açılan kart: profil resmi, adı ve yanında karakteri; sıralamadaki yeri büyük rakamlarla
    (ilk üçte madalyasıyla), katkıları ve rozetleri. Marketten aldıkları ayrıca yazılmaz: adının yanında ve karakterinde görünür */
+/* Kullanıcı kartındaki karakterin yuvarlak podyumu: taş görünümlü üst yüz, yan bant, alt kenarda LED şerit ve yere vuran ışığı */
+function podiumSvg() {
+  const p = 'pd' + (++artSeq) + '-';
+  return `<svg class="uc-pod" viewBox="0 0 240 72" aria-hidden="true"><defs>`
+    + `<linearGradient id="${p}s" x1="0" x2="1"><stop offset="0" stop-color="#4F5B82"/><stop offset=".4" stop-color="#C5CDE3"/><stop offset=".62" stop-color="#A9B3CF"/><stop offset="1" stop-color="#46527A"/></linearGradient>`
+    + `<linearGradient id="${p}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D6DCEC"/></linearGradient>`
+    + `<filter id="${p}b" x="-25%" y="-150%" width="150%" height="400%"><feGaussianBlur stdDeviation="5"/></filter>`
+    + `<filter id="${p}l" x="-10%" y="-80%" width="120%" height="260%"><feGaussianBlur stdDeviation="2.2"/></filter></defs>`
+    + `<ellipse class="uc-led-floor" cx="120" cy="60" rx="104" ry="10" fill="#38E1FF" filter="url(#${p}b)"/>`
+    + `<path d="M12 24v16a108 17 0 0 0 216 0V24z" fill="url(#${p}s)" stroke="#1B1330" stroke-width="2.4" stroke-linejoin="round"/>`
+    + `<path class="uc-led-glow" d="M15 42a105 15 0 0 0 210 0" fill="none" stroke="#38E1FF" stroke-width="7" filter="url(#${p}l)"/>`
+    + `<path d="M15 42a105 15 0 0 0 210 0" fill="none" stroke="#B5F8FF" stroke-width="2.6" stroke-linecap="round"/>`
+    + `<ellipse cx="120" cy="24" rx="108" ry="17" fill="url(#${p}t)" stroke="#1B1330" stroke-width="2.4"/>`
+    + `<ellipse cx="120" cy="24.5" rx="84" ry="11.5" fill="none" stroke="#C3CBE0" stroke-width="1.6"/>`
+    + `<path d="M46 14.5q74-10 148 0" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/></svg>`;
+}
 function openUserCard(uid) {
   const u = userOf(uid);
   if (!u) return;
@@ -3419,15 +3463,15 @@ function openUserCard(uid) {
   const rank = (r, label) => `<div class="uc-rank${r && r <= 3 ? ' m' + r : ''}">${r && r <= 3 ? mtMedalIcon(r) : ''}<span class="uc-rl">${esc(label)}</span><b class="uc-rv">${!r ? '–' : r <= 3 ? r + '.' : '#' + r}</b><span class="uc-rs">${!r ? 'sıralamada yok' : r <= 3 ? 'sırada' : 'genel sıralamada'}</span></div>`;
   const stat = (n, label, g) => `<span class="uc-stat">${gl(g, 'uc-sg')}<b>${n}</b>${label}</span>`;
   const m = openModal({ title: '@' + (u.username || 'öğrenci'), body: `<div class="uc-head">
-      ${avatarHtml(uid, { cls: 'xl' })}
+      <div class="uc-who">${avatarHtml(uid, { cls: 'xl' })}
       <div class="uc-id"><p class="kh-name">${nameHtml(u, u.username || '')}${badgesHtml(u)}</p>${facts ? `<p class="muted">${facts}</p>` : ''}
-        <p class="uc-kubbe">${gl('coin', 'k-coin')}<b>${k.all}</b><span>kubbe</span></p></div>
-      ${figSvg(uid, u, { cls: 'uc-fig' })}</div>
+        <p class="uc-kubbe">${gl('coin', 'k-coin')}<b>${k.all}</b><span>kubbe</span></p></div></div>
+      <div class="uc-stage">${figSvg(uid, u, { cls: 'uc-fig' })}${podiumSvg()}</div></div>
     <div class="uc-ranks">${rank(rankOf(uid, 'all'), 'Tüm zamanlar')}${rank(rankOf(uid, 'term'), termLabel(currentTk()))}</div>${deptLineHtml(uid, 'uc-dept')}
     <div class="uc-stats">${stat(k.notes, 'not', 'note')}${stat(k.comments, 'yorum', 'bubble')}${S.supa && uid !== S.me ? '' : stat(k.ratings, 'hoca puanı', 'star')}</div>
-    ${k.notes || k.ups ? levelHtml(k, 'uc-lv') : ''}${isFrozen(uid) ? '<p class="uc-frozen">Bu hesap donduruldu.</p>' : ''}
+    ${isFrozen(uid) ? '<p class="uc-frozen">Bu hesap donduruldu.</p>' : ''}
     ${eb.length ? `<div class="uc-bdgs"><h3>Rozetler <span class="count">${eb.length}</span></h3><ul>${eb.map(b => `<li title="${esc(b.d)}"><span class="bdg-medal"><span class="bdg-g">${gl(b.g)}</span></span><b>${esc(b.ad)}</b></li>`).join('')}</ul></div>` : ''}
-    <p class="fine">${S.supa ? 'Anonim paylaşımlar ve hoca puanları kubbeye ve sıralamaya sayılır (her gece toplu), bu kartta ayrıca gösterilmez.' : 'Anonim paylaşımlar bu kartta gösterilmez.'}</p>` });
+    <p class="fine">Anonim paylaşımlar ve hoca puanları da kubbeye ve sıralamaya sayılır.</p>` });
   applyWidths(m.el);
 }
 async function setAvatarItem(id) {
@@ -3731,9 +3775,10 @@ function renderChrome() {
   const chip = $('[data-r=acc]');
   if (chip) {
     const u = myAcc();
-    const h = u ? avatarHtml(S.me, { cls: 'sm' }) + `<span class="acc-name">${esc(u.username || '')}</span>` : '<span class="acc-name">Giriş yap</span>';
+    const h = u ? avatarHtml(S.me, { cls: 'sm' }) + `<span class="acc-name">Profil</span><span class="acc-chev">${icon('chev')}</span>` : '<span class="acc-name">Giriş yap</span>';
     if (chip.dataset.h !== h) { chip.dataset.h = h; chip.innerHTML = h; applyWidths(chip); }
-    chip.setAttribute('aria-label', u ? 'Profilim' : 'Yeditepe hesabınla gir');
+    chip.setAttribute('aria-label', u ? `Profil menüsü, @${u.username || ''}` : 'Yeditepe hesabınla gir');
+    if (u) chip.setAttribute('aria-haspopup', 'menu'); else { chip.removeAttribute('aria-haspopup'); closeAccMenu(); }
     chip.hidden = !u && !S.out && !S.supa;
     const kb = $('[data-r=kubbechip]');
     if (kb) { kb.hidden = !u; if (u) animNum($('b', kb), balanceOf(S.me)); }
@@ -5126,7 +5171,7 @@ function tourSteps(u) {
     { go: '#/', sel: '#main .hero .search', t: 'Her şey buradan başlar', say: 'Ders kodunu (CSE 211 gibi) ya da hocanın adını buraya yaz, listeden seç. Aradığın ders ya da hoca hemen önüne gelir.' },
     { go: '#/dersler', sel: '#main .toolbar', t: 'Bölümünün ders planı', say: 'Buradan bölümünü seç: dönem dönem bütün derslerin çıkar. Bitirdiğin dersleri ✓ ile işaretlersen ne kadar kaldığını da görürsün.' },
     cid ? { go: '#/ders/' + cid, sel: ['#main [data-r=myc]', '#main .head-actions'], t: 'Derslerini ekle', say: 'Her dersin kendi sayfası var: notlar, yorumlar ve hocalar. “Derslerime ekle”ye basarsan o derse yeni not düşünce ilk sen görürsün.' } : null,
-    { go: '#/paylas', sel: ['#main [data-r=gpick]', '#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `${gdCfg() ? '“Drive’dan seç”e bas, notunu Drive’ından seç; paylaşım ayarını ben hallederim.' : 'Notunu Google Drive’a koy, linkini buraya yapıştır.'} Notun ${KUBBE.note} kubbe kazandırır; asıl kubbe ilgiden gelir: notuna gelen her ▲ +${KUBBE.up} kubbe, yorum yazan her arkadaşın +${KUBBE.ncm} kubbe. Bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
+    { go: '#/paylas', sel: ['#main [data-r=gpick]', '#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `${gdCfg() ? '“Drive’dan seç”e bas, notunu Drive’ından seç; paylaşım ayarını ben hallederim.' : 'Notunu Google Drive’a koy, linkini buraya yapıştır.'} Her not ${KUBBE.note} kubbe; notuna gelen her ▲ ve her yorum +${KUBBE.up} kubbe daha. Bir not isteğini karşılarsan +${KUBBE.fill} kubbe.` },
     { go: '#/hocaolcer', sel: '#main .ho-search', t: 'HocaÖlçer', say: 'Hocayı adıyla ya da ders koduyla bul. Anlatım, ödev yükü, not verme ve devamsızlıkta puanla; yorumunu anonim bırakabilirsin.' },
     { go: '#/kubbe', sel: ['#main [data-r=head]', '#main .shop-sec'], t: 'Kubbe ve market', say: 'Paylaştıkça kubbe toplarsın. Dönemin yıldızı sıralamasında yüksel, marketten profilini süsleyecek parçalar al.' },
     { go: '#/', sel: '#main [data-r=ayhan]', t: 'Hepsi bu kadar!', say: 'Ben burada, ana sayfada dolaşıyorum; yorulunca kırmızı kulübemin önünde uyurum. Canın sıkılırsa gel beni sev. İlk notunu bekliyorum, hav!', next: 'Başlayalım' }
@@ -6146,7 +6191,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
   const terms = termList();
   let anon = false;
   root.innerHTML = `<div class="wrap">
-    <div class="page-intro"><h1>Not paylaş</h1><p>${gdCfg() ? 'Notunu Google Drive’dan seç, gerisini YediWiki halleder.' : 'Notunu Google Drive’a yükle, linkini burada paylaş.'} Dosya YediWiki’ye yüklenmez, yalnızca Drive linki saklanır. Not <b>${KUBBE.note} kubbe</b> kazandırır; asıl kubbe notuna gelen ilgiden: her ${gl('up', 'gl-in')} <b>${KUBBE.up}</b>, yorum yazan her kişi <b>${KUBBE.ncm} kubbe</b>.</p></div>
+    <div class="page-intro"><h1>Not paylaş</h1><p>${gdCfg() ? 'Notunu Google Drive’dan seç, gerisini YediWiki halleder.' : 'Notunu Google Drive’a yükle, linkini burada paylaş.'} Dosya YediWiki’ye yüklenmez, yalnızca Drive linki saklanır. Her not <b>${KUBBE.note} kubbe</b>, notuna gelen her ${gl('up', 'gl-in')} ve her yorum <b>${KUBBE.up} kubbe</b> kazandırır.</p></div>
     <div class="empty mb2" data-r="locked" hidden><h3>Önce Yeditepe hesabın gerekiyor</h3><p>Not paylaşmak, yorum yazmak ve puan vermek için okul e-postanla bir hesap aç.</p><button type="button" class="btn btn-primary" data-g="auth">${icon('star')}Hesabımla gir</button></div>
     <div class="share-grid" data-r="grid">
       <form class="form-card share-form" novalidate data-r="form">
@@ -6282,7 +6327,7 @@ ROUTES['katkilarim'] = function viewMine(root) {
       const sec = (t, n, inner) => `<section class="km-sec"><div class="km-head"><h2>${t}</h2><span class="km-count">${n}</span></div>${inner}</section>`;
       const empty = (txt, href, cta) => `<div class="km-empty"><p>${txt}</p><a class="btn btn-sm btn-primary" href="${href}">${cta}</a></div>`;
       el.innerHTML =
-        sec('Notlarım', notes.length, notes.length ? `<ul class="list">${notes.map(n => noteRow(n, { showCourse: true }).replace('</li>', `<div class="cm-actions pad"><button type="button" class="iconbtn" data-g="del-note" data-id="${esc(n.id)}">${icon('trash')}Sil</button></div></li>`)).join('')}</ul>` : empty(`Henüz not paylaşmadın. Not ${KUBBE.note} kubbe, notuna gelen her ▲ ${KUBBE.up} kubbe kazandırır.`, '#/paylas', `${icon('up')}Not paylaş`)) +
+        sec('Notlarım', notes.length, notes.length ? `<ul class="list">${notes.map(n => noteRow(n, { showCourse: true }).replace('</li>', `<div class="cm-actions pad"><button type="button" class="iconbtn" data-g="del-note" data-id="${esc(n.id)}">${icon('trash')}Sil</button></div></li>`)).join('')}</ul>` : empty(`Henüz not paylaşmadın. Her not ${KUBBE.note} kubbe, notuna gelen her ▲ ve yorum ${KUBBE.up} kubbe kazandırır.`, '#/paylas', `${icon('up')}Not paylaş`)) +
         sec('HocaÖlçer puanlarım', rates.length, rates.length ? `<ul class="list">${rates.map(x => { const avg = critAll(x.r); return `<li><div class="row-link"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><a class="row-title" href="#/hoca/${esc(x.hid)}">${esc(hocaFull(x.h))}</a><span class="row-sub">${CRIT.map(c => `${esc(c.name)} ${fmt1(x.r[c.k])}`).join(', ')}</span></span><span class="row-end"><span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span><button type="button" class="iconbtn" data-g="rate" data-hid="${esc(x.hid)}">${icon('edit')}Güncelle</button><button type="button" class="iconbtn" data-g="unrate" data-id="${esc(x.hid)}">${icon('trash')}Kaldır</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz bir hocayı puanlamadın. Her HocaÖlçer puanı ${KUBBE.rating} kubbe kazandırır.`, '#/hocaolcer', `${icon('star')}HocaÖlçer’e git`)) +
         sec('Yorumlarım', cms.length, cms.length ? `<ul class="list">${cms.map(c => { const where = c.tt === 'course' ? `#/ders/${c.tid}?tab=yorumlar` : c.tt === 'hoca' ? `#/hoca/${c.tid}` : `#/not/${c.tid}`; const label = c.tt === 'course' ? codeOf(c.tid) : c.tt === 'hoca' ? hocaName(c.tid) : ((S.notes.get(c.tid) || {}).title || 'Not'); return `<li><div class="row-link"><span class="row-main"><a class="row-title" href="${esc(where)}">${esc(label || 'Silinmiş içerik')}</a><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end"><span>${esc(ago(c.at))}</span><button type="button" class="iconbtn" data-g="del-comment" data-id="${esc(c.id)}">${icon('trash')}Sil</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz yorum yazmadın. Her yorum ${KUBBE.comment} kubbe kazandırır.`, '#/dersler', `${icon('book')}Derslere göz at`));
       lazyPhotos(el); applyWidths(el);
@@ -6397,11 +6442,10 @@ ROUTES['hakkinda'] = function viewAbout(root) {
     <h2>Hesap ve anonimlik</h2>
     <p>YediWiki’ye yalnızca okul e-postasıyla katılınır: adres <b>@std.yeditepe.edu.tr</b> ile bitmeli ve doğrulanmalıdır. Not paylaşmak, yorum yazmak ve hoca puanlamak için hesap gerekir; gezinmek için gerekmez.</p>
     <p>Her yorum ve notta “Anonim” seçeneği var. Anonim paylaşımda kullanıcı adın görünmez, kazandığın kubbe yine hesabına yazılır. HocaÖlçer yorumlarında anonim seçeneği varsayılan olarak açıktır.</p>
-    ${S.supa ? '<p>HocaÖlçer puanların, oyların, beğenilerin ve anonim paylaşımların herkese açık profilinle eşleşmez: her kayıtta yalnızca o kayda özel bir takma ad tutulur. Anonim paylaşımlarının ve hoca puanlarının kubbesi bakiyene hemen, sıralamaya her gece herkesinkiyle birlikte toplu eklenir; böylece hangi anonim paylaşımın ya da puanın senin olduğu sıralamadan anlaşılmaz.</p>' : ''}
+    ${S.supa ? '<p>HocaÖlçer puanların, oyların ve beğenilerin kayıtlarda adınla değil, o kayda özel bir takma adla tutulur; anonim paylaşımlarında adın görünmez. Hepsinin kubbesi bakiyene ve sıralamaya hemen eklenir.</p>' : ''}
     <h2>Kubbe</h2>
-    <p>Kubbe, paylaşımı teşvik eden puandır; en çok, işe yarayan not paylaşanı ödüllendirir. Not paylaşmak ${KUBBE.note} kubbe; asıl kubbe notun gördüğü ilgiden gelir: notuna gelen her ${gl('up', 'gl-in')} ${KUBBE.up}, notuna yorum yazan her kişi ${KUBBE.ncm} kubbe (not başına bir kez, kendi yorumun sayılmaz). ${gl('down', 'gl-in')} kubbe vermez, düşürmez; notu sıralamada aşağı iter.</p>
-    <p>Notlarına gelen ${gl('up', 'gl-in')} arttıkça paylaşımcı seviyen yükselir ve ${gl('up', 'gl-in')} ile yorum kubben katlanır: ${KB_LV.slice(1).map(l => `${l.min} ${gl('up', 'gl-in')} ile ${esc(l.ad)} (×${kbX(l.x)})`).join(', ')}.</p>
-    <p>Ayrıca hesap açma ${KUBBE.signup}, yorum ${KUBBE.comment}, yorumuna gelen her beğeni ${KUBBE.like}, HocaÖlçer puanı ${KUBBE.rating} (ilk ${KUBBE.rateCap} hoca), not isteği karşılamak ${KUBBE.fill} kubbe kazandırır. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
+    <p>Kubbe, paylaşımı teşvik eden puandır; en değerlisi not paylaşmak. Her not ${KUBBE.note} kubbe; notuna gelen her ${gl('up', 'gl-in')} ve başkasının notuna yazdığı her yorum ${KUBBE.up} kubbe daha. ${gl('down', 'gl-in')} kubbe vermez, düşürmez; notu sıralamada aşağı iter.</p>
+    <p>Ayrıca yorum yazmak ${KUBBE.comment}, HocaÖlçer puanı ${KUBBE.rating}, not isteği karşılamak ${KUBBE.fill}, yorumuna gelen her beğeni ${KUBBE.like}, hesap açma ${KUBBE.signup} kubbe kazandırır. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
     <p>Sahte, boş ya da alakasız not paylaşanı bildir: ${REPORT_LIMIT} bildirim alan not gizlenir ve kubbe kazandırmaz.${S.supa ? ' Notlarından üçü bildirimle gizlenen hesap, yönetici onaylarsa dondurulur: dondurulan hesap paylaşım yapamaz, oy veremez ve sıralamada görünmez.' : ''}</p>
     <h2>Ders ve hoca listesi</h2>
     <p>Dersler ve akademik kadro okulun kataloğundan yüklenir; kullanıcılar yeni ders ya da hoca ekleyemez. Eksik bir kayıt görürsen site yönetimine bildir.</p>
@@ -6431,7 +6475,7 @@ ROUTES.__404 = viewNotFound;
 Object.assign(G, {
   auth: () => openAuth(),
   user: id => openUserCard(id),
-  acc: () => { if (hasAcc()) location.hash = '#/profil'; else openAuth(); },
+  acc: () => { if (!hasAcc()) openAuth(); else if (accPop()) closeAccMenu(true); else openAccMenu(); },
   'profile-edit': () => openProfileEdit(),
   'vis-toggle': (id, el) => toggleVis(el.dataset.k),
   buy: (id) => buyItem(id),
@@ -6579,17 +6623,17 @@ ROUTES['profil'] = function viewProfile(root) {
               ${S.bolumler.size || u.bolum ? `<div><dt>Bölüm</dt><dd><span class="pf-val">${esc(bolumName(u.bolum) || 'seçilmedi')}</span></dd></div>` : ''}
               <div><dt>Telefon</dt><dd><span class="pf-val">${esc((S.priv && S.priv.phone) || 'girilmedi')}</span><span class="vis-note">${icon('lock')}Yalnızca sen</span></dd></div>
             </dl>
-            ${S.supa ? '<p class="fine">Anonim paylaşımların ve hoca puanların da sıralamaya sayılır. Kimin olduğu anlaşılmasın diye sıralamaya her gece toplu eklenir; bakiyene hemen eklenir.</p>' : ''}
+            ${S.supa ? '<p class="fine">Anonim paylaşımların ve hoca puanların da kubbene ve sıralamaya hemen sayılır.</p>' : ''}
           </section>
           <section class="pf-sec"><h2 class="sub-h">Kubbe dökümü</h2>
-            ${levelHtml(k)}
             <ul class="pf-ledger">
               ${led('kubbe', 'Hesap açma', Math.max(0, +u.bonus || 0))}
               ${led('book', `${k.notes} not paylaştın`, k.notes * KUBBE.note)}
-              ${led('vup', `Notlarına ${k.ups} ${gl('up', 'gl-in')} geldi, ${k.ncm} kişi yorum yazdı`, k.pi, k.lv > 1 ? '×' + kbX(KB_LV[k.lv - 1].x) : '')}
-              ${led('comment', `${k.comments} yorum`, k.comments * KUBBE.comment)}
+              ${led('vup', `Notlarına ${k.ups} ${gl('up', 'gl-in')} geldi`, k.ups * KUBBE.up)}
+              ${led('comment', `Notlarına ${k.ncm} yorum yazıldı`, k.ncm * KUBBE.ncm)}
+              ${led('comment', `${k.comments} yorum yazdın`, k.comments * KUBBE.comment)}
               ${led('heart', `Yorumların ${k.likes} beğeni aldı`, k.likes * KUBBE.like)}
-              ${led('star', `${k.ratings} HocaÖlçer puanı`, Math.min(k.ratings, KUBBE.rateCap) * KUBBE.rating, k.ratings > KUBBE.rateCap ? `ilk ${KUBBE.rateCap} hoca` : '')}
+              ${led('star', `${k.ratings} HocaÖlçer puanı`, k.ratings * KUBBE.rating)}
               ${led('bookmark', `${k.fills || 0} not isteği karşıladın`, (k.fills || 0) * KUBBE.fill)}
               ${giftOf(S.me) ? led('plus', 'Hediye', giftOf(S.me), 'sıralamaya sayılmaz') : ''}
               ${spentOf(S.me) ? led('cr', 'Markette harcadın', '−' + spentOf(S.me)) : ''}

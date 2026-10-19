@@ -45,7 +45,7 @@ npm run test:site    # site sürümü: sayfa + gerçek SQL kuralları, RLS ve te
 - Kişisel anahtarlar (beğeni, bildirim, hoca puanı, "ben de", DersÖlçer oyu) belge başına takma addır:
   `'k' + HMAC-SHA256(kişisel gizli, '<koleksiyon>/<kimlik>')` ilk 24 hane. Anahtarlar birbirine bağlanamaz.
 - Anonim not ve yorumda yazar alanı boştur; gerçek sahip yalnızca `yw_private.doc_owner` tablosunda.
-- Kubbe sunucuda sayılır (`yw_private.kb_calc`): paylaşmak az, notun gördüğü ilgi (▲, yorum) çok kazandırır; paylaşımcı seviyesiyle katlanır. `private.kb` yalnızca sahibine (her şey, anında; bakiye). `users.kb` herkese açık (sıralama): adla yapılanlar anında, anonim paylaşımlar ve hoca puanları her gece toplu (pg_cron).
+- Kubbe sunucuda sayılır (`yw_private.kb_calc`): not 75, notuna gelen her ▲ ve yorum 35, yorum 15, HocaÖlçer puanı 10. `users.kb` (herkese açık, sıralama) ile `private.kb` (yalnızca sahibine, bakiye) aynı sayım; anonim paylaşımlar da hemen sayılır.
 - Notlarından üçü bildirimle gizlenen hesap için yöneticiye onay e-postası gider (pg_net → Worker `/api/dondurma`); onaylanırsa hesap dondurulur.
 - Kayıt yalnızca `@std.yeditepe.edu.tr`; yönetici (`yonetici@yediwiki.com`) ve ortak deneme hesabı `yw_private.special_accounts` listesinde.
 

@@ -70,28 +70,27 @@ step('Yeditepe Sarısı alınmadan seçilemez; alınmamış ürün takılamaz', 
 step('A adıyla not paylaşır; yazar, zaman ve oylar sunucudan', A,
      f"select public.doc_set('notes', 'tA1', {j({'cid':'CSE211','title':'Veri yapıları','drive':DRIVE,'by':B,'at':1,'likes':{'x':True},'downs':{'y':True},'anon':False,'photos':['p1']})})",
      'ok', f"{DOC('notes','tA1','by')} = '$A' and {DOC('notes','tA1','at')}::bigint > 1000000000000 and {DOC('notes','tA1','likes')} = '{{}}' and {DOC('notes','tA1','downs')} = '{{}}' "
-           f"and {DOC('notes','tA1','photos')} = '[]' and {U(A,'kb,all')}::int = 55 and {P(A,'kb,all')}::int = 55")
+           f"and {DOC('notes','tA1','photos')} = '[]' and {U(A,'kb,all')}::int = 125 and {P(A,'kb,all')}::int = 125")
 step('Drive bağlantısı olmayan not reddedilir', A, f"select public.doc_set('notes', 'tAx', {j({'cid':'CSE211','title':'Linksiz','anon':False})})", 'fail')
 step('Drive dışı bağlantı reddedilir', A, f"select public.doc_set('notes', 'tAy', {j({'cid':'CSE211','title':'Başka site','drive':'https://example.com/a','anon':False})})", 'fail')
-step('A anonim not paylaşır: yazar boş, açık profil hiç değişmez', A,
+step('A anonim not paylaşır: yazar boş, kubbesi sıralamaya da hemen sayılır', A,
      f"select public.doc_set('notes', 'tA2', {j({'cid':'MATH131','title':'Kalkülüs','drive':DRIVE,'anon':True,'by':A})})",
      'ok', f"{DOC('notes','tA2','by')} = '' and {DOC('notes','tA2','byk')} = {K(A,'notes','tA2')} "
-           f"and {U(A,'kb,all')}::int = 55 and {U(A,'kb,notes')}::int = 1 and {P(A,'kb,all')}::int = 60 and {P(A,'kb,notes')}::int = 2 "
-           f"and {CTID(A)} = pre", pre=CTID(A))
-step('B nota kendi anahtarıyla ▲ verir; A açık kubbede +10', B,
+           f"and {U(A,'kb,all')}::int = 200 and {U(A,'kb,notes')}::int = 2 and {P(A,'kb,all')}::int = 200 and {P(A,'kb,notes')}::int = 2")
+step('B nota kendi anahtarıyla ▲ verir; A +35', B,
      f"select public.doc_update('notes', 'tA1', jsonb_build_object('likes', jsonb_build_object({K(B,'notes','tA1')}, true)))",
-     'ok', f"{U(A,'kb,all')}::int = 65 and {U(A,'kb,ups')}::int = 1 and {U(A,'kb,likes')}::int = 0 and {U(A,'kb,pi')}::int = 10 and {U(A,'kb,lv')}::int = 1")
-step('Anonim nota gelen ▲ açık profilde iz bırakmaz', B,
+     'ok', f"{U(A,'kb,all')}::int = 235 and {U(A,'kb,ups')}::int = 1 and {U(A,'kb,likes')}::int = 0 and {U(A,'kb,lv')} is null")
+step('Anonim nota gelen ▲ de hemen sayılır', B,
      f"select public.doc_update('notes', 'tA2', jsonb_build_object('likes', jsonb_build_object({K(B,'notes','tA2')}, true)))",
-     'ok', f"{U(A,'kb,all')}::int = 65 and {P(A,'kb,all')}::int = 80 and {P(A,'kb,ups')}::int = 2 and {CTID(A)} = pre", pre=CTID(A))
+     'ok', f"{U(A,'kb,all')}::int = 270 and {P(A,'kb,all')}::int = 270 and {U(A,'kb,ups')}::int = 2")
 step('B ▼ verir: ▲ kalkar, A kubbesi geri düşer', B,
      f"select public.doc_update('notes', 'tA1', jsonb_build_object('downs', jsonb_build_object({K(B,'notes','tA1')}, true)))",
      'ok', f"(select data->'downs'->{K(B,'notes','tA1')} = 'true'::jsonb and data->'likes'->{K(B,'notes','tA1')} = 'null'::jsonb from public.docs where col = 'notes' and id = 'tA1') "
-           f"and {U(A,'kb,all')}::int = 55 and {U(A,'kb,ups')}::int = 0")
+           f"and {U(A,'kb,all')}::int = 235 and {U(A,'kb,ups')}::int = 1")
 step('B yeniden ▲ verir: ▼ kalkar', B,
      f"select public.doc_update('notes', 'tA1', jsonb_build_object('likes', jsonb_build_object({K(B,'notes','tA1')}, true)))",
      'ok', f"(select data->'likes'->{K(B,'notes','tA1')} = 'true'::jsonb and data->'downs'->{K(B,'notes','tA1')} = 'null'::jsonb from public.docs where col = 'notes' and id = 'tA1') "
-           f"and {U(A,'kb,all')}::int = 65")
+           f"and {U(A,'kb,all')}::int = 270")
 step('İkisi birden gelirse ▲ kalır', B,
      f"select public.doc_update('notes', 'tA1', jsonb_build_object('likes', jsonb_build_object({K(B,'notes','tA1')}, true), 'downs', jsonb_build_object({K(B,'notes','tA1')}, true)))",
      'ok', f"(select data->'likes'->{K(B,'notes','tA1')} = 'true'::jsonb and data->'downs'->{K(B,'notes','tA1')} = 'null'::jsonb from public.docs where col = 'notes' and id = 'tA1')")
@@ -116,16 +115,16 @@ step('A kendi notunun başlığını düzeltir (uzun başlık 80 harfe kısalır
      f"length({DOC('notes','tA1','title')}) = 80 and (select data->'likes'->{K(B,'notes','tA1')} = 'true'::jsonb from public.docs where col = 'notes' and id = 'tA1')")
 step('A notu baştan yazar: oyları silemez', A,
      f"select public.doc_set('notes', 'tA1', {j({'cid':'CSE211','title':'Veri yapıları','drive':DRIVE,'likes':{},'downs':{'z':True},'anon':False})})", 'ok',
-     f"(select data->'likes'->{K(B,'notes','tA1')} = 'true'::jsonb and not (data->'downs' ? 'z') from public.docs where col = 'notes' and id = 'tA1') and {U(A,'kb,all')}::int = 65")
+     f"(select data->'likes'->{K(B,'notes','tA1')} = 'true'::jsonb and not (data->'downs' ? 'z') from public.docs where col = 'notes' and id = 'tA1') and {U(A,'kb,all')}::int = 270")
 step('Not sahibi ▼ alanını düzenleyemez', A,
      f"select public.doc_update('notes', 'tA1', jsonb_build_object('title', 'yeni', 'downs', jsonb_build_object({K(A,'notes','tA1')}, null)))", 'fail')
 
 # ---- HocaÖlçer
-step('B kadrodaki hocaya ilk puanı verir: puan gizli, açık profil değişmez, hocanın sahibi tutulmaz', B,
+step('B kadrodaki hocaya ilk puanı verir: puan takma adla, kubbesi hemen (+10), hocanın sahibi tutulmaz', B,
      f"select public.doc_set('hocas', '{H}', jsonb_build_object('ratings', jsonb_build_object({K(B,'hocas',H)}, '{{\"a\":4,\"o\":3.5,\"n\":5,\"d\":4,\"c\":\"CSE211\",\"tk\":20261,\"x\":\"fazla\"}}'::jsonb)))",
      'ok', f"(select data->'ratings' ? {K(B,'hocas',H)} and not (data ? 'name') and data->'ratings'->{K(B,'hocas',H)}->'x' is null from public.docs where col = 'hocas' and id = '{H}') "
-           f"and {U(B,'kb,ratings')}::int = 0 and {U(B,'kb,all')}::int = 50 and {P(B,'kb,ratings')}::int = 1 and {P(B,'kb,all')}::int = 55 "
-           f"and {CTID(B)} = pre and not exists (select 1 from yw_private.doc_owner where col = 'hocas' and id = '{H}')", pre=CTID(B))
+           f"and {U(B,'kb,ratings')}::int = 1 and {U(B,'kb,all')}::int = 60 and {P(B,'kb,ratings')}::int = 1 and {P(B,'kb,all')}::int = 60 "
+           f"and not exists (select 1 from yw_private.doc_owner where col = 'hocas' and id = '{H}')")
 step('Listede olmayan hocaya puan verilemez', B,
      f"select public.doc_set('hocas', 'yok-boyle-hoca', jsonb_build_object('ratings', jsonb_build_object({K(B,'hocas','yok-boyle-hoca')}, '{{\"a\":4,\"o\":4,\"n\":4,\"d\":4}}'::jsonb)))", 'fail')
 step('B hocanın adını değiştiremez', B, f"select public.doc_update('hocas', '{H}', '{{\"name\":\"X\"}}'::jsonb)", 'fail')
@@ -154,12 +153,12 @@ step('Başka dersin notuyla istek kapatılamaz', A,
      f"select public.doc_update('requests', 'tR1', {j({'done':True,'nid':'tA2','doneBy':A,'doneAt':0})})", 'fail')
 step('A isteği adıyla paylaştığı notla karşılar', A,
      f"select public.doc_update('requests', 'tR1', {j({'done':True,'nid':'tA1','doneBy':A,'doneAt':0})})",
-     'ok', f"{DOC('requests','tR1','doneBy')} = '$A' and {U(A,'kb,fills')}::int = 1 and {U(A,'kb,all')}::int = 75")
+     'ok', f"{DOC('requests','tR1','doneBy')} = '$A' and {U(A,'kb,fills')}::int = 1 and {U(A,'kb,all')}::int = 280")
 step('Anonim notla karşılanan istekte karşılayan görünmez', B,
      f"select public.doc_set('requests', 'tR2', {j({'cid':'MATH131','kind':'vize','text':''})})", 'ok')
-step('A ikinci isteği anonim notuyla karşılar: açık profil değişmez', A,
+step('A ikinci isteği anonim notuyla karşılar: karşılayan görünmez, kubbesi sayılır', A,
      f"select public.doc_update('requests', 'tR2', {j({'done':True,'nid':'tA2','doneBy':A,'doneAt':0})})",
-     'ok', f"{DOC('requests','tR2','doneBy')} = '' and {U(A,'kb,fills')}::int = 1 and {P(A,'kb,fills')}::int = 2 and {CTID(A)} = pre", pre=CTID(A))
+     'ok', f"{DOC('requests','tR2','doneBy')} = '' and {U(A,'kb,fills')}::int = 2 and {P(A,'kb,fills')}::int = 2 and {U(A,'kb,all')}::int = 290")
 step('İstek metni 140 harfe kısalır, tür listede değilse genel olur', B,
      f"select public.doc_set('requests', 'tR3', {j({'cid':'CSE211','kind':'uydurma','text':'y'*300})})",
      'ok', f"length({DOC('requests','tR3','text')}) = 140 and {DOC('requests','tR3','kind')} = 'genel'")
@@ -202,32 +201,32 @@ step('Sahip olunan ürün profil resmi olur', A, f"select public.doc_update('use
      'ok', f"{U(A,'avk')} = 'urun'")
 
 # ---- yorumlar
-step('B nota adıyla yorum yazar: B +2, notun sahibi A +5', B, f"select public.doc_set('comments', 'tC1', {j({'tt':'note','tid':'tA1','text':'teşekkürler','anon':False,'downs':{'q':True}})})",
+step('B nota adıyla yorum yazar: B +15, notun sahibi A +35', B, f"select public.doc_set('comments', 'tC1', {j({'tt':'note','tid':'tA1','text':'teşekkürler','anon':False,'downs':{'q':True}})})",
      'ok', f"{DOC('comments','tC1','by')} = '$B' and {U(B,'kb,comments')}::int = 1 and {DOC('comments','tC1','downs')} is null "
-           f"and {U(B,'kb,all')}::int = 52 and {U(A,'kb,ncm')}::int = 1 and {U(A,'kb,all')}::int = 80")
+           f"and {U(B,'kb,all')}::int = 75 and {U(A,'kb,ncm')}::int = 1 and {U(A,'kb,all')}::int = 325")
 step('A kendi notuna yorum yazar: kendi yorumu notuna kubbe getirmez', A, f"select public.doc_set('comments', 'tC0', {j({'tt':'note','tid':'tA1','text':'rica ederim','anon':False})})",
-     'ok', f"{U(A,'kb,ncm')}::int = 1 and {U(A,'kb,comments')}::int = 1 and {U(A,'kb,all')}::int = 82")
-step('B aynı nota ikinci yorumu yazar: kişi başına bir kez sayılır', B, f"select public.doc_set('comments', 'tC9', {j({'tt':'note','tid':'tA1','text':'bir daha','anon':False})})",
-     'ok', f"{U(A,'kb,ncm')}::int = 1 and {U(A,'kb,all')}::int = 82 and {U(B,'kb,comments')}::int = 2")
+     'ok', f"{U(A,'kb,ncm')}::int = 1 and {U(A,'kb,comments')}::int = 1 and {U(A,'kb,all')}::int = 340")
+step('B aynı nota ikinci yorumu yazar: her yorum sayılır', B, f"select public.doc_set('comments', 'tC9', {j({'tt':'note','tid':'tA1','text':'bir daha','anon':False})})",
+     'ok', f"{U(A,'kb,ncm')}::int = 2 and {U(A,'kb,all')}::int = 375 and {U(B,'kb,comments')}::int = 2 and {U(B,'kb,all')}::int = 90")
 step('A yorumu beğenir: B +2 kubbe, beğeni sayısı yorumlardan', A,
      f"select public.doc_update('comments', 'tC1', jsonb_build_object('likes', jsonb_build_object({K(A,'comments','tC1')}, true)))",
-     'ok', f"{U(B,'kb,likes')}::int = 1 and {U(B,'kb,ups')}::int = 0 and {U(B,'kb,all')}::int = 56")
+     'ok', f"{U(B,'kb,likes')}::int = 1 and {U(B,'kb,ups')}::int = 0 and {U(B,'kb,all')}::int = 92")
 step('Yorumda ▼ yok', A,
      f"select public.doc_update('comments', 'tC1', jsonb_build_object('downs', jsonb_build_object({K(A,'comments','tC1')}, true)))", 'fail')
-step('B anonim yorum yazar: yazar boş, açık profil değişmez', B,
+step('B anonim yorum yazar: yazar boş, kubbesi hemen sayılır', B,
      f"select public.doc_set('comments', 'tC3', {j({'tt':'note','tid':'tA1','text':'gizli','anon':True})})",
-     'ok', f"{DOC('comments','tC3','by')} = '' and {DOC('comments','tC3','byk')} = {K(B,'comments','tC3')} and {U(B,'kb,comments')}::int = 2 "
-           f"and {P(B,'kb,comments')}::int = 3 and {CTID(B)} = pre", pre=CTID(B))
+     'ok', f"{DOC('comments','tC3','by')} = '' and {DOC('comments','tC3','byk')} = {K(B,'comments','tC3')} and {U(B,'kb,comments')}::int = 3 "
+           f"and {P(B,'kb,comments')}::int = 3 and {U(B,'kb,all')}::int = 107 and {U(A,'kb,ncm')}::int = 3 and {U(A,'kb,all')}::int = 410")
 step('Boş yorum reddedilir', B, f"select public.doc_set('comments', 'tC4', {j({'tt':'note','tid':'tA1','text':'   '})})", 'fail')
 step('Yeri belli olmayan yorum reddedilir', B, f"select public.doc_set('comments', 'tC5', {j({'tt':'xx','tid':'tA1','text':'a'})})", 'fail')
 step('B başkasının notunu silemez', B, "select public.doc_delete('notes', 'tA1')", 'fail')
-step('B ikinci yorumunu siler', B, "select public.doc_delete('comments', 'tC9')", 'ok', f"{U(A,'kb,ncm')}::int = 1")
-step('Not sahibi altındaki yorumu silebilir; adıyla yorumu kalmayan B açık kayıtta sayılmaz, anonim yorumu bakiyede sayılır', A, "select public.doc_delete('comments', 'tC1')",
-     'ok', f"not exists (select 1 from public.docs where col = 'comments' and id = 'tC1') and {U(A,'kb,ncm')}::int = 0 and {P(A,'kb,ncm')}::int = 1")
+step('B ikinci yorumunu siler', B, "select public.doc_delete('comments', 'tC9')", 'ok', f"{U(A,'kb,ncm')}::int = 2")
+step('Not sahibi altındaki yorumu silebilir', A, "select public.doc_delete('comments', 'tC1')",
+     'ok', f"not exists (select 1 from public.docs where col = 'comments' and id = 'tC1') and {U(A,'kb,ncm')}::int = 1 and {P(A,'kb,ncm')}::int = 1")
 step('B yeni yorum yazar', B, f"select public.doc_set('comments', 'tC2', {j({'tt':'note','tid':'tA1','text':'ikinci','anon':False})})", 'ok')
 step('A notunu silince yorumları ve karşılama kubbesi de gider', A, "select public.doc_delete('notes', 'tA1')",
      'ok', f"not exists (select 1 from public.docs where (col = 'notes' and id = 'tA1') or (col = 'comments' and id in ('tC2', 'tC3'))) "
-           f"and {U(B,'kb,comments')}::int = 0 and {P(B,'kb,comments')}::int = 0 and {U(A,'kb,fills')}::int = 0")
+           f"and {U(B,'kb,comments')}::int = 0 and {P(B,'kb,comments')}::int = 0 and {U(A,'kb,fills')}::int = 1")
 
 # ---- yorum sınırı: bir kişi bir derse ya da hocaya en çok 3 yorum (anonim de sayılır); not yorumunda sınır yok
 for i, an in enumerate([False, True, False]):
@@ -322,22 +321,20 @@ step('Not silinince files kaydı da silinir', A, "select public.doc_delete('note
 step('Okuma denetimi için bir not kalır', A, f"select public.doc_set('notes', 'tF2', {j({'cid':'CSE211','title':'Açık başlık','desc':'gizli açıklama','drive':DRIVE,'anon':False})})", 'ok',
      f"{DOC('files','tF2','drive')} = '{DRIVE}'")
 
-# ---- kubbe düzeni (0013): seviye, gece sayımı, HocaÖlçer sınırı
+# ---- kubbe puanları (0014): not 75, notuna gelen her ▲ ve yorum 35, hoca puanı 10 (sınır yok), anonimler hemen
 step('E hesap açar', E, f"select public.doc_set('users', '{E}', {j({'username':'teste','first':'E','last':'E','showName':True})})", 'ok')
-step('E adıyla not paylaşır: +5', E, f"select public.doc_set('notes', 'tE1', {j({'cid':'CSE211','title':'Seviye notu','drive':DRIVE,'anon':False})})",
-     'ok', f"{U(E,'kb,all')}::int = 55 and {U(E,'kb,lv')}::int = 1")
-step('Notuna 10 ▲: seviye 2, ▲ kubbesi ×1,25', None, "select pg_temp.fake_likes('tE1', 10)",
-     'ok', f"{U(E,'kb,lv')}::int = 2 and {U(E,'kb,pi')}::int = 125 and {U(E,'kb,all')}::int = 180 and {P(E,'kb,all')}::int = 180")
-step('E anonim not paylaşır: açık kayıt değişmez', E, f"select public.doc_set('notes', 'tE2', {j({'cid':'CSE211','title':'Gizli not','drive':DRIVE,'anon':True})})",
-     'ok', f"{U(E,'kb,all')}::int = 180 and {P(E,'kb,all')}::int = 185 and {CTID(E)} = pre", pre=CTID(E))
-step('Anonim notuna 20 ▲: açık kayıt değişmez; bakiyede seviye 3, ×1,5', None, "select pg_temp.fake_likes('tE2', 20)",
-     'ok', f"{U(E,'kb,all')}::int = 180 and {P(E,'kb,lv')}::int = 3 and {P(E,'kb,pi')}::int = 450 and {P(E,'kb,all')}::int = 510 and {CTID(E)} = pre", pre=CTID(E))
-step('Gece sayımı: anonim pay açık toplama eklenir, sayaçlar yalnızca adıyla yapılanlar', None, "select yw_private.kb_gece_say()",
-     'ok', f"{U(E,'kb,all')}::int = 510 and {U(E,'kb,term')}::int = 510 and {U(E,'kb,notes')}::int = 1 and {U(E,'kb,ups')}::int = 10 and {U(E,'kb,lv')}::int = 2")
-step('Gün içinde adıyla ▲: açık toplam anında artar, gece payı yerinde', None, "select pg_temp.fake_likes('tE1', 11)",
-     'ok', f"{U(E,'kb,all')}::int = 522 and {P(E,'kb,all')}::int = 525")
-step('HocaÖlçer: 31 puanın ilk 30\'u kubbe kazandırır, açık kayıt değişmez', None, f"select pg_temp.fake_ratings('{E}', 31)",
-     'ok', f"{P(E,'kb,ratings')}::int = 31 and {P(E,'kb,all')}::int = 675 and {U(E,'kb,all')}::int = 522")
+step('E adıyla not paylaşır: +75', E, f"select public.doc_set('notes', 'tE1', {j({'cid':'CSE211','title':'Puan notu','drive':DRIVE,'anon':False})})",
+     'ok', f"{U(E,'kb,all')}::int = 125")
+step('Notuna 10 ▲: her biri 35, çarpan yok', None, "select pg_temp.fake_likes('tE1', 10)",
+     'ok', f"{U(E,'kb,all')}::int = 475 and {P(E,'kb,all')}::int = 475 and {U(E,'kb,ups')}::int = 10")
+step('E anonim not paylaşır: sıralamada hemen', E, f"select public.doc_set('notes', 'tE2', {j({'cid':'CSE211','title':'Gizli not','drive':DRIVE,'anon':True})})",
+     'ok', f"{U(E,'kb,all')}::int = 550 and {P(E,'kb,all')}::int = 550")
+step('Anonim notuna 20 ▲: sıralamada hemen', None, "select pg_temp.fake_likes('tE2', 20)",
+     'ok', f"{U(E,'kb,all')}::int = 1250 and {U(E,'kb,ups')}::int = 30 and (select data->'kb' from public.docs where col = 'users' and id = '{E}') = (select data->'kb' from public.docs where col = 'private' and id = '{E}')")
+step('HocaÖlçer: 31 puanın hepsi 10 kubbe (sınır yok)', None, f"select pg_temp.fake_ratings('{E}', 31)",
+     'ok', f"{P(E,'kb,ratings')}::int = 31 and {P(E,'kb,all')}::int = 1560 and {U(E,'kb,all')}::int = 1560")
+step('Gece sayımı kalktı', None, "select 1",
+     'ok', "to_regclass('yw_private.kb_gece') is null and to_regprocedure('yw_private.kb_gece_say()') is null and to_regprocedure('yw_private.kb_calc(uuid,boolean)') is null")
 
 # ---- bildirim nedeni, ihtar ve dondurma (0013)
 TOK = f"(select token from yw_private.dondurma where uid = '{F}')"
@@ -364,7 +361,7 @@ for nid in ('tS1', 'tS2', 'tS3'):
              f"select public.doc_update('notes', '{nid}', jsonb_build_object('reports', jsonb_build_object({K(who,'notes',nid)}, 1), 'rsn', jsonb_build_object({K(who,'notes',nid)}, '{why}')))", 'ok')
     if nid == 'tS2':
         step('İki not gizlendi: onay isteği yok; gizli not kubbe kazandırmaz', None, "select 1",
-             'ok', f"not exists (select 1 from yw_private.dondurma where uid = '{F}') and {P(F,'kb,notes')}::int = 1 and {U(F,'kb,all')}::int = 50")
+             'ok', f"not exists (select 1 from yw_private.dondurma where uid = '{F}') and {P(F,'kb,notes')}::int = 1 and {U(F,'kb,all')}::int = 125")
 step('Üçüncü gizli not (anonim de sayılır): yöneticiye onay isteği', None, "select 1",
      'ok', f"(select count(*) from yw_private.dondurma where uid = '{F}' and status = 'bekliyor' and notes = array['tS1','tS2','tS3']) = 1 "
            f"and {P(F,'kb,notes')}::int = 0 and {P(F,'kb,all')}::int = 50")
