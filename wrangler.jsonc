@@ -9,5 +9,7 @@
     "binding": "ASSETS",
     "not_found_handling": "none"
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Hesap dondurma onayı e-postası (worker/eposta.js): Email Routing'de doğrulanmış yönetici adresine
+  "send_email": [{ "name": "EPOSTA", "destination_address": "uygaryigt@gmail.com" }]
 }

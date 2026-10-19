@@ -90,6 +90,26 @@ const eq = (a, b, msg) => ok(a === b, `${msg}: beklenen ${JSON.stringify(b)}, ge
   ok(nf.includes('noindex') && nf.includes('XYZ 999') && nf.includes('/#/ders/XYZ999'), '404 sayfası: noindex ve sitede açma bağlantısı');
   ok(!emoji.test(body + nf), 'önizlemede emoji yok');
 
+  console.log('4) hesap dondurma onayı e-postası (worker/eposta.js)');
+  const ep = await import(P('worker', 'eposta.js'));
+  const tok = 'a'.repeat(48);
+  const q = { token: tok, username: 'testf', total: 3, notes: [{ title: 'Sahte 1', cid: 'CSE211', n: 3, rsn: { sahte: 2, spam: 1 } }, { title: 'Gizli', cid: 'MATH131', anon: true, n: 3, rsn: {} }] };
+  const m = ep.onayMetni(q, D.site);
+  eq(m.konu, 'Hesap dondurma onayı: @testf', 'konu');
+  ok(m.govde.includes('https://yediwiki.com/#/onay/' + tok), 'onay bağlantısı');
+  ok(m.govde.includes('- Sahte 1 (CSE 211): 3 bildirim, 2 sahte not, 1 spam'), 'not, bildirim sayısı ve nedenleri: ' + m.govde);
+  ok(m.govde.includes('- Gizli (MATH 131, anonim): 3 bildirim') && m.govde.includes('- 1 not silinmiş'), 'anonim not ve silinen not');
+  ok(!emoji.test(m.konu + m.govde), 'e-postada emoji yok');
+  const raw = ep.mimeIleti({ kimden: ep.ONAY_KIMDEN, kime: ep.ONAY_KIME, konu: m.konu, govde: m.govde, id: 'x1', tarih: new Date(Date.UTC(2026, 9, 19, 22, 0, 0)) });
+  const [mh, bd] = raw.split('\r\n\r\n');
+  ok(mh.startsWith('From: YediWiki <iletisim@yediwiki.com>\r\nTo: <uygaryigt@gmail.com>\r\n') && mh.includes('Message-ID: <x1@yediwiki.com>') && mh.includes('Date: Mon, 19 Oct 2026 22:00:00 +0000'), 'başlıklar: ' + mh);
+  const subj = /Subject: =\?UTF-8\?B\?([^?]+)\?=/.exec(mh);
+  eq(subj && Buffer.from(subj[1], 'base64').toString('utf8'), m.konu, 'konu UTF-8 olarak kodlandı');
+  eq(Buffer.from(bd.replace(/\r\n/g, ''), 'base64').toString('utf8'), m.govde.replace(/\n/g, '\r\n'), 'gövde base64, satır sonları CRLF');
+  ok(bd.split('\r\n').every(l => l.length <= 76), 'gövde satırları 76 karakteri geçmez');
+  const wrc = fs.readFileSync(P('wrangler.jsonc'), 'utf8');
+  ok(wrc.includes('"send_email": [{ "name": "EPOSTA", "destination_address": "' + ep.ONAY_KIME + '" }]'), 'e-posta bağlaması yalnızca yöneticinin adresine');
+
   console.log(`\n${pass} geçti, ${fail} kaldı`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log('  ✗ beklenmeyen hata: ' + (e && e.stack || e)); process.exit(1); });

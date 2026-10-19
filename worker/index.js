@@ -1,10 +1,13 @@
 // YediWiki Worker. Statik dosyalar (dist/) doğrudan sunulur; Worker yalnızca dosyası olmayan adreslerde çalışır:
 //   /ders/<kod>  index.html'i dersin başlığı, açıklaması, canonical bağlantısı ve önizlemesiyle (not başlıkları) yazarak döner.
 //                Arama motorları dersi bu adreste bulur; uygulama da aynı adresten dersi açar (app.js pathRoute).
+//   /api/dondurma  hesap dondurma onayı e-postası (yalnızca POST, veritabanından; eposta.js).
 //   diğerleri    404 sayfası.
 // Notlar Supabase'den herkese açık anahtarla okunur (okuma zaten herkese açık); sonuç her veri merkezinde 15 dakika önbellekte durur.
+import { EmailMessage } from 'cloudflare:email';
 import D from '../build/seo-data.json';
 import { parseCode, courseOf, courseMeta, courseBody, visibleNotes, coursePath, notFoundHtml } from './seo.js';
+import { onayMetni, mimeIleti, ONAY_KIME, ONAY_KIMDEN } from './eposta.js';
 
 const EDGE_TTL = 900;
 const SEC_HEADERS = {
@@ -17,6 +20,7 @@ const SEC_HEADERS = {
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    if (url.pathname === '/api/dondurma') return onayEpostasi(req, env);
     if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('İzin verilmeyen istek', { status: 405, headers: { Allow: 'GET, HEAD' } });
     const m = /^\/ders\/([^/]*)\/?$/.exec(url.pathname);
     if (m) return coursePage(req, env, ctx, url, m[1]);
@@ -91,4 +95,30 @@ async function readNotes(id) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/* Hesap dondurma onayı: veritabanı (pg_net) yalnızca belirteç gönderir. Ayrıntı belirteçle Supabase'den bir kez okunur
+   (dondurma_eposta; ikinci okumada boş döner), e-posta yöneticinin doğrulanmış adresine gider. Belirteci bilmeyen
+   bu adrese istek gönderse de e-posta gitmez. */
+async function onayEpostasi(req, env) {
+  const json = (o, status) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+  if (req.method !== 'POST') return json({ ok: false }, 405);
+  let t = '';
+  try { t = String(((await req.json()) || {}).t || ''); } catch (e) { /* boş */ }
+  if (!/^[0-9a-f]{48}$/.test(t)) return json({ ok: false }, 400);
+  if (!D.sb || !D.sb.url || !D.sb.key || !env.EPOSTA) return json({ ok: false }, 503);
+  const r = await fetch(D.sb.url + '/rest/v1/rpc/dondurma_eposta', {
+    method: 'POST', headers: { apikey: D.sb.key, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ p_token: t })
+  });
+  if (!r.ok) return json({ ok: false }, 502);
+  const q = await r.json().catch(() => null);
+  if (!q || q.token !== t) return json({ ok: false }, 404);
+  const { konu, govde } = onayMetni(q, D.site);
+  try {
+    await env.EPOSTA.send(new EmailMessage(ONAY_KIMDEN, ONAY_KIME, mimeIleti({ kimden: ONAY_KIMDEN, kime: ONAY_KIME, konu, govde, id: crypto.randomUUID() })));
+  } catch (e) {
+    console.error('onay e-postası gönderilemedi', e && e.message);
+    return json({ ok: false }, 500);
+  }
+  return json({ ok: true }, 200);
 }

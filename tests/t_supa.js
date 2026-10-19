@@ -211,7 +211,7 @@ async function signup(t, be, local, prof) {
     }
     const n1 = await share(A, { code: 'CSE211', title: 'Bagli liste ozeti', anon: false });
     { const d = await doc(be, 'notes', n1); ok(d && d.by === aid && !d.byk, 'adıyla not: yazar kimliği'); }
-    await A.until(() => A.text('[data-r=kubbechip] b') === '75', 'kubbe 75');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '55', 'kubbe 55 (not 5)');
     const usersCtid = async uid => (await q1(be, "select ctid::text as c from public.docs where col = 'users' and id = $1", [uid])).c;
     const ct0 = await usersCtid(aid);
     A.$('[data-anon]') ;
@@ -219,7 +219,7 @@ async function signup(t, be, local, prof) {
     { const d = await doc(be, 'notes', n2);
       ok(d && d.by === '' && d.anon === true && d.byk === A.ev(`pk('notes', ${JSON.stringify(n2)})`), 'anonim not: yazar boş, anahtar tarayıcıdakiyle aynı'); }
     eq(await usersCtid(aid), ct0, 'anonim not açık profilde değişiklik yapmadı');
-    await A.until(() => A.text('[data-r=kubbechip] b') === '100', 'bakiye 100 (anonim not dahil)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '60', 'bakiye 60 (anonim not dahil)');
     ok(/\(sen\)/.test(A.text('[data-r=meta]')), 'anonim notunda "(sen)" yalnızca sana');
     ok(!!A.$('[data-g=del-note]') && !A.$('[data-g=report-note]'), 'kendi anonim notunu silebilir, bildiremez');
     await A.go('#/katkilarim');
@@ -321,18 +321,18 @@ async function signup(t, be, local, prof) {
     const k2 = B.ev(`pk('notes', ${JSON.stringify(n2)})`);
     { const d = await doc(be, 'notes', n2); ok(d.likes && d.likes[k2] === true && !d.likes[bid] && !(d.downs && d.downs[k2]), '▲ B\'nin bu nottaki takma adıyla'); }
     eq(await usersCtid(aid), ct0, 'anonim nota ▲ de açık profili değiştirmedi');
-    await A.until(() => A.text('[data-r=kubbechip] b') === '101', 'A\'nın bakiyesi canlı güncellendi (101: ▲ 1 kubbe)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '70', 'A\'nın bakiyesi canlı güncellendi (70: ▲ 10 kubbe)');
     await B.until(() => B.$('#main .vote.is-up') && B.text('#main .vote .vnum') === '1', 'B ▲ verdiğini görüyor');
     B.$('#main [data-g=vote-down]').click(); await sleep(300);
     { const d = await doc(be, 'notes', n2); ok(d.downs && d.downs[k2] === true && d.likes[k2] === null, '▼ verince sunucuda ▲ kalktı'); }
-    await A.until(() => A.text('[data-r=kubbechip] b') === '100', '▼ kubbe vermez, ▲ kubbesi geri gitti (100)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '60', '▼ kubbe vermez, ▲ kubbesi geri gitti (60)');
     await B.until(() => B.$('#main .vote.is-down') && B.text('#main .vote .vnum') === '-1', 'B ▼ verdiğini görüyor');
     B.$('#main [data-g=vote-up]').click(); await sleep(300);
-    await A.until(() => A.text('[data-r=kubbechip] b') === '101', 'yeniden ▲ (101)');
+    await A.until(() => A.text('[data-r=kubbechip] b') === '70', 'yeniden ▲ (70)');
     await B.go('#/not/' + n1); await sleep(150);
     B.$('#main [data-g=vote-up]').click(); await sleep(300);
-    await A.until(() => A.text('[data-r=kubbechip] b') === '102', 'adıyla nota ▲ (102)');
-    { const u = await doc(be, 'users', aid); eq(u.kb.all, 76, 'açık kubbe: hesap + adıyla not + ▲'); eq(u.kb.ups, 1, 'açık profilde ▲ sayısı'); eq(u.kb.likes, 0, 'yorum beğenisi yok'); }
+    await A.until(() => A.text('[data-r=kubbechip] b') === '80', 'adıyla nota ▲ (80)');
+    { const u = await doc(be, 'users', aid); eq(u.kb.all, 65, 'açık kubbe: hesap + adıyla not + ▲'); eq(u.kb.ups, 1, 'açık profilde ▲ sayısı'); eq(u.kb.likes, 0, 'yorum beğenisi yok'); }
     await A.go('#/not/' + n1); await sleep(150);
     A.$('#main [data-g=vote-down]').click(); await sleep(200);
     await A.until(() => /Kendi notuna oy veremezsin/.test(A.text('#toasts')), 'kendi notuna ▼ verilemez');
@@ -447,9 +447,14 @@ async function signup(t, be, local, prof) {
     // B, A'nın adıyla notunu bildirir; yönetici temizler
     await B.go('#/not/' + n1); await sleep(150);
     B.ev(`reportItem('notes', ${JSON.stringify(n1)})`); await sleep(60);
+    ok(B.$('.modal [data-ok]').disabled && B.$$('.modal input[name=rsn]').length === 3, 'neden seçilmeden Bildir kapalı; notta üç neden');
+    B.$('.modal input[name=rsn][value=sahte]').click(); await sleep(20);
+    ok(!B.$('.modal [data-ok]').disabled, 'neden seçilince Bildir açılır');
     B.$('.modal [data-ok]').click(); await sleep(300);
+    { const d = await doc(be, 'notes', n1), k = B.ev(`pk('notes', ${JSON.stringify(n1)})`); ok(d.rsn && d.rsn[k] === 'sahte' && typeof d.reports[k] === 'number', 'bildirim nedeni bildirenin takma adıyla'); }
     await C.go('#/moderasyon');
-    await C.until(() => /1 bildirim/.test(C.text('#main')), 'bildirim moderasyonda');
+    await C.until(() => /1 bildirim \(1 sahte\)/.test(C.text('#main')), 'bildirim moderasyonda, nedeniyle');
+    await C.until(() => /Dondurma onayı bekleyenler/.test(C.text('[data-r=frz]')) && /Bekleyen istek yok/.test(C.text('[data-r=frz]')), 'Moderasyon\'da dondurma onayları (boş)');
     C.$('#main [data-g=mod-ok]').click(); await sleep(400);
     await C.until(() => /Bildirilen içerik yok/.test(C.text('#main')), 'bildirim temizlendi');
     noErr(C, 'yönetici');
@@ -716,6 +721,38 @@ async function signup(t, be, local, prof) {
       ok(!cl2.st.calls.slice(n1).some(c => c[0] === 'select' && c[1].gt.length), 'başka projenin önbelleği kullanılmadı');
       w.close();
       await be.pool.query("delete from public.docs where col = 'notes' and id like 'pencere%'");
+    }
+
+    console.log('13) hesap dondurma: e-postadaki onay bağlantısı, Moderasyon, donuk hesap');
+    {
+      await be.pool.query('insert into yw_private.dondurma (uid, notes) values ($1, $2)', [aid, [n1, n2]]);
+      const tok = (await q1(be, 'select token from yw_private.dondurma where uid = $1', [aid])).token;
+      const A3 = await tab(be, { name: 'A (dondurma)', session: A.cl.st.session, hash: '#/' });
+      const C3 = await tab(be, { name: 'yönetici (dondurma)', session: C.cl.st.session, hash: '#/moderasyon' });
+      await A3.until(() => A3.ev('myAcc() && myAcc().username') === 'aliveli', 'A yeniden açıldı');
+      const O = await tab(be, { name: 'onay', hash: '#/onay/' + tok });
+      await O.until(() => /@aliveli/.test(O.text('#main')) && O.$$('#main .frz-notes li').length === 2, 'girişsiz onay sayfası: kim ve hangi notlar');
+      ok(O.$$('#main .frz-notes li').some(li => /MATH 131, anonim, 0 bildirim/.test(li.textContent)), 'anonim not da listede: ' + O.text('#main .frz-notes'));
+      ok(!!O.$('#main [data-g=frz-karar][data-v="1"]') && !!O.$('#main [data-g=frz-karar][data-v="0"]'), 'onay sayfasında Hesabı dondur ve Dondurma');
+      const O2 = await tab(be, { name: 'onay yanlış', hash: '#/onay/' + 'b'.repeat(48) });
+      await O2.until(() => /süresi dolmuş ya da geçersiz/.test(O2.text('#main')), 'geçersiz belirteç');
+      await C3.until(() => C3.ev('S.owner') === true && /@aliveli/.test(C3.text('[data-r=frz]')) && C3.$$('[data-r=frz] [data-g=frz-karar]').length === 2, 'bekleyen istek Moderasyon\'da');
+      O.$('#main [data-g=frz-karar][data-v="1"]').click(); await sleep(60);
+      O.$('.modal [data-ok]').click();
+      await O.until(() => /Hesap donduruldu/.test(O.text('#main')) && !O.$('#main [data-g=frz-karar]'), 'bağlantıyla donduruldu, düğmeler kalktı');
+      await A3.until(() => A3.ev('isFrozen(S.me)') && /Hesabın donduruldu/.test(A3.text('#banner')), 'donuk hesapta uyarı');
+      ok(A3.ev('needAcc()') === false && /Hesabın donduruldu/.test(A3.text('#toasts')), 'donuk hesap oy veremez, yorum yazamaz');
+      eq(await A3.ev(`S.db.doc('users/' + S.me).update({ kiyafet: 'mont' }).then(() => 'yazıldı', e => /donduruldu/.test(e.message) ? 'engellendi' : e.message)`), 'engellendi', 'sunucu da yazdırmaz');
+      await C3.until(() => !C3.ev(`ranking("all").some(x => x.uid === ${JSON.stringify(aid)})`), 'donuk hesap sıralamada yok');
+      ok(!A3.ev('ranking("all").some(x => x.uid === S.me)'), 'kendi ekranında da sıralamada yok');
+      await C3.go('#/'); await C3.go('#/moderasyon');
+      await C3.until(() => /Dondurulan hesaplar/.test(C3.text('[data-r=frz]')) && /Bekleyen istek yok/.test(C3.text('[data-r=frz]')), 'Moderasyon: dondurulan hesaplar');
+      C3.$('[data-r=frz] [data-g=frz-kaldir]').click(); await sleep(60);
+      C3.$('.modal [data-ok]').click();
+      await A3.until(() => !A3.ev('isFrozen(S.me)') && !/Hesabın donduruldu/.test(A3.text('#banner')), 'yönetici dondurmayı kaldırdı');
+      await C3.until(() => !/Dondurulan hesaplar/.test(C3.text('[data-r=frz]')), 'liste boşaldı');
+      noErr(O, 'onay sayfası'); noErr(O2, 'geçersiz onay'); noErr(C3, 'yönetici dondurma'); noErr(A3, 'donuk hesap');
+      for (const x of [O, O2, A3, C3]) x.close();
     }
   } catch (e) {
     fail++; console.log('  ✗ beklenmeyen hata: ' + (e && e.stack || e));

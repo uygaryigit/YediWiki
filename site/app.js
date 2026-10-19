@@ -37,7 +37,13 @@ function mailOf(raw) {
   return v + MAIL_DOMAIN;
 }
 const mailLocal = mail => String(mail || '').replace(MAIL_DOMAIN, '');
-const KUBBE = { signup: 50, note: 25, photos: 10, comment: 5, rating: 10, grade: 5, dist: 15, like: 2, up: 1, fill: 10 };   // up: notuna gelen her ▲
+/* Kubbe: paylaşmak az, notun gördüğü ilgi çok kazandırır (sunucuda yw_private.kb_calc ile aynı). up: notuna gelen her ▲,
+   ncm: notuna yorum yazan her kişi (not başına bir kez, kendi yorumun sayılmaz), rating: HocaÖlçer puanı (ilk rateCap hoca). ▼ kubbe vermez, düşürmez. */
+const KUBBE = { signup: 50, note: 5, up: 10, ncm: 5, comment: 2, like: 2, rating: 5, rateCap: 30, fill: 10 };
+/* Paylaşımcı seviyesi notlarına gelen toplam ▲ ile yükselir; ▲ ve yorum kubbesi seviyenin çarpanıyla (x) çarpılır */
+const KB_LV = [{ min: 0, x: 1, ad: 'Çaylak' }, { min: 10, x: 1.25, ad: 'Notçu' }, { min: 30, x: 1.5, ad: 'Usta notçu' }, { min: 100, x: 2, ad: 'Efsane' }];
+const kbLevel = ups => KB_LV.reduce((lv, l, i) => (ups >= l.min ? i + 1 : lv), 1);
+const kbX = x => String(x).replace('.', ',');
 const AV_EMOJI = ['🦉', '🦊', '🐼', '🐧', '🦁', '🐢', '🐝', '🦄', '🐳', '🦖', '🐙', '🦕', '🌵', '🍀', '⚡', '🎧', '📚', '☕', '🧩', '🚀', '🎸', '🧠', '🛰️', '🥐'];
 const AV_COLORS = ['#FFE14D', '#9DB0FF', '#8ED6B2', '#FFB4A2', '#C9B6FF', '#9AD8FF', '#F7C1E0', '#E3E7F2'];
 const RARITY = {
@@ -708,37 +714,60 @@ function itemAvSrc(id) {
 }
 function currentTk(now = new Date()) { const l = termList(now); return l.length ? l[0] : 0; }
 function termStartMs(tk) { const y = Math.floor(tk / 10), k = tk % 10; return (k === 1 ? new Date(y, 8, 1) : k === 2 ? new Date(y + 1, 1, 1) : new Date(y + 1, 6, 1)).getTime(); }
+/* Paylaşımcı seviyesi: adı, çarpanı ve bir sonraki seviyeye kalan ▲ */
+function levelHtml(k, cls = '') {
+  const lv = clamp(k.lv || kbLevel(k.ups), 1, KB_LV.length), cur = KB_LV[lv - 1], nx = KB_LV[lv];
+  return `<div class="kb-lv${cls ? ' ' + cls : ''}"><span class="kb-lv-b">Seviye ${lv}</span><b>${esc(cur.ad)}</b><span class="kb-lv-x" title="▲ ve yorum kubbesi çarpanı">×${kbX(cur.x)}</span>`
+    + (nx ? `<span class="kb-lv-bar" aria-hidden="true"><i data-w="${Math.round(100 * (k.ups - cur.min) / (nx.min - cur.min))}"></i></span><span class="kb-lv-n">${esc(nx.ad)} için notlarına ${nx.min - k.ups} ${gl('up', 'gl-in')} daha (×${kbX(nx.x)})</span>`
+      : '<span class="kb-lv-n">En üst seviye</span>') + '</div>';
+}
 function kubbeStats() {
   return memoized('kubbe', () => {
-    const m = new Map(), start = termStartMs(currentTk());
-    const ent = uid => { let o = m.get(uid); if (!o) { o = ZK(); m.set(uid, o); } return o; };
-    const add = (uid, pts, at, kind) => { if (!uid || !pts) return; const o = ent(uid); o.all += pts; if (at && at >= start) o.term += pts; if (kind) o[kind]++; };
-    for (const [uid, u] of S.users) { const o = ent(uid), b = Math.max(0, +u.bonus || 0); o.all += b; if (u.at && u.at >= start) o.term += Math.min(b, KUBBE.signup); }
-    for (const n of S.notes.values()) {
-      if (!n || isHidden(n)) continue;
-      const photos = Array.isArray(n.photos) ? n.photos.length : 0;
-      add(n.by, KUBBE.note + (photos ? KUBBE.photos : 0), n.at, 'notes');
-      const up = likeCount(n); if (up) { add(n.by, up * KUBBE.up, n.at); ent(n.by).ups += up; }   // ▼ kubbe almaz
-    }
+    const start = termStartMs(currentTk()), acc = new Map(), cmBy = new Map();
+    const ent = uid => { let o = acc.get(uid); if (!o) { o = { n: 0, nT: 0, up: 0, upT: 0, cm: 0, cmT: 0, c: 0, cT: 0, lk: 0, lkT: 0, r: [], f: 0, fT: 0 }; acc.set(uid, o); } return o; };
     for (const c of S.comments.values()) {
-      if (!c || isHidden(c)) continue;
-      add(c.by, KUBBE.comment, c.at, 'comments');
-      const lk = likeCount(c); if (lk) { add(c.by, lk * KUBBE.like, c.at); ent(c.by).likes += lk; }
+      if (!c || isHidden(c) || !c.by) continue;
+      const o = ent(c.by), lk = likeCount(c), t = (c.at || 0) >= start;
+      o.c++; o.lk += lk; if (t) { o.cT++; o.lkT += lk; }
+      if (c.tt === 'note') { let s = cmBy.get(c.tid); if (!s) cmBy.set(c.tid, s = new Set()); s.add(c.by); }
     }
-    for (const h of S.hocas.values()) for (const r of ratingsOf(h)) add(r.key, KUBBE.rating, r.at, 'ratings');
-    for (const r of S.requests.values()) if (r && r.done && r.doneBy && r.doneBy !== r.by) add(r.doneBy, KUBBE.fill, r.doneAt || r.at, 'fills');
-    for (const c of S.courses.values()) {
+    for (const n of S.notes.values()) {
+      if (!n || isHidden(n) || !n.by) continue;
+      const o = ent(n.by), up = likeCount(n), s = cmBy.get(n.id), cm = s ? s.size - (s.has(n.by) ? 1 : 0) : 0;   // ▼ kubbe almaz
+      o.n++; o.up += up; o.cm += cm;
+      if ((n.at || 0) >= start) { o.nT++; o.upT += up; o.cmT += cm; }
+    }
+    for (const h of S.hocas.values()) for (const r of ratingsOf(h)) ent(r.key).r.push(r.at);
+    for (const r of S.requests.values()) {
+      const n = r && S.notes.get(r.nid);
+      if (r && r.done && r.doneBy && r.doneBy !== r.by && n && !isHidden(n)) { const o = ent(r.doneBy); o.f++; if ((r.doneAt || r.at || 0) >= start) o.fT++; }
+    }
+    for (const uid of S.users.keys()) ent(uid);
+    const m = new Map();
+    for (const [uid, o] of acc) {
+      const u = S.users.get(uid), b = Math.max(0, +(u && u.bonus) || 0), lv = kbLevel(o.up), x = KB_LV[lv - 1].x;
+      const pi = Math.floor((o.up * KUBBE.up + o.cm * KUBBE.ncm) * x), rT = o.r.filter(a => a >= start).length;
+      const rp = Math.min(o.r.length, KUBBE.rateCap) * KUBBE.rating, rpT = Math.min(rT, Math.max(0, KUBBE.rateCap - (o.r.length - rT))) * KUBBE.rating;
+      m.set(uid, Object.assign(ZK(), {
+        all: b + o.n * KUBBE.note + pi + o.c * KUBBE.comment + o.lk * KUBBE.like + rp + o.f * KUBBE.fill,
+        term: (u && u.at && u.at >= start ? Math.min(b, KUBBE.signup) : 0) + o.nT * KUBBE.note + Math.floor((o.upT * KUBBE.up + o.cmT * KUBBE.ncm) * x)
+          + o.cT * KUBBE.comment + o.lkT * KUBBE.like + rpT + o.fT * KUBBE.fill,
+        notes: o.n, ups: o.up, ncm: o.cm, pi, lv, comments: o.c, likes: o.lk, ratings: o.r.length, fills: o.f
+      }));
     }
     return m;
   });
 }
-const ZK = () => ({ all: 0, term: 0, notes: 0, comments: 0, ratings: 0, grades: 0, likes: 0, ups: 0, fills: 0 });   // likes: yorum beğenisi, ups: not ▲
-/* Sitede kubbe sunucuda sayılır. users.kb herkese açık: yalnızca adla yapılanlar (sıralama). private.kb yalnızca sahibine:
-   hoca puanları ve anonim paylaşımlar dahil her şey (bakiye). Böylece puanlar ve anonim paylaşımlar kimseye bağlanamaz. */
+/* likes: yorum beğenisi, ups: not ▲, ncm: notlarına yorum yazan kişi, pi: ▲ ve yorum kubbesi (çarpanla), lv: paylaşımcı seviyesi */
+const ZK = () => ({ all: 0, term: 0, notes: 0, comments: 0, ratings: 0, grades: 0, likes: 0, ups: 0, fills: 0, ncm: 0, pi: 0, lv: 1 });
+/* Sitede kubbe sunucuda sayılır. private.kb yalnızca sahibine: her şey, anında (bakiye). users.kb herkese açık (sıralama):
+   adıyla yapılanlar anında; anonim paylaşımların ve hoca puanlarının kubbesi all ve term'e her gece toplu eklenir, böylece
+   hangi anonim paylaşımın ya da puanın kime ait olduğu anlaşılmaz. Sayaçlar (notes, comments...) yalnızca adıyla yapılanlar. */
 function kbNorm(k) {
   const o = ZK();
   if (!k || typeof k !== 'object') return o;
   for (const f of Object.keys(o)) o[f] = Math.max(0, +k[f] || 0);
+  if (!o.lv) o.lv = kbLevel(o.ups);
   if (!(+k.ts >= termStartMs(currentTk()) - 2 * 864e5)) o.term = 0;   // yeni dönem başladı, sunucu henüz yeniden saymadı
   return o;
 }
@@ -746,13 +775,15 @@ const kbPub = uid => kbNorm((userOf(uid) || {}).kb);
 const kubbeOf = uid => (S.supa ? (uid === S.me && S.priv && S.priv.kb ? kbNorm(S.priv.kb) : kbPub(uid)) : (kubbeStats().get(uid) || ZK()));
 const rankVal = (uid, kind) => (S.supa ? kbPub(uid)[kind] : kubbeOf(uid)[kind]);
 const spentOf = uid => { const u = userOf(uid); return Math.max(0, +(u && u.spent) || 0); };
+/* Dondurulan hesap (sunucu kb.donuk yazar): yazamaz, sıralamada görünmez */
+const isFrozen = uid => { const u = userOf(uid); return !!(S.supa && u && u.kb && +u.kb.donuk > 0); };
 /* Hediye kubbe (yönetimin verdiği): bakiyeye eklenir, harcanır; sıralamaya ve "kazandın" toplamına sayılmaz */
 const giftOf = uid => { const u = userOf(uid); return Math.max(0, +(u && u.gift) || 0); };
 const balanceOf = uid => Math.max(0, kubbeOf(uid).all + giftOf(uid) - spentOf(uid));
 function ranking(kind) {
   return memoized('rank-' + kind, () => {
     const out = [];
-    for (const [uid, u] of S.users) if (u && u.role !== 'admin') out.push({ uid, u, val: rankVal(uid, kind) });
+    for (const [uid, u] of S.users) if (u && u.role !== 'admin' && !isFrozen(uid)) out.push({ uid, u, val: rankVal(uid, kind) });
     out.sort((a, b) => b.val - a.val || String(a.u.username || '').localeCompare(String(b.u.username || ''), 'tr'));
     out.forEach((x, i) => { x.rank = i + 1; });
     return out;
@@ -1301,6 +1332,7 @@ function detectTitle(raw) {
 }
 function needAcc() {
   if (!guardWrite()) return false;
+  if (S.me && isFrozen(S.me)) { toast('Hesabın donduruldu: not paylaşamaz, oy veremez, yorum yazamazsın.', 'err'); return false; }
   if (hasAcc()) return true;
   openAuth({ reason: true });
   return false;
@@ -1333,15 +1365,37 @@ function voteHtml(n, { big = false } = {}) {
     + `<button type="button" class="vbtn vdown" data-g="vote-down" data-id="${id}" aria-pressed="${v < 0}" aria-label="Aşağı oy: işe yaramadı" title="İşe yaramadı">${icon('vdown')}</button></span>`;
 }
 const voteBadge = n => { const sc = voteScore(n); return sc ? `<span class="vscore${sc < 0 ? ' neg' : ''}">${gl(sc > 0 ? 'up' : 'down')}${Math.abs(sc)}</span>` : ''; };
+/* Bildirimin nedeni (rsn, bildirenin anahtarıyla); sahte not yalnızca notlarda */
+const RSN = { sahte: { ad: 'Sahte, boş ya da alakasız not', kisa: 'sahte' }, spam: { ad: 'Spam ya da reklam', kisa: 'spam' }, uygunsuz: { ad: 'Hakaret, kişisel bilgi ya da telifli içerik', kisa: 'uygunsuz' } };
+const rsnTxt = c => Object.keys(c || {}).filter(k => RSN[k] && c[k] > 0).map(k => `${c[k]} ${RSN[k].kisa}`).join(', ');
+function reportWhy(o) {
+  const ok = +((o && o.ok) || 0), r = (o && o.rsn) || {}, c = {};
+  for (const [k, at] of Object.entries((o && o.reports) || {})) if (typeof at === 'number' && at > ok && RSN[r[k]]) c[r[k]] = (c[r[k]] || 0) + 1;
+  return rsnTxt(c);
+}
+function reasonModal(col) {
+  const keys = col === 'notes' ? ['sahte', 'spam', 'uygunsuz'] : ['spam', 'uygunsuz'];
+  return new Promise(resolve => {
+    let done = false;
+    const m = openModal({ title: col === 'notes' ? 'Notu bildir' : 'Yorumu bildir', body: `<p class="muted">Neden bildiriyorsun? ${REPORT_LIMIT} bildirim alan içerik otomatik gizlenir ve moderatör inceler.${col === 'notes' && S.supa ? ' Notlarından üçü gizlenen hesap, yönetici onaylarsa dondurulur.' : ''}</p>
+      <div class="rsn-opts" role="radiogroup" aria-label="Bildirimin nedeni">${keys.map(k => `<label class="rsn-opt"><input type="radio" name="rsn" value="${k}"><span>${esc(RSN[k].ad)}</span></label>`).join('')}</div>
+      <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Vazgeç</button><button type="button" class="btn btn-danger" data-ok disabled>Bildir</button></div>` });
+    const okb = m.el.querySelector('[data-ok]');
+    m.el.addEventListener('change', () => { okb.disabled = !m.el.querySelector('input[name=rsn]:checked'); });
+    m.onClose = () => { if (!done) { done = true; resolve(''); } };
+    okb.addEventListener('click', () => { const r = m.el.querySelector('input[name=rsn]:checked'); if (!r) return; done = true; m.close(); resolve(r.value); });
+  });
+}
 async function reportItem(col, id) {
   const o = (col === 'notes' ? S.notes : S.comments).get(id);
   if (!o || !okId(id)) return;
   if (isMine(o)) { toast('Kendi paylaşımını bildiremezsin; istersen silebilirsin.'); return; }
   if (reportedByMe(o)) { toast('Bu içeriği zaten bildirdin.'); return; }
   if (!needAcc()) return;
-  const ok = await confirmModal({ title: 'Uygunsuz içerik bildir', text: 'Hakaret, kişisel bilgi, telifli kitap ya da alakasız içerik mi? Üç bildirim alan içerik otomatik gizlenir ve moderatör inceler.', ok: 'Bildir', danger: true });
-  if (!ok) return;
-  write(() => S.db.doc(col + '/' + id).update({ reports: { [pk(col, id)]: Date.now() } }), 'Bildirimin alındı, teşekkürler.');
+  const why = await reasonModal(col);
+  if (!why) return;
+  const k = pk(col, id);
+  write(() => S.db.doc(col + '/' + id).update({ reports: { [k]: Date.now() }, rsn: { [k]: why } }), 'Bildirimin alındı, teşekkürler.');
 }
 async function deleteNote(id) {
   const n = S.notes.get(id);
@@ -1416,6 +1470,8 @@ const G = {
   'welcome': () => { if (hasAcc()) openWelcome(); else openAuth(); },
   'edit-hoca': id => openEditHoca(id),
   'mod-ok': (id, el) => modApprove(el.dataset.col, id),
+  'frz-karar': (id, el) => freezeDecide(id, el.dataset.v === '1'),
+  'frz-kaldir': id => freezeLift(id),
   'mod-del': (id, el) => (el.dataset.col === 'notes' ? deleteNote(id) : deleteComment(id)),
   'unrate': id => removeRating(id),
 };
@@ -3369,8 +3425,9 @@ function openUserCard(uid) {
       ${figSvg(uid, u, { cls: 'uc-fig' })}</div>
     <div class="uc-ranks">${rank(rankOf(uid, 'all'), 'Tüm zamanlar')}${rank(rankOf(uid, 'term'), termLabel(currentTk()))}</div>${deptLineHtml(uid, 'uc-dept')}
     <div class="uc-stats">${stat(k.notes, 'not', 'note')}${stat(k.comments, 'yorum', 'bubble')}${S.supa && uid !== S.me ? '' : stat(k.ratings, 'hoca puanı', 'star')}</div>
+    ${k.notes || k.ups ? levelHtml(k, 'uc-lv') : ''}${isFrozen(uid) ? '<p class="uc-frozen">Bu hesap donduruldu.</p>' : ''}
     ${eb.length ? `<div class="uc-bdgs"><h3>Rozetler <span class="count">${eb.length}</span></h3><ul>${eb.map(b => `<li title="${esc(b.d)}"><span class="bdg-medal"><span class="bdg-g">${gl(b.g)}</span></span><b>${esc(b.ad)}</b></li>`).join('')}</ul></div>` : ''}
-    <p class="fine">${S.supa ? 'Anonim paylaşımlar ve hoca puanları bu kartta görünmez.' : 'Anonim paylaşımlar bu kartta gösterilmez.'}</p>` });
+    <p class="fine">${S.supa ? 'Anonim paylaşımlar ve hoca puanları kubbeye ve sıralamaya sayılır (her gece toplu), bu kartta ayrıca gösterilmez.' : 'Anonim paylaşımlar bu kartta gösterilmez.'}</p>` });
   applyWidths(m.el);
 }
 async function setAvatarItem(id) {
@@ -3519,7 +3576,7 @@ function commentsBlock(el, { tt, tid, ctx = '' }) {
 let lastGate = null, curKey = null, curWait = false, curUrl = '';
 // Herkese açık sayfalar: ana sayfa, Hakkında ve ders önizlemesi (giriş yapmamışa notların başlıkları görünür; nota, yoruma, hocalara girişle)
 // girişsiz de gezilir: notların içi kilitli (not sayfası bulanık), yazma işlemleri giriş ister (needAcc)
-const PUBLIC = new Set(['', 'hakkinda', 'ders', 'not', 'dersler', 'ara', 'hocaolcer', 'hoca', 'istekler']);
+const PUBLIC = new Set(['', 'hakkinda', 'ders', 'not', 'dersler', 'ara', 'hocaolcer', 'hoca', 'istekler', 'onay']);
 async function tryLogin(mail, pw) {
   const em = String(mail || '').trim().toLowerCase();
   for (const [uid, u] of S.users) {
@@ -3665,6 +3722,7 @@ function renderChrome() {
   else if (S.subErr === 'live') html = '<div class="banner"><div class="wrap">Canlı bağlantı koptu, yeniden bağlanılıyor. Yeni paylaşımlar birazdan görünür.</div></div>';
   else if (S.subErr === 'revoked') html = '<div class="banner err"><div class="wrap">Bu sayfaya erişimin değişti. Sayfayı yenile.</div></div>';
   else if (S.subErr) html = '<div class="banner err"><div class="wrap">Bağlantı kesildi, veriler güncellenmiyor olabilir. Sayfayı yenile.</div></div>';
+  else if (S.me && isFrozen(S.me)) html = '<div class="banner err"><div class="wrap">Hesabın donduruldu: notlarından üçü bildirimle gizlendi ve yönetici onayladı. Not paylaşamaz, oy veremez, yorum yazamazsın. İtiraz için <a href="mailto:iletisim@yediwiki.com">iletisim@yediwiki.com</a></div></div>';
   else if (S.readOnly) html = '<div class="banner"><div class="wrap">' + (S.roWhy === 'nouser'
       ? 'Sayfayı Claude hesabınla açmamışsın gibi görünüyor, bu yüzden yalnızca görüntüleyebiliyorsun. Davetin geldiği e-postayla claude.ai’ye giriş yap ve sayfayı davet linkinden yeniden aç.'
       : 'Claude hesabın bu sayfada yalnızca görüntüleme izninde görünüyor. Site sahibi seni Editor olarak davet ettiyse sayfayı yenile; düzelmezse davetin gittiği e-postayla giriş yaptığını kontrol et.') + '</div></div>';
@@ -5068,7 +5126,7 @@ function tourSteps(u) {
     { go: '#/', sel: '#main .hero .search', t: 'Her şey buradan başlar', say: 'Ders kodunu (CSE 211 gibi) ya da hocanın adını buraya yaz, listeden seç. Aradığın ders ya da hoca hemen önüne gelir.' },
     { go: '#/dersler', sel: '#main .toolbar', t: 'Bölümünün ders planı', say: 'Buradan bölümünü seç: dönem dönem bütün derslerin çıkar. Bitirdiğin dersleri ✓ ile işaretlersen ne kadar kaldığını da görürsün.' },
     cid ? { go: '#/ders/' + cid, sel: ['#main [data-r=myc]', '#main .head-actions'], t: 'Derslerini ekle', say: 'Her dersin kendi sayfası var: notlar, yorumlar ve hocalar. “Derslerime ekle”ye basarsan o derse yeni not düşünce ilk sen görürsün.' } : null,
-    { go: '#/paylas', sel: ['#main [data-r=gpick]', '#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `${gdCfg() ? '“Drive’dan seç”e bas, notunu Drive’ından seç; paylaşım ayarını ben hallederim.' : 'Notunu Google Drive’a koy, linkini buraya yapıştır.'} Her not ${KUBBE.note} kubbe, her ▲ oy +${KUBBE.up} kubbe kazandırır; bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
+    { go: '#/paylas', sel: ['#main [data-r=gpick]', '#main [data-r=dbox]', '#main [data-r=form]'], t: 'Notunu paylaş, kubbe kazan', say: `${gdCfg() ? '“Drive’dan seç”e bas, notunu Drive’ından seç; paylaşım ayarını ben hallederim.' : 'Notunu Google Drive’a koy, linkini buraya yapıştır.'} Notun ${KUBBE.note} kubbe kazandırır; asıl kubbe ilgiden gelir: notuna gelen her ▲ +${KUBBE.up} kubbe, yorum yazan her arkadaşın +${KUBBE.ncm} kubbe. Bir not isteğini karşılarsan +${KUBBE.fill} kubbe daha.` },
     { go: '#/hocaolcer', sel: '#main .ho-search', t: 'HocaÖlçer', say: 'Hocayı adıyla ya da ders koduyla bul. Anlatım, ödev yükü, not verme ve devamsızlıkta puanla; yorumunu anonim bırakabilirsin.' },
     { go: '#/kubbe', sel: ['#main [data-r=head]', '#main .shop-sec'], t: 'Kubbe ve market', say: 'Paylaştıkça kubbe toplarsın. Dönemin yıldızı sıralamasında yüksel, marketten profilini süsleyecek parçalar al.' },
     { go: '#/', sel: '#main [data-r=ayhan]', t: 'Hepsi bu kadar!', say: 'Ben burada, ana sayfada dolaşıyorum; yorulunca kırmızı kulübemin önünde uyurum. Canın sıkılırsa gel beni sev. İlk notunu bekliyorum, hav!', next: 'Başlayalım' }
@@ -6088,7 +6146,7 @@ ROUTES['paylas'] = function viewShare(root, r) {
   const terms = termList();
   let anon = false;
   root.innerHTML = `<div class="wrap">
-    <div class="page-intro"><h1>Not paylaş</h1><p>${gdCfg() ? 'Notunu Google Drive’dan seç, gerisini YediWiki halleder.' : 'Notunu Google Drive’a yükle, linkini burada paylaş.'} Dosya YediWiki’ye yüklenmez, yalnızca Drive linki saklanır. Her not <b>${KUBBE.note} kubbe</b> kazandırır.</p></div>
+    <div class="page-intro"><h1>Not paylaş</h1><p>${gdCfg() ? 'Notunu Google Drive’dan seç, gerisini YediWiki halleder.' : 'Notunu Google Drive’a yükle, linkini burada paylaş.'} Dosya YediWiki’ye yüklenmez, yalnızca Drive linki saklanır. Not <b>${KUBBE.note} kubbe</b> kazandırır; asıl kubbe notuna gelen ilgiden: her ${gl('up', 'gl-in')} <b>${KUBBE.up}</b>, yorum yazan her kişi <b>${KUBBE.ncm} kubbe</b>.</p></div>
     <div class="empty mb2" data-r="locked" hidden><h3>Önce Yeditepe hesabın gerekiyor</h3><p>Not paylaşmak, yorum yazmak ve puan vermek için okul e-postanla bir hesap aç.</p><button type="button" class="btn btn-primary" data-g="auth">${icon('star')}Hesabımla gir</button></div>
     <div class="share-grid" data-r="grid">
       <form class="form-card share-form" novalidate data-r="form">
@@ -6224,7 +6282,7 @@ ROUTES['katkilarim'] = function viewMine(root) {
       const sec = (t, n, inner) => `<section class="km-sec"><div class="km-head"><h2>${t}</h2><span class="km-count">${n}</span></div>${inner}</section>`;
       const empty = (txt, href, cta) => `<div class="km-empty"><p>${txt}</p><a class="btn btn-sm btn-primary" href="${href}">${cta}</a></div>`;
       el.innerHTML =
-        sec('Notlarım', notes.length, notes.length ? `<ul class="list">${notes.map(n => noteRow(n, { showCourse: true }).replace('</li>', `<div class="cm-actions pad"><button type="button" class="iconbtn" data-g="del-note" data-id="${esc(n.id)}">${icon('trash')}Sil</button></div></li>`)).join('')}</ul>` : empty(`Henüz not paylaşmadın. Her not ${KUBBE.note} kubbe kazandırır.`, '#/paylas', `${icon('up')}Not paylaş`)) +
+        sec('Notlarım', notes.length, notes.length ? `<ul class="list">${notes.map(n => noteRow(n, { showCourse: true }).replace('</li>', `<div class="cm-actions pad"><button type="button" class="iconbtn" data-g="del-note" data-id="${esc(n.id)}">${icon('trash')}Sil</button></div></li>`)).join('')}</ul>` : empty(`Henüz not paylaşmadın. Not ${KUBBE.note} kubbe, notuna gelen her ▲ ${KUBBE.up} kubbe kazandırır.`, '#/paylas', `${icon('up')}Not paylaş`)) +
         sec('HocaÖlçer puanlarım', rates.length, rates.length ? `<ul class="list">${rates.map(x => { const avg = critAll(x.r); return `<li><div class="row-link"><span class="avatar">${esc(initials(x.h.name))}</span><span class="row-main"><a class="row-title" href="#/hoca/${esc(x.hid)}">${esc(hocaFull(x.h))}</a><span class="row-sub">${CRIT.map(c => `${esc(c.name)} ${fmt1(x.r[c.k])}`).join(', ')}</span></span><span class="row-end"><span class="minirate">${starsHtml(avg, 'sm')}${fmt1(avg)}</span><button type="button" class="iconbtn" data-g="rate" data-hid="${esc(x.hid)}">${icon('edit')}Güncelle</button><button type="button" class="iconbtn" data-g="unrate" data-id="${esc(x.hid)}">${icon('trash')}Kaldır</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz bir hocayı puanlamadın. Her HocaÖlçer puanı ${KUBBE.rating} kubbe kazandırır.`, '#/hocaolcer', `${icon('star')}HocaÖlçer’e git`)) +
         sec('Yorumlarım', cms.length, cms.length ? `<ul class="list">${cms.map(c => { const where = c.tt === 'course' ? `#/ders/${c.tid}?tab=yorumlar` : c.tt === 'hoca' ? `#/hoca/${c.tid}` : `#/not/${c.tid}`; const label = c.tt === 'course' ? codeOf(c.tid) : c.tt === 'hoca' ? hocaName(c.tid) : ((S.notes.get(c.tid) || {}).title || 'Not'); return `<li><div class="row-link"><span class="row-main"><a class="row-title" href="${esc(where)}">${esc(label || 'Silinmiş içerik')}</a><span class="row-sub clip">${esc(c.text)}</span></span><span class="row-end"><span>${esc(ago(c.at))}</span><button type="button" class="iconbtn" data-g="del-comment" data-id="${esc(c.id)}">${icon('trash')}Sil</button></span></div></li>`; }).join('')}</ul>` : empty(`Henüz yorum yazmadın. Her yorum ${KUBBE.comment} kubbe kazandırır.`, '#/dersler', `${icon('book')}Derslere göz at`));
       lazyPhotos(el); applyWidths(el);
@@ -6234,22 +6292,93 @@ ROUTES['katkilarim'] = function viewMine(root) {
 
 /* ================= Moderasyon ================= */
 ROUTES['moderasyon'] = function viewMod(root) {
-  root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Moderasyon</h1><p>Bildirilen içerikler. Üç bildirim alan içerik otomatik gizlenir; uygun bulursan bildirimleri temizle, değilse sil.</p></div><div data-r="body"></div></div>`;
+  root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Moderasyon</h1><p>Bildirilen içerikler. Üç bildirim alan içerik otomatik gizlenir; uygun bulursan bildirimleri temizle, değilse sil.${S.supa ? ' Notlarından üçü gizlenen hesabın dondurulması senin onayınla olur; onay isteği e-postana da gelir.' : ''}</p></div><div data-r="frz"></div><div data-r="body"></div></div>`;
+  let asked = false;
   return {
     refresh() {
       const el = $('[data-r=body]', root), st = waitState();
       if (st === 'nodb') { el.innerHTML = noDbHtml(); return; }
       if (st === 'loading' || !allLoaded()) { el.innerHTML = loadingHtml(); return; }
       if (!S.owner) { el.innerHTML = emptyHtml('Bu sayfa yalnızca site sahibine açık', 'Uygunsuz bir içerik gördüysen içeriğin yanındaki Bildir düğmesini kullan.'); return; }
-      const items = notesWhere(n => reportCount(n) > 0).map(n => ({ col: 'notes', id: n.id, n: reportCount(n), title: n.title, link: '#/not/' + n.id, at: n.at, where: codeOf(n.cid) }))
-        .concat(commentsWhere(c => reportCount(c) > 0).map(c => ({ col: 'comments', id: c.id, n: reportCount(c), title: c.text, link: c.tt === 'course' ? '#/ders/' + c.tid + '?tab=yorumlar' : c.tt === 'hoca' ? '#/hoca/' + c.tid : '#/not/' + c.tid, at: c.at, where: c.tt === 'course' ? codeOf(c.tid) : c.tt === 'hoca' ? hocaName(c.tid) : 'Not yorumu' })))
+      if (S.supa && !asked) { asked = true; loadFrz(); }
+      $('[data-r=frz]', root).innerHTML = S.supa ? frzSecHtml() : '';
+      const items = notesWhere(n => reportCount(n) > 0).map(n => ({ col: 'notes', id: n.id, n: reportCount(n), why: reportWhy(n), title: n.title, link: '#/not/' + n.id, at: n.at, where: codeOf(n.cid) }))
+        .concat(commentsWhere(c => reportCount(c) > 0).map(c => ({ col: 'comments', id: c.id, n: reportCount(c), why: reportWhy(c), title: c.text, link: c.tt === 'course' ? '#/ders/' + c.tid + '?tab=yorumlar' : c.tt === 'hoca' ? '#/hoca/' + c.tid : '#/not/' + c.tid, at: c.at, where: c.tt === 'course' ? codeOf(c.tid) : c.tt === 'hoca' ? hocaName(c.tid) : 'Not yorumu' })))
         .sort((a, b) => b.n - a.n || b.at - a.at);
       let photoCount = 0;
       for (const n of S.notes.values()) photoCount += Array.isArray(n.photos) ? n.photos.length : 0;
       const used = S.dbCourses.size + S.dbHocas.size + S.notes.size + S.comments.size + S.users.size + S.dbBolumler.size + S.requests.size + photoCount;
-      el.innerHTML = S.supa ? `<p class="help mb">Veritabanında ${used} kayıt (${S.notes.size} not, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbHocas.size} hoca kaydı, ${S.requests.size} istek, ${S.zor.size} DersÖlçer belgesi).</p>` + (items.length ? `<ul class="list">${items.map(x => `<li><div class="row-link"><span class="row-main"><a class="row-title clip" href="${esc(x.link)}">${esc(x.title)}</a><span class="row-sub">${x.col === 'notes' ? 'Not' : 'Yorum'}, ${esc(x.where || '')}, ${x.n} bildirim${x.n >= REPORT_LIMIT ? ', gizlendi' : ''}</span></span><span class="row-end"><button type="button" class="iconbtn" data-g="mod-ok" data-col="${x.col}" data-id="${esc(x.id)}">Uygun</button><button type="button" class="iconbtn" data-g="mod-del" data-col="${x.col}" data-id="${esc(x.id)}">${icon('trash')}Sil</button></span></div></li>`).join('')}</ul>` : emptyHtml('Bildirilen içerik yok', 'Her şey yolunda görünüyor.')) : `<p class="help mb">Veritabanı kullanımı yaklaşık ${used} / 5000 kayıt (${S.notes.size} not, ${photoCount} fotoğraf, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbCourses.size} ders kaydı, ${S.dbHocas.size} hoca kaydı, ${S.dbBolumler.size} bölüm, ${S.requests.size} istek). Ders kataloğu (${CAT.courses.size} ders, ${CAT.plans.size} bölüm planı) ve akademik kadro (${CAT.hocas.size} hoca) sayfanın içinde durur, bu kotayı kullanmaz.</p>` +
-        (items.length ? `<ul class="list">${items.map(x => `<li><div class="row-link"><span class="row-main"><a class="row-title clip" href="${esc(x.link)}">${esc(x.title)}</a><span class="row-sub">${x.col === 'notes' ? 'Not' : 'Yorum'}, ${esc(x.where || '')}, ${x.n} bildirim${x.n >= REPORT_LIMIT ? ', gizlendi' : ''}</span></span><span class="row-end"><button type="button" class="iconbtn" data-g="mod-ok" data-col="${x.col}" data-id="${esc(x.id)}">Uygun</button><button type="button" class="iconbtn" data-g="mod-del" data-col="${x.col}" data-id="${esc(x.id)}">${icon('trash')}Sil</button></span></div></li>`).join('')}</ul>` : emptyHtml('Bildirilen içerik yok', 'Her şey yolunda görünüyor.'));
+      const list = items.length ? `<ul class="list">${items.map(x => `<li><div class="row-link"><span class="row-main"><a class="row-title clip" href="${esc(x.link)}">${esc(x.title)}</a><span class="row-sub">${x.col === 'notes' ? 'Not' : 'Yorum'}, ${esc(x.where || '')}, ${x.n} bildirim${x.why ? ` (${esc(x.why)})` : ''}${x.n >= REPORT_LIMIT ? ', gizlendi' : ''}</span></span><span class="row-end"><button type="button" class="iconbtn" data-g="mod-ok" data-col="${x.col}" data-id="${esc(x.id)}">Uygun</button><button type="button" class="iconbtn" data-g="mod-del" data-col="${x.col}" data-id="${esc(x.id)}">${icon('trash')}Sil</button></span></div></li>`).join('')}</ul>` : emptyHtml('Bildirilen içerik yok', 'Her şey yolunda görünüyor.');
+      el.innerHTML = (S.supa ? `<p class="help mb">Veritabanında ${used} kayıt (${S.notes.size} not, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbHocas.size} hoca kaydı, ${S.requests.size} istek, ${S.zor.size} DersÖlçer belgesi).</p>`
+        : `<p class="help mb">Veritabanı kullanımı yaklaşık ${used} / 5000 kayıt (${S.notes.size} not, ${photoCount} fotoğraf, ${S.comments.size} yorum, ${S.users.size} hesap, ${S.dbCourses.size} ders kaydı, ${S.dbHocas.size} hoca kaydı, ${S.dbBolumler.size} bölüm, ${S.requests.size} istek). Ders kataloğu (${CAT.courses.size} ders, ${CAT.plans.size} bölüm planı) ve akademik kadro (${CAT.hocas.size} hoca) sayfanın içinde durur, bu kotayı kullanmaz.</p>`) + list;
     }
+  };
+};
+
+/* ================= Hesap dondurma (yalnızca site) ================= */
+/* Notlarından üçü bildirimle gizlenen hesap için onay isteği: e-postadaki bağlantı (#/onay/<belirteç>) ve Moderasyon */
+function frzReqHtml(q, acts = true) {
+  const ns = q.notes || [];
+  return `<div class="frz-req"><p class="frz-who"><b>@${esc(q.username || 'silinmiş hesap')}</b> <span class="muted">${esc(ago(q.at))}</span></p>
+    <p class="muted">Notlarından ${q.total || ns.length} tanesi bildirimle gizlendi:</p>
+    <ul class="frz-notes">${ns.map(n => `<li><a href="#/not/${esc(n.id)}">${esc(n.title || 'Not')}</a> <span class="muted">${esc(codeOf(n.cid))}${n.anon ? ', anonim' : ''}, ${+n.n || 0} bildirim${rsnTxt(n.rsn) ? ` (${esc(rsnTxt(n.rsn))})` : ''}</span></li>`).join('')}${(q.total || 0) > ns.length ? `<li class="muted">${q.total - ns.length} not silinmiş</li>` : ''}</ul>
+    ${acts ? `<div class="frz-acts"><button type="button" class="btn btn-danger" data-g="frz-karar" data-id="${esc(q.token)}" data-v="1">Hesabı dondur</button><button type="button" class="btn btn-ghost" data-g="frz-karar" data-id="${esc(q.token)}" data-v="0">Dondurma</button></div>` : ''}</div>`;
+}
+function frzSecHtml() {
+  const f = S.frz;
+  const head = n => `<h2 class="sub-h">Dondurma onayı bekleyenler${n ? ` <span class="count">${n}</span>` : ''}</h2>`;
+  if (!f) return `<section class="frz-sec">${head(0)}${loadingHtml()}</section>`;
+  if (f.err) return `<section class="frz-sec">${head(0)}<p class="help">Dondurma bilgisi okunamadı. Sayfayı yenile.</p></section>`;
+  const reqs = f.bekleyen || [], fz = f.donuk || [];
+  return `<section class="frz-sec">${head(reqs.length)}${reqs.length ? `<ul class="list frz-list">${reqs.map(q => `<li>${frzReqHtml(q)}</li>`).join('')}</ul>` : '<p class="help">Bekleyen istek yok.</p>'}
+    ${fz.length ? `<h2 class="sub-h">Dondurulan hesaplar <span class="count">${fz.length}</span></h2><ul class="list">${fz.map(z => `<li><div class="row-link"><span class="row-main"><b class="row-title">@${esc(z.username || 'silinmiş hesap')}</b><span class="row-sub">${esc(ago(z.at))} donduruldu</span></span><span class="row-end"><button type="button" class="iconbtn" data-g="frz-kaldir" data-id="${esc(z.uid)}">Dondurmayı kaldır</button></span></div></li>`).join('')}</ul>` : ''}</section>`;
+}
+async function loadFrz() {
+  if (!S.supa || !S.owner || !S.db) return;
+  try { S.frz = await S.db.rpc('dondurma_liste'); } catch (e) { console.error(e); S.frz = { err: true }; }
+  changed();
+}
+async function freezeDecide(token, yes) {
+  const ok = await confirmModal(yes
+    ? { title: 'Hesabı dondur', text: 'Hesap not paylaşamaz, oy veremez, yorum yazamaz ve sıralamada görünmez. Moderasyon’dan geri açabilirsin.', ok: 'Dondur', danger: true }
+    : { title: 'Dondurma', text: 'İstek kapanır, hesap açık kalır. Gizlenen notlar gizli kalır; bu notlar yeni bir istekte sayılmaz.', ok: 'Dondurma' });
+  if (!ok) return;
+  if (await write(() => S.db.rpc('dondurma_karar', { p_token: token, p_dondur: yes }), yes ? 'Hesap donduruldu' : 'İstek geri çevrildi')) {
+    if (S.owner) loadFrz();
+    if (S.frzPage) S.frzPage();
+  }
+}
+async function freezeLift(uid) {
+  const ok = await confirmModal({ title: 'Dondurmayı kaldır', text: 'Hesap yeniden paylaşım yapabilir ve sıralamada görünür.', ok: 'Kaldır' });
+  if (!ok) return;
+  if (await write(() => S.db.rpc('dondurma_kaldir', { p_uid: uid }), 'Dondurma kaldırıldı')) loadFrz();
+}
+ROUTES['onay'] = function viewOnay(root, r) {
+  const tok = r.parts[1] || '';
+  root.innerHTML = `<div class="wrap"><div class="page-intro"><h1>Hesap dondurma onayı</h1></div><div data-r="body">${loadingHtml()}</div></div>`;
+  let q = null, err = '', state = 'idle';
+  const paint = () => {
+    const b = $('[data-r=body]', root);
+    if (!b) return;
+    if (!S.supa) { b.innerHTML = emptyHtml('Bu sayfa yalnızca sitede çalışır', 'Onay bağlantısını yediwiki.com’da aç.'); return; }
+    if (state !== 'done') { b.innerHTML = loadingHtml(); return; }
+    if (err) { b.innerHTML = emptyHtml('Bağlantı açılamadı', err); return; }
+    if (!q) { b.innerHTML = emptyHtml('Bağlantının süresi dolmuş ya da geçersiz', 'Onay bağlantıları 30 gün geçerli. Bekleyen istekler Moderasyon sayfasında da görünür.'); return; }
+    const st = q.status === 'donduruldu' ? `<p class="frz-st bad">Hesap donduruldu${q.decidedAt ? ` (${esc(ago(q.decidedAt))})` : ''}.${q.donuk ? '' : ' Dondurma sonradan kaldırıldı.'}</p>`
+      : q.status === 'reddedildi' ? '<p class="frz-st">İstek geri çevrildi, hesap açık.</p>' : '';
+    b.innerHTML = `<div class="panel frz-page">${frzReqHtml(q, !st)}${st}<p class="fine">Dondurulan hesap not paylaşamaz, oy veremez, yorum yazamaz ve sıralamada görünmez; giriş yapıp okuyabilir. Moderasyon sayfasından geri açabilirsin.</p></div>`;
+  };
+  const load = async () => {
+    state = 'loading';
+    if (/^[0-9a-f]{32,64}$/.test(tok)) {
+      try { q = await S.db.rpc('dondurma_bilgi', { p_token: tok }); err = ''; } catch (e) { console.error(e); err = dbErrMsg(e); }
+    }
+    state = 'done'; paint();
+  };
+  S.frzPage = load;
+  return {
+    refresh() { if (state === 'idle' && S.supa && S.db) load(); else if (state !== 'loading') paint(); },
+    cleanup() { if (S.frzPage === load) S.frzPage = null; }
   };
 };
 
@@ -6268,9 +6397,12 @@ ROUTES['hakkinda'] = function viewAbout(root) {
     <h2>Hesap ve anonimlik</h2>
     <p>YediWiki’ye yalnızca okul e-postasıyla katılınır: adres <b>@std.yeditepe.edu.tr</b> ile bitmeli ve doğrulanmalıdır. Not paylaşmak, yorum yazmak ve hoca puanlamak için hesap gerekir; gezinmek için gerekmez.</p>
     <p>Her yorum ve notta “Anonim” seçeneği var. Anonim paylaşımda kullanıcı adın görünmez, kazandığın kubbe yine hesabına yazılır. HocaÖlçer yorumlarında anonim seçeneği varsayılan olarak açıktır.</p>
-    ${S.supa ? '<p>HocaÖlçer puanların, oyların, beğenilerin ve anonim paylaşımların hesabına bağlanamaz: her kayıtta yalnızca o kayda özel bir takma ad tutulur, sitenin kendisi bile bunları herkese açık profilinle eşleştiremez. Bu yüzden puanların ve anonim paylaşımların kubbesi bakiyene eklenir ama sıralamaya sayılmaz.</p>' : ''}
+    ${S.supa ? '<p>HocaÖlçer puanların, oyların, beğenilerin ve anonim paylaşımların herkese açık profilinle eşleşmez: her kayıtta yalnızca o kayda özel bir takma ad tutulur. Anonim paylaşımlarının ve hoca puanlarının kubbesi bakiyene hemen, sıralamaya her gece herkesinkiyle birlikte toplu eklenir; böylece hangi anonim paylaşımın ya da puanın senin olduğu sıralamadan anlaşılmaz.</p>' : ''}
     <h2>Kubbe</h2>
-    <p>Kubbe, paylaşımı teşvik eden puandır. Hesap açma ${KUBBE.signup}, not ${KUBBE.note}, yorum ${KUBBE.comment}, not isteği karşılamak ${KUBBE.fill}, HocaÖlçer puanı ${KUBBE.rating}, notuna gelen her ${gl('up', 'gl-in')} ${KUBBE.up}, yorumuna gelen her beğeni ${KUBBE.like} kubbe kazandırır; ${gl('down', 'gl-in')} kubbe düşürmez, notu sıralamada aşağı iter. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
+    <p>Kubbe, paylaşımı teşvik eden puandır; en çok, işe yarayan not paylaşanı ödüllendirir. Not paylaşmak ${KUBBE.note} kubbe; asıl kubbe notun gördüğü ilgiden gelir: notuna gelen her ${gl('up', 'gl-in')} ${KUBBE.up}, notuna yorum yazan her kişi ${KUBBE.ncm} kubbe (not başına bir kez, kendi yorumun sayılmaz). ${gl('down', 'gl-in')} kubbe vermez, düşürmez; notu sıralamada aşağı iter.</p>
+    <p>Notlarına gelen ${gl('up', 'gl-in')} arttıkça paylaşımcı seviyen yükselir ve ${gl('up', 'gl-in')} ile yorum kubben katlanır: ${KB_LV.slice(1).map(l => `${l.min} ${gl('up', 'gl-in')} ile ${esc(l.ad)} (×${kbX(l.x)})`).join(', ')}.</p>
+    <p>Ayrıca hesap açma ${KUBBE.signup}, yorum ${KUBBE.comment}, yorumuna gelen her beğeni ${KUBBE.like}, HocaÖlçer puanı ${KUBBE.rating} (ilk ${KUBBE.rateCap} hoca), not isteği karşılamak ${KUBBE.fill} kubbe kazandırır. Sıralamalar ana sayfada ve <a href="#/kubbe">Kubbe</a> sayfasında; kubbeni markette kampüs ödüllerine çevirirsin.</p>
+    <p>Sahte, boş ya da alakasız not paylaşanı bildir: ${REPORT_LIMIT} bildirim alan not gizlenir ve kubbe kazandırmaz.${S.supa ? ' Notlarından üçü bildirimle gizlenen hesap, yönetici onaylarsa dondurulur: dondurulan hesap paylaşım yapamaz, oy veremez ve sıralamada görünmez.' : ''}</p>
     <h2>Ders ve hoca listesi</h2>
     <p>Dersler ve akademik kadro okulun kataloğundan yüklenir; kullanıcılar yeni ders ya da hoca ekleyemez. Eksik bir kayıt görürsen site yönetimine bildir.</p>
     <h2>Topluluk kuralları</h2>
@@ -6447,16 +6579,17 @@ ROUTES['profil'] = function viewProfile(root) {
               ${S.bolumler.size || u.bolum ? `<div><dt>Bölüm</dt><dd><span class="pf-val">${esc(bolumName(u.bolum) || 'seçilmedi')}</span></dd></div>` : ''}
               <div><dt>Telefon</dt><dd><span class="pf-val">${esc((S.priv && S.priv.phone) || 'girilmedi')}</span><span class="vis-note">${icon('lock')}Yalnızca sen</span></dd></div>
             </dl>
-            ${S.supa ? '<p class="fine">Sıralamaya yalnızca adınla yaptıkların sayılır; anonim paylaşımlar ve hoca puanları bakiyene eklenir.</p>' : ''}
+            ${S.supa ? '<p class="fine">Anonim paylaşımların ve hoca puanların da sıralamaya sayılır. Kimin olduğu anlaşılmasın diye sıralamaya her gece toplu eklenir; bakiyene hemen eklenir.</p>' : ''}
           </section>
           <section class="pf-sec"><h2 class="sub-h">Kubbe dökümü</h2>
+            ${levelHtml(k)}
             <ul class="pf-ledger">
               ${led('kubbe', 'Hesap açma', Math.max(0, +u.bonus || 0))}
-              ${led('book', `${k.notes} not`, k.notes * KUBBE.note, k.notes ? 've üzeri' : '')}
-              ${led('vup', `Notlarına ${k.ups || 0} ${gl('up', 'gl-in')} geldi`, (k.ups || 0) * KUBBE.up)}
+              ${led('book', `${k.notes} not paylaştın`, k.notes * KUBBE.note)}
+              ${led('vup', `Notlarına ${k.ups} ${gl('up', 'gl-in')} geldi, ${k.ncm} kişi yorum yazdı`, k.pi, k.lv > 1 ? '×' + kbX(KB_LV[k.lv - 1].x) : '')}
               ${led('comment', `${k.comments} yorum`, k.comments * KUBBE.comment)}
               ${led('heart', `Yorumların ${k.likes} beğeni aldı`, k.likes * KUBBE.like)}
-              ${led('star', `${k.ratings} HocaÖlçer puanı`, k.ratings * KUBBE.rating)}
+              ${led('star', `${k.ratings} HocaÖlçer puanı`, Math.min(k.ratings, KUBBE.rateCap) * KUBBE.rating, k.ratings > KUBBE.rateCap ? `ilk ${KUBBE.rateCap} hoca` : '')}
               ${led('bookmark', `${k.fills || 0} not isteği karşıladın`, (k.fills || 0) * KUBBE.fill)}
               ${giftOf(S.me) ? led('plus', 'Hediye', giftOf(S.me), 'sıralamaya sayılmaz') : ''}
               ${spentOf(S.me) ? led('cr', 'Markette harcadın', '−' + spentOf(S.me)) : ''}
