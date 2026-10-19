@@ -179,6 +179,7 @@ function makeClient(be, { delay = 2 } = {}) {
         const l = p => {
           // RLS taklidi: özel kayıt yalnızca sahibine
           if (p.col === 'private' && !(st.session && st.session.user.id === p.id)) return;
+          if (p.col === 'files' && !st.session) return;   // notun bağlantısı yalnızca girişliye
           const del = p.t === 'DELETE';
           const payload = { eventType: p.t, schema: 'public', table: 'docs', commit_timestamp: p.ts,
             new: del ? {} : { col: p.col, id: p.id, data: p.data, updated_at: p.updated_at }, old: { col: p.col, id: p.id } };

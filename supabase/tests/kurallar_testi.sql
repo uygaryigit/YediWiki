@@ -153,6 +153,16 @@ begin
   res := res || pg_temp.step(127, 'Öğrenci başkasının isteğini silemez', '$A', 'select public.doc_delete(''requests'', ''tR1'')', 'fail', 'true', null);
   res := res || pg_temp.step(128, 'Olmayan kaydı silmek sessizce geçer', '$A', 'select public.doc_delete(''hocas'', ''yok'')', 'ok', 'true', null);
   res := res || pg_temp.step(129, 'Yönetici anonim notu siler', '$C', 'select public.doc_delete(''notes'', ''tA2'')', 'ok', 'pg_temp.f(''private'',''$A'',''{kb,notes}'')::int = 0', null);
+  res := res || pg_temp.step(130, 'Not paylaşılınca bağlantı ve açıklama files kaydına gider, notta türü kalır', '$A', 'select public.doc_set(''notes'', ''tF1'', ''{"cid": "CSE211", "title": "Kilitli not", "desc": "Vize özeti", "drive": "https://drive.google.com/file/d/abc/view", "anon": false}''::jsonb)', 'ok', 'pg_temp.f(''notes'',''tF1'',''{drive}'') is null and pg_temp.f(''notes'',''tF1'',''{desc}'') is null and pg_temp.f(''notes'',''tF1'',''{dk}'') = ''file'' and pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://drive.google.com/file/d/abc/view'' and pg_temp.f(''files'',''tF1'',''{desc}'') = ''Vize özeti''', null);
+  res := res || pg_temp.step(131, 'Başlık düzeltilir: bağlantı istenmez, files değişmez', '$A', 'select public.doc_update(''notes'', ''tF1'', ''{"title": "Kilitli not 2"}''::jsonb)', 'ok', 'pg_temp.f(''notes'',''tF1'',''{title}'') = ''Kilitli not 2'' and pg_temp.f(''notes'',''tF1'',''{dk}'') = ''file'' and pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://drive.google.com/file/d/abc/view'' and pg_temp.f(''files'',''tF1'',''{desc}'') = ''Vize özeti''', null);
+  res := res || pg_temp.step(132, 'Bağlantı ve açıklama değişir: files ve tür güncellenir', '$A', 'select public.doc_update(''notes'', ''tF1'', ''{"drive": "https://docs.google.com/document/d/xyz/edit", "desc": ""}''::jsonb)', 'ok', 'pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://docs.google.com/document/d/xyz/edit'' and pg_temp.f(''files'',''tF1'',''{desc}'') = '''' and pg_temp.f(''notes'',''tF1'',''{dk}'') = ''doc'' and pg_temp.f(''notes'',''tF1'',''{drive}'') is null', null);
+  res := res || pg_temp.step(133, 'Düzeltmede Drive dışı bağlantı reddedilir', '$A', 'select public.doc_update(''notes'', ''tF1'', ''{"drive": "https://example.com/x"}''::jsonb)', 'fail', 'pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://docs.google.com/document/d/xyz/edit''', null);
+  res := res || pg_temp.step(134, 'B nota oy verir: files değişmez', '$B', 'select public.doc_update(''notes'', ''tF1'', jsonb_build_object(''likes'', jsonb_build_object(pg_temp.k(''$B'',''notes'',''tF1''), true)))', 'ok', 'pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://docs.google.com/document/d/xyz/edit''', null);
+  res := res || pg_temp.step(135, 'files kaydına doğrudan yazılamaz', '$B', 'select public.doc_set(''files'', ''tF1'', ''{"drive": "https://drive.google.com/file/d/abc/view"}''::jsonb)', 'fail', 'pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://docs.google.com/document/d/xyz/edit''', null);
+  res := res || pg_temp.step(136, 'files kaydı düzeltilemez', '$B', 'select public.doc_update(''files'', ''tF1'', ''{"drive": "https://drive.google.com/file/d/abc/view"}''::jsonb)', 'fail', 'pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://docs.google.com/document/d/xyz/edit''', null);
+  res := res || pg_temp.step(137, 'files kaydı silinemez', '$B', 'select public.doc_delete(''files'', ''tF1'')', 'fail', 'pg_temp.f(''files'',''tF1'',''{drive}'') = ''https://docs.google.com/document/d/xyz/edit''', null);
+  res := res || pg_temp.step(138, 'Not silinince files kaydı da silinir', '$A', 'select public.doc_delete(''notes'', ''tF1'')', 'ok', 'not exists (select 1 from public.docs where id = ''tF1'')', null);
+  res := res || pg_temp.step(139, 'Okuma denetimi için bir not kalır', '$A', 'select public.doc_set(''notes'', ''tF2'', ''{"cid": "CSE211", "title": "Açık başlık", "desc": "gizli açıklama", "drive": "https://drive.google.com/file/d/abc/view", "anon": false}''::jsonb)', 'ok', 'pg_temp.f(''files'',''tF2'',''{drive}'') = ''https://drive.google.com/file/d/abc/view''', null);
 
   -- okuma kuralları: anon özel kayıtları görmez, sahibi kendi özel kaydını görür
   perform set_config('request.jwt.claims', '', true);
@@ -170,6 +180,20 @@ begin
   perform set_config('role', 'postgres', true);
   res := res || jsonb_build_array(jsonb_build_object('t', 'okuma: anon özel kayıt görmez, profilleri görür', 'ok', n1 = 0 and n2 = 3, 'got', n1 || '/' || n2));
   res := res || jsonb_build_array(jsonb_build_object('t', 'okuma: sahibi kendi özel kaydını görür, başkası göremez', 'ok', n3 = 1 and n4 = 0, 'got', n3 || '/' || n4));
+  -- not kilidi: anon bağlantıları (files) göremez, notlarda bağlantı ve açıklama yok; giriş yapmış görür
+  perform set_config('request.jwt.claims', '', true);
+  perform set_config('role', 'anon', true);
+  select count(*) into n1 from public.docs where col = 'files';
+  select count(*) into n2 from public.docs where col = 'notes' and (data ? 'drive' or data ? 'desc');
+  select count(*) into n4 from public.docs where col = 'notes';
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '0000000b-0000-4000-8000-00000000000b', 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  select count(*) into n3 from public.docs where col = 'files';
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', '', true);
+  res := res || jsonb_build_array(jsonb_build_object('t', 'not kilidi: anon notları görür ama bağlantıları ve açıklamaları göremez', 'ok', n1 = 0 and n2 = 0 and n4 > 0, 'got', n1 || '/' || n2 || '/' || n4));
+  res := res || jsonb_build_array(jsonb_build_object('t', 'not kilidi: giriş yapmış öğrenci bağlantıları görür', 'ok', n3 > 0, 'got', n3));
   perform set_config('request.jwt.claims', json_build_object('sub', '0000000c-0000-4000-8000-00000000000c', 'role', 'authenticated')::text, true);
   res := res || jsonb_build_array(jsonb_build_object('t', 'my_info yöneticiyi tanır', 'ok', (public.my_info()->>'admin')::boolean));
   perform set_config('request.jwt.claims', json_build_object('sub', '0000000a-0000-4000-8000-00000000000a', 'role', 'authenticated')::text, true);

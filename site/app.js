@@ -352,8 +352,8 @@ const S = {
   db: null, user: null, downloads: null, me: null, owner: false, ownerId: false, out: false, login: null, canWrite: null, readOnly: false,
   supa: false, sb: null, sec: '', email: '', session: null, sesUid: '', authPending: false, liveSeen: false,
   dbState: 'loading', subErr: null, version: 0,
-  courses: new Map(), dbCourses: new Map(), hocas: new Map(), dbHocas: new Map(), notes: new Map(), comments: new Map(), users: new Map(), bolumler: new Map(), dbBolumler: new Map(), requests: new Map(), zor: new Map(), priv: null, privLoaded: false, pendingHash: null, adminProv: 'idle', usersVer: 0,
-  loaded: { courses: false, hocas: false, notes: false, comments: false, users: false, requests: false, zor: false },
+  courses: new Map(), dbCourses: new Map(), hocas: new Map(), dbHocas: new Map(), notes: new Map(), dbNotes: new Map(), dbFiles: new Map(), comments: new Map(), users: new Map(), bolumler: new Map(), dbBolumler: new Map(), requests: new Map(), zor: new Map(), priv: null, privLoaded: false, pendingHash: null, adminProv: 'idle', usersVer: 0,
+  loaded: { courses: false, hocas: false, notes: false, rawNotes: false, files: false, comments: false, users: false, requests: false, zor: false },
   photoCache: new Map(), revealed: new Set()
 };
 const allLoaded = () => S.loaded.courses && S.loaded.hocas && S.loaded.notes && S.loaded.comments && S.loaded.users;
@@ -784,11 +784,13 @@ function subscribe() {
       q.onSnapshot(snap => {
         const m = new Map();
         for (const d of snap.docs) { const v = d.data(); if (v && typeof v === 'object') { if (S.supa) v.$k = name + '/' + d.id; m.set(d.id, v); } }
-        if (name === 'courses') { S.dbCourses = m; S.courses = mergeCourses(m); } else if (name === 'hocas') { S.dbHocas = m; S.hocas = mergeHocas(m); } else if (name === 'bolumler') { S.dbBolumler = m; S.bolumler = mergeBolumler(m); } else S[name] = m;
-        S.loaded[name] = true; S.version++; if (name === 'users') S.usersVer++; changed();
+        if (name === 'courses') { S.dbCourses = m; S.courses = mergeCourses(m); } else if (name === 'hocas') { S.dbHocas = m; S.hocas = mergeHocas(m); } else if (name === 'bolumler') { S.dbBolumler = m; S.bolumler = mergeBolumler(m); } else if (name === 'notes') S.dbNotes = m; else S[name] = m;
+        S.loaded[name === 'notes' ? 'rawNotes' : name] = true; if (name === 'notes') syncNotes();
+        S.version++; if (name === 'users') S.usersVer++; changed();
       }, err => {
         console.error(name, err);
-        S.loaded[name] = true; S.subErr = (err && err.code) || 'error'; S.version++; changed();
+        S.loaded[name === 'notes' ? 'rawNotes' : name] = true; if (name === 'notes') syncNotes();
+        S.subErr = (err && err.code) || 'error'; S.version++; changed();
       });
     } catch (e) { console.error(e); S.loaded[name] = true; S.subErr = 'error'; }
   };
@@ -800,7 +802,35 @@ function subscribe() {
   sub('bolumler', S.db.collection('bolumler'));
   sub('requests', S.db.collection('requests').orderBy('at', 'desc').limit(500));
   if (S.supa) sub('zor', S.db.collection('zor'));
-  subPriv();
+  subPriv(); subFiles();
+}
+/* Not kilidi (göç 0012): notun Drive bağlantısı ve açıklaması ayrı kayıtta (files), onu yalnızca giriş yapmış hesap okur.
+   Notlar onunla birleşir; girişliyken notlar dosyalar da gelince açılır (içeriksiz görünmesin). Önceki sürümde bağlantı
+   notun içindeydi: files'ta kaydı olmayan not kendi bağlantısıyla kalır. */
+function syncNotes() {
+  const fm = S.dbFiles;
+  if (fm.size) {
+    const m = new Map();
+    for (const [id, n] of S.dbNotes) { const f = fm.get(id); m.set(id, f ? Object.assign({}, n, 'drive' in f ? { drive: f.drive } : null, 'desc' in f ? { desc: f.desc } : null) : n); }
+    S.notes = m;
+  } else S.notes = S.dbNotes;
+  S.loaded.notes = !!S.loaded.rawNotes && !!S.loaded.files;
+}
+let filesUnsub = null;
+function subFiles() {
+  if (filesUnsub) { try { filesUnsub(); } catch (e) { /* yok */ } filesUnsub = null; }
+  if (S.db && S.db.forget) S.db.forget('files');   // önceki oturumun bağlantıları bellekte kalmasın
+  const want = !!(S.supa && S.sesUid && S.db);
+  S.dbFiles = new Map(); S.loaded.files = !want; syncNotes();
+  if (!want) return;
+  const done = m => { if (m) S.dbFiles = m; S.loaded.files = true; syncNotes(); S.version++; changed(); };
+  try {
+    filesUnsub = S.db.collection('files').onSnapshot(snap => {
+      const m = new Map();
+      for (const d of snap.docs) { const v = d.data(); if (v && typeof v === 'object') m.set(d.id, v); }
+      done(m);
+    }, err => { console.error('files', err); done(null); });
+  } catch (e) { console.error(e); done(null); }
 }
 /* Yeni sürüm: yayından sonra açık kalan sekmeler eski kodla kalmasın. Sekmeye dönünce /ver.txt'ye bakılır; yenisi varsa
    bir sonraki sayfa geçişinde sayfa sessizce yenilenir (adres korunur). Aynı sürüm için yalnızca bir kez denenir. */
@@ -889,7 +919,7 @@ async function applySession(session, first) {
   S.me = uid || anonLocalId(); S.baseMe = S.me;
   S.sec = ''; S.ownerId = false; keyCache.clear(); syncOwner();
   S.authPending = !!uid;
-  if (!first) subPriv();
+  if (!first) { subPriv(); subFiles(); }
   S.version++; changed();
   if (!uid) return;
   try {
@@ -1725,6 +1755,8 @@ function openRateModal(hid, { cid = '' } = {}) {
 
 /* ================= Liste parçaları ================= */
 const DRIVE_KINDS = { doc: 'Doküman', slide: 'Sunum', sheet: 'Tablo', form: 'Form', folder: 'Klasör', file: 'Dosya', drive: 'Drive' };
+// girişsizde notta bağlantı yok, yalnızca türü var (dk, göç 0012)
+const dkInfo = k => { const ok = typeof k === 'string' && Object.prototype.hasOwnProperty.call(DRIVE_KINDS, k); return { k: ok ? k : 'drive', name: DRIVE_KINDS[ok ? k : 'drive'] }; };
 function driveInfo(url) {
   const u = String(url || '').trim();
   if (!/^https:\/\/(drive|docs)\.google\.com\/\S+$/i.test(u)) return null;
@@ -2290,16 +2322,19 @@ const GATE_SVG = (() => {
 const AYHAN_SAY = {
   hi: 'Ben Ayhan Abi. Hav!',
   pet: ['Hav!', 'Hav hav!', 'Kuyruğum durmuyor.', 'Bir sosisli olsa fena olmazdı.', 'Derslerine çalıştın mı bakalım?', 'Yokuşu bugün kaç kere çıktın?', 'Ringde yer var mı?', 'Notunu paylaştın mı?'],
-  wake: ['Hı? Uyumuyordum ki.', 'Beş dakika daha…', 'Hav! Buradayım.']
+  // uyurken ilk dokunuşta uyanmaz: uykulu bir söz söyleyip uyumaya devam eder (snooze); yeniden dokununca kalkar (wake)
+  snooze: ['Beş dakika daha…', 'Hı… beş dakika daha anne…', 'Zzz… rüyamda finaldeydim…', 'Hmm… ring gelince kaldır beni…'],
+  wake: ['Hı? Uyumuyordum ki.', 'Gözlerimi dinlendiriyordum sadece.', 'Tamam tamam, kalktım!', 'Rüyamda sosisli yiyordum, neden uyandırdın?', 'Hav! Buradayım, buradayım.']
 };
-/* Ana sayfada Ayhan Abi: rastgele yürür, durup kuyruk sallar, ara sıra bir köşede uyur. Dokununca havlar, uyuyorsa uyanır. */
+/* Ana sayfada Ayhan Abi: rastgele yürür, durup kuyruk sallar, ara sıra bir köşede uyur. Dokununca havlar; uyuyorsa önce
+   "beş dakika daha" der, ikinci dokunuşta uyanır. */
 function startAyhan(stage) {
   const dog = stage && stage.querySelector('.ay-roam');
   if (!dog) return () => {};
-  let x = 0, timer = 0, dead = false, state = '';
+  let x = 0, timer = 0, dead = false, state = '', snoozed = false;
   const W = () => Math.max(0, stage.clientWidth - dog.offsetWidth);
   const rnd = (a, b) => a + Math.random() * (b - a);
-  const set = st => { state = st; dog.classList.remove('walk', 'idle', 'sleep'); dog.classList.add(st); if (st === 'sleep') dog.classList.remove('left'); dog.setAttribute('aria-label', st === 'sleep' ? 'Ayhan Abi kulübesinin önünde uyuyor. Uyandırmak için dokun.' : 'Ayhan Abi, kampüsün köpeği. Sevmek için dokun.'); };
+  const set = st => { state = st; if (st !== 'sleep') snoozed = false; dog.classList.remove('walk', 'idle', 'sleep'); dog.classList.add(st); if (st === 'sleep') dog.classList.remove('left'); dog.setAttribute('aria-label', st === 'sleep' ? 'Ayhan Abi kulübesinin önünde uyuyor. Uyandırmak için dokun.' : 'Ayhan Abi, kampüsün köpeği. Sevmek için dokun.'); };
   // uyku yeri: kulübenin önündeki paspas (uyurken çizimi kutunun ortasında olduğu için paspasın ortasına hizalanır)
   const homeX = () => { const m = stage.querySelector('.ay-mat'); if (!m) return W(); const r = m.getBoundingClientRect(), s = stage.getBoundingClientRect(); return Math.max(0, Math.min(W(), r.left + r.width / 2 - s.left - dog.offsetWidth / 2)); };
   const after = (ms, fn) => { clearTimeout(timer); timer = setTimeout(() => { if (!dead && !document.hidden) fn(); }, ms); };
@@ -2322,11 +2357,17 @@ function startAyhan(stage) {
     else walkTo(homeX(), () => { set('sleep'); after(rnd(10000, 22000), () => { set('idle'); after(1500, next); }); });
   }
   dog.addEventListener('click', () => {
-    const was = state;
+    const was = state, pick = a => a[Math.floor(Math.random() * a.length)];
+    const hi = !ls.get('ayhanHi', false); if (hi) ls.set('ayhanHi', true);
+    if (was === 'sleep' && !hi && !snoozed) {
+      snoozed = true;
+      petDog(dog, pick(AYHAN_SAY.snooze), { sleepy: true });
+      if (!reduceMotion()) after(rnd(9000, 15000), () => { set('idle'); after(1500, next); });
+      return;
+    }
     if (was === 'walk') { x = nowX(); place(x, 0); }
     set('idle');
-    const hi = !ls.get('ayhanHi', false); if (hi) ls.set('ayhanHi', true);
-    petDog(dog, hi ? AYHAN_SAY.hi : (was === 'sleep' ? AYHAN_SAY.wake : AYHAN_SAY.pet)[Math.floor(Math.random() * (was === 'sleep' ? AYHAN_SAY.wake : AYHAN_SAY.pet).length)]);
+    petDog(dog, hi ? AYHAN_SAY.hi : pick(was === 'sleep' ? AYHAN_SAY.wake : AYHAN_SAY.pet));
     if (!reduceMotion()) after(rnd(3000, 5000), next);
   });
   const w0 = W();
@@ -2567,7 +2608,7 @@ function noteCard(n, { showCourse = true, peek = false } = {}) {
   const type = noteType(n).name, h = !showCourse && n.h && S.hocas.get(n.h);
   const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
   return `<li class="ncard"><a class="ncard-link" href="#/not/${esc(n.id)}">
-    <span class="ncard-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `${(() => { const di = driveInfo(n.drive) || { k: 'drive', name: 'Drive' }; return `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`; })()}${driveThumbHtml(n.drive)}`}${photos.length > 1 ? `<span class="ncard-pages">${photos.length} sayfa</span>` : ''}</span>
+    <span class="ncard-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `${(() => { const di = driveInfo(n.drive) || dkInfo(n.dk); return `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`; })()}${driveThumbHtml(n.drive)}`}${photos.length > 1 ? `<span class="ncard-pages">${photos.length} sayfa</span>` : ''}</span>
     <span class="ncard-body"><span class="ncard-top">${showCourse ? `<span class="code">${esc(codeOf(n.cid))}</span>` : n.tk ? `<span class="pill">${esc(termLabel(n.tk))}</span>` : ''}<span class="kind kind-${noteType(n).k}">${esc(type)}</span></span>
       <span class="ncard-title">${esc(n.title)}</span>${h ? `<span class="ncard-hoca">${esc(hocaFull(h))}</span>` : ''}
       <span class="meta">${peek ? '' : `<span>${whoHtml(n.by, n.anon, n.nick)}</span>`}<span>${esc(ago(n.at))}</span>${voteBadge(n)}</span></span></a></li>`;
@@ -2604,7 +2645,7 @@ function noteRow(n, { showCourse = false, peek = false } = {}) {
       <div class="meta">${n.tk ? `<span>${esc(termLabel(n.tk))}</span>` : ''}${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}${peek ? '' : `<span>${whoHtml(n.by, n.anon, n.nick)}</span>`}<span>${esc(ago(n.at))}</span></div>
     </div>
     <div class="note-side">
-      <span class="chips">${photos.length ? `<span class="pill">${icon('camera')}${photos.length} sayfa</span>` : ''}${n.drive ? `<span class="pill">${icon('external')}${esc((driveInfo(n.drive) || { name: 'Drive' }).name)}</span>` : ''}</span>
+      <span class="chips">${photos.length ? `<span class="pill">${icon('camera')}${photos.length} sayfa</span>` : ''}${n.drive || n.dk ? `<span class="pill">${icon('external')}${esc((driveInfo(n.drive) || dkInfo(n.dk)).name)}</span>` : ''}</span>
       <span class="note-stats">${voteHtml(n)}<a class="iconbtn" href="#/not/${esc(n.id)}" aria-label="${cc} yorum">${icon('comment')}${cc}</a></span>
     </div>
   </li>`;
@@ -5249,11 +5290,12 @@ function tourEnd() {
   TOUR.el = null; TOUR.tgt = null;
   if (was) { const p = TOUR.prevFocus; TOUR.prevFocus = null; if (p && p.focus && document.contains(p) && p !== document.body) { try { p.focus({ preventScroll: true }); } catch (e) { /* yok */ } } }
 }
-function petDog(el, say) {
+function petDog(el, say, { sleepy = false } = {}) {
   if (!el) return;
   const bub = el.querySelector('.ay-say');
   if (bub && el.parentElement) { const pr = el.parentElement.getBoundingClientRect(), r = el.getBoundingClientRect(), c = r.left + r.width / 2 - pr.left; el.dataset.say = pr.width && c < pr.width * 0.3 ? 'l' : pr.width && c > pr.width * 0.7 ? 'r' : 'c'; }
   if (bub) { bub.textContent = say || 'Hav!'; bub.classList.remove('on'); void bub.offsetWidth; bub.classList.add('on'); clearTimeout(bub._t); bub._t = setTimeout(() => bub.classList.remove('on'), 2600); }
+  if (sleepy) return;   // uykulu söz: havlamaz, kalp çıkmaz
   el.classList.remove('barking'); void el.offsetWidth; el.classList.add('barking');
   setTimeout(() => el.classList.remove('barking'), 1000);
   const [x, y] = centerOf(el); burst(x, y - 10, { glyphs: ['heart', 'paw'], n: 5, cls: 'heart', spread: 36 });

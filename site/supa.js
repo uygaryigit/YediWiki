@@ -60,7 +60,8 @@
   const hmacHex = (key, msg) => hex(hmac(enc(key), enc(msg)));
 
   /* ---------------- belge veritabanı ---------------- */
-  const COLS = new Set(['users', 'private', 'notes', 'comments', 'hocas', 'courses', 'bolumler', 'requests', 'zor']);
+  const COLS = new Set(['users', 'private', 'notes', 'comments', 'hocas', 'courses', 'bolumler', 'requests', 'zor', 'files']);
+  const NO_CACHE = new Set(['files']);   // notların bağlantıları yalnızca girişliye açık: tarayıcıda saklanmaz
   const ID_OK = /^[A-Za-z0-9_.~:@+-]{1,100}$/;
   const PAGE = 1000;
   const SEL = 'id,data,updated_at';
@@ -233,7 +234,7 @@
     const cacheKey = st => ['c' + CACHE_V, st.name, st.order ? st.order.f + ' ' + st.order.dir : '', st.limit || ''].join('|');
     // önbellekteki koleksiyon ya da null (yok, başka proje, eski, bozuk ya da zamanında okunamadı)
     async function readCache(st) {
-      if (!cache) return null;
+      if (!cache || NO_CACHE.has(st.name)) return null;
       let c = null;
       try {
         const raw = await Promise.race([cache.get(cacheKey(st)), new Promise(r => setTimeout(r, CACHE_WAIT, null))]);
@@ -245,7 +246,7 @@
       return { rows, cur: String(c.cur) };
     }
     function saveCache(st) {
-      if (!cache || !st.cur) return;
+      if (!cache || !st.cur || NO_CACHE.has(st.name)) return;
       const rows = [];
       for (const [id, r] of st.rows) rows.push([id, clean(r.data), r.ver]);
       try { Promise.resolve(cache.set(cacheKey(st), JSON.stringify({ v: CACHE_V, scope, at: Date.now(), cur: st.cur, rows }))).catch(() => {}); }
@@ -409,6 +410,8 @@
         if (applyTo && data && typeof data === 'object') { const [c, i] = applyTo.split('/'); apply(c, i, data, null, false); }
         return data;
       },
+      // oturum değişince: abonesi kalmayan koleksiyonun bellekteki kopyası atılır, sonraki abonelik baştan okur
+      forget(name) { const st = cols.get(name); if (st && !st.subs.size) cols.delete(name); },
       // test ve hata ayıklama için
       _apply: apply
     };

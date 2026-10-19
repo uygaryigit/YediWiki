@@ -489,8 +489,10 @@ async function signup(t, be, local, prof) {
     B.$('#main [data-g=logout]').click(); await sleep(300);
     await B.until(() => !B.ev('myAcc()') && B.ev('S.me.startsWith("l")'), 'çıkış yapıldı');
     ok(B.ev('S.sec') === '' && B.ev('S.priv') === null, 'gizli ve özel kayıt temizlendi');
+    ok(B.ev('S.notes.size') > 0 && !B.ev('[...S.notes.values()].some(n => n.drive || n.desc)') && !B.ev('S.dbFiles.size'), 'çıkınca notların bağlantıları ve açıklamaları bellekten düştü');
     const B2 = await tab(be, { name: 'B yeniden', session: sesB, hash: '#/katkilarim' });
     await B2.until(() => B2.ev('myAcc() && myAcc().username') === 'borakaya', 'oturum geri geldi');
+    await B2.until(() => B2.ev('S.loaded.notes && S.notes.size > 0 && [...S.notes.values()].every(n => n.drive)'), 'girişliyken notların bağlantısı files kaydından geldi');
     await B2.until(() => B2.text('#main .km-sec:nth-child(1) .km-count') === '1' && B2.text('#main .km-sec:nth-child(2) .km-count') === '1', 'Katkılarım: anonim not ve puan tanındı');
     noErr(B2, 'oturum');
 
@@ -566,6 +568,11 @@ async function signup(t, be, local, prof) {
       ok(!/drive\.google\.com\/(file|open|drive)|docs\.google\.com/.test(G.$('#main').innerHTML), 'Drive bağlantısı sayfada yok');
       ok(!/Paylaşan/.test(G.text('#main .page-head')) && !G.$('#main [data-g=report-note]'), 'paylaşan ve Bildir yok');
       ok(G.$('#main .nlock [data-g=peek-login]') && G.$('#main .nlock [data-g=peek-signup]') && G.$('#main .nlock .gl-padlock'), 'kilidin üstünde Giriş yap ve Kayıt ol');
+      ok(!G.$('#main .nlock .dthumb'), 'kilitli sayfada notun küçük resmi de yok');
+      const rf = await G.cl.client.from('docs').select('id').eq('col', 'files'), rn = await G.cl.client.from('docs').select('id,data').eq('col', 'notes');
+      ok(!rf.error && rf.data.length === 0, 'sunucu: girişsiz notların bağlantı kaydı (files) okunamaz');
+      ok(rn.data.length > 0 && rn.data.every(x => !('drive' in x.data) && !('desc' in x.data) && x.data.dk), 'sunucu: girişsize notlar bağlantısız ve açıklamasız gelir, yalnızca türü var');
+      ok(!G.ev('[...S.notes.values()].some(n => n.drive || n.desc)') && !G.$('#main .dthumb'), 'sayfada hiçbir notun bağlantısı ve küçük resmi yok');
       G.$('#main [data-g=vote-up]').click(); await sleep(60);
       await G.until(() => G.$('.modal #au-lmail'), 'oy vermeye çalışınca giriş istenir');
       ok(/Notları açmak/.test(G.text('.modal .auth-why') || ''), 'oyda da giriş nedeni yazıyor');
@@ -625,7 +632,7 @@ async function signup(t, be, local, prof) {
     console.log('12) artımlı yükleme: tarayıcı önbelleği, yalnızca değişenler');
     {
       const mem = new Map();
-      const cols = (await be.pool.query("select distinct col from public.docs where col <> 'private'")).rows.map(r => r.col);
+      const cols = (await be.pool.query("select distinct col from public.docs where col not in ('private', 'files')")).rows.map(r => r.col);
       const inCols = c => c[1].filters.some(f => f[0] === 'col' && cols.includes(f[1]));
       const fullReads = t => t.cl.st.calls.filter(c => c[0] === 'select' && c[1].table === 'docs' && !c[1].gt.length && !c[1].filters.some(f => f[0] === 'id') && inCols(c));
       const sinceReads = t => t.cl.st.calls.filter(c => c[0] === 'select' && c[1].gt.length && inCols(c));
@@ -686,7 +693,7 @@ async function signup(t, be, local, prof) {
         db.collection('notes').orderBy('at', 'desc').limit(2).onSnapshot(s => res(s.docs.map(d => d.id).sort().join()));
       });
       const big = Date.now() + 1e9;
-      const add = (id, at) => be.pool.query("insert into public.docs (col, id, data) values ('notes', $1, jsonb_build_object('at', $2::bigint, 'title', $1::text))", [id, at]);
+      const add = (id, at) => be.pool.query("insert into public.docs (col, id, data) values ('notes', $1, jsonb_build_object('at', $2::bigint, 'title', $1::text, 'drive', 'https://drive.google.com/file/d/pencere0000/view'))", [id, at]);
       await add('pencere1', big + 1); await add('pencere2', big + 2); await add('pencere3', big + 3);
       eq(await open(), 'pencere2,pencere3', 'pencere: en yeni iki not');
       await sleep(20);

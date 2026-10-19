@@ -290,6 +290,30 @@ step('Öğrenci başkasının isteğini silemez', A, "select public.doc_delete('
 step('Olmayan kaydı silmek sessizce geçer', A, "select public.doc_delete('hocas', 'yok')", 'ok')
 step('Yönetici anonim notu siler', C, "select public.doc_delete('notes', 'tA2')", 'ok', f"{P(A,'kb,notes')}::int = 0")
 
+# ---- not kilidi (0012): bağlantı ve açıklama files kaydında, notta yalnızca bağlantının türü
+DOCX = 'https://docs.google.com/document/d/xyz/edit'
+step('Not paylaşılınca bağlantı ve açıklama files kaydına gider, notta türü kalır', A,
+     f"select public.doc_set('notes', 'tF1', {j({'cid':'CSE211','title':'Kilitli not','desc':'Vize özeti','drive':DRIVE,'anon':False})})", 'ok',
+     f"{DOC('notes','tF1','drive')} is null and {DOC('notes','tF1','desc')} is null and {DOC('notes','tF1','dk')} = 'file' "
+     f"and {DOC('files','tF1','drive')} = '{DRIVE}' and {DOC('files','tF1','desc')} = 'Vize özeti'")
+step('Başlık düzeltilir: bağlantı istenmez, files değişmez', A,
+     f"select public.doc_update('notes', 'tF1', {j({'title':'Kilitli not 2'})})", 'ok',
+     f"{DOC('notes','tF1','title')} = 'Kilitli not 2' and {DOC('notes','tF1','dk')} = 'file' and {DOC('files','tF1','drive')} = '{DRIVE}' and {DOC('files','tF1','desc')} = 'Vize özeti'")
+step('Bağlantı ve açıklama değişir: files ve tür güncellenir', A,
+     f"select public.doc_update('notes', 'tF1', {j({'drive':DOCX,'desc':''})})", 'ok',
+     f"{DOC('files','tF1','drive')} = '{DOCX}' and {DOC('files','tF1','desc')} = '' and {DOC('notes','tF1','dk')} = 'doc' and {DOC('notes','tF1','drive')} is null")
+step('Düzeltmede Drive dışı bağlantı reddedilir', A, f"select public.doc_update('notes', 'tF1', {j({'drive':'https://example.com/x'})})", 'fail',
+     f"{DOC('files','tF1','drive')} = '{DOCX}'")
+step('B nota oy verir: files değişmez', B,
+     f"select public.doc_update('notes', 'tF1', jsonb_build_object('likes', jsonb_build_object({K(B,'notes','tF1')}, true)))", 'ok',
+     f"{DOC('files','tF1','drive')} = '{DOCX}'")
+step('files kaydına doğrudan yazılamaz', B, f"select public.doc_set('files', 'tF1', {j({'drive':DRIVE})})", 'fail', f"{DOC('files','tF1','drive')} = '{DOCX}'")
+step('files kaydı düzeltilemez', B, f"select public.doc_update('files', 'tF1', {j({'drive':DRIVE})})", 'fail', f"{DOC('files','tF1','drive')} = '{DOCX}'")
+step('files kaydı silinemez', B, "select public.doc_delete('files', 'tF1')", 'fail', f"{DOC('files','tF1','drive')} = '{DOCX}'")
+step('Not silinince files kaydı da silinir', A, "select public.doc_delete('notes', 'tF1')", 'ok', "not exists (select 1 from public.docs where id = 'tF1')")
+step('Okuma denetimi için bir not kalır', A, f"select public.doc_set('notes', 'tF2', {j({'cid':'CSE211','title':'Açık başlık','desc':'gizli açıklama','drive':DRIVE,'anon':False})})", 'ok',
+     f"{DOC('files','tF2','drive')} = '{DRIVE}'")
+
 S2 = len(S)
 
 # ---- okuma ve özel hesaplar (doğrudan SQL)
@@ -310,6 +334,20 @@ extra = f"""
   perform set_config('role', 'postgres', true);
   res := res || jsonb_build_array(jsonb_build_object('t', 'okuma: anon özel kayıt görmez, profilleri görür', 'ok', n1 = 0 and n2 = 3, 'got', n1 || '/' || n2));
   res := res || jsonb_build_array(jsonb_build_object('t', 'okuma: sahibi kendi özel kaydını görür, başkası göremez', 'ok', n3 = 1 and n4 = 0, 'got', n3 || '/' || n4));
+  -- not kilidi: anon bağlantıları (files) göremez, notlarda bağlantı ve açıklama yok; giriş yapmış görür
+  perform set_config('request.jwt.claims', '', true);
+  perform set_config('role', 'anon', true);
+  select count(*) into n1 from public.docs where col = 'files';
+  select count(*) into n2 from public.docs where col = 'notes' and (data ? 'drive' or data ? 'desc');
+  select count(*) into n4 from public.docs where col = 'notes';
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '$B', 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  select count(*) into n3 from public.docs where col = 'files';
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', '', true);
+  res := res || jsonb_build_array(jsonb_build_object('t', 'not kilidi: anon notları görür ama bağlantıları ve açıklamaları göremez', 'ok', n1 = 0 and n2 = 0 and n4 > 0, 'got', n1 || '/' || n2 || '/' || n4));
+  res := res || jsonb_build_array(jsonb_build_object('t', 'not kilidi: giriş yapmış öğrenci bağlantıları görür', 'ok', n3 > 0, 'got', n3));
   perform set_config('request.jwt.claims', json_build_object('sub', '$C', 'role', 'authenticated')::text, true);
   res := res || jsonb_build_array(jsonb_build_object('t', 'my_info yöneticiyi tanır', 'ok', (public.my_info()->>'admin')::boolean));
   perform set_config('request.jwt.claims', json_build_object('sub', '$A', 'role', 'authenticated')::text, true);
