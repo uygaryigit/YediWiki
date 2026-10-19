@@ -866,7 +866,7 @@ async function initSupa() {
   catch (e) { console.error(e); }
   if (!sb) { S.authPending = false; S.dbState = 'none'; S.version++; changed(); return; }
   S.sb = sb; S.canWrite = true;
-  S.db = window.YWSupa.makeDb(sb, { onLive: up => {
+  S.db = window.YWSupa.makeDb(sb, { cache: window.YWSupa.idbStore(), scope: cfg.url, onLive: up => {
     if (up) { S.liveSeen = true; if (S.subErr === 'live') { S.subErr = null; renderChrome(); } }
     else if (S.liveSeen && !S.subErr) { S.subErr = 'live'; renderChrome(); }
   } });

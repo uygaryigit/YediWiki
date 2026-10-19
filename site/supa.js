@@ -2,6 +2,7 @@
    app.js claude.ai sürümünde belge veritabanını (koleksiyon/belge, onSnapshot, set/update/delete) kullanır.
    Bu dosya aynı arayüzü Supabase üzerinde kurar: okuma public.docs tablosundan, yazma doc_set / doc_update /
    doc_delete RPC'leriyle (kurallar sunucuda), canlı güncelleme Realtime ile.
+   Koleksiyonlar tarayıcıda saklanır (IndexedDB); sonraki açılışta yalnızca değişenler ve silinenler (docs_gone) okunur.
    Ayrıca belge başına takma ad için eşzamanlı HMAC-SHA256 (sunucudaki yw_private.key_for ile aynı sonuç). */
 (function () {
   'use strict';
@@ -63,6 +64,12 @@
   const ID_OK = /^[A-Za-z0-9_.~:@+-]{1,100}$/;
   const PAGE = 1000;
   const SEL = 'id,data,updated_at';
+  // Artımlı yükleme (göç 0011): önbellek yoksa, eskiyse ya da değişiklik çoksa koleksiyon baştan okunur
+  const CACHE_V = 1;                 // önbellek biçimi değişirse artar
+  const CACHE_MAX_AGE = 20 * 864e5;  // bundan uzun süredir eşitlenmemiş önbellek kullanılmaz (silinenler 45 gün tutulur)
+  const CACHE_WAIT = 1500;           // önbellek bu sürede okunamazsa beklenmez
+  const SINCE_MARGIN = 5 * 60e3;     // geç kaydedilen yazmalar kaçmasın diye geriye pay
+  const SINCE_MAX = 500;             // daha çok değişiklik varsa baştan oku (PostgREST en çok 1000 satır döndürür)
 
   /* Zaman damgası karşılaştırması (mikro saniyeye kadar): eski bir canlı olay yeni veriyi ezmesin */
   function tsNum(s) {
@@ -74,6 +81,7 @@
     return base * 1000 + (+frac || 0);
   }
   const older = (a, b) => { const x = tsNum(a), y = tsNum(b); return x === x && y === y && y < x; };   // b, a'dan eski mi
+  const later = (a, b) => { const x = tsNum(a), y = tsNum(b); return y === y && !(x >= y) ? b : a; };   // ikisinden yenisi
 
   function mapErr(e) {
     const msg = String((e && e.message) || e || 'error');
@@ -102,15 +110,39 @@
     return Array.from(a, x => abc[x % 36]).join('');
   }
 
+  /* Tarayıcı önbelleği: IndexedDB'de tek anahtar-değer deposu. Tarayıcıda yoksa null; açılamazsa okuma ve yazma hata verir,
+     site önbelleksiz çalışır. */
+  function idbStore(name) {
+    let idb = null;
+    try { idb = window.indexedDB || null; } catch (e) { idb = null; }
+    if (!idb) return null;
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const rq = idb.open(name || 'yw-cache', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+      rq.onblocked = () => rej(new Error('blocked'));
+    }));
+    const op = (mode, fn) => open().then(db => new Promise((res, rej) => {
+      const tx = db.transaction('kv', mode), rq = fn(tx.objectStore('kv'));
+      tx.oncomplete = () => res(rq.result);
+      tx.onerror = tx.onabort = () => rej(tx.error);
+    })).catch(e => { dbp = null; throw e; });
+    return { get: k => op('readonly', os => os.get(k)), set: (k, v) => op('readwrite', os => os.put(v, k)) };
+  }
+
   function makeDb(sb, opts = {}) {
     const cols = new Map();          // koleksiyon -> durum
     const docSubs = new Map();       // 'col/id' -> Set(abone)
     let chan = null, everUp = false, needResync = false;
     const onLive = typeof opts.onLive === 'function' ? opts.onLive : () => {};
+    const cache = opts.cache || null, scope = String(opts.scope || ''), margin = opts.margin != null ? +opts.margin : SINCE_MARGIN;
 
     function colState(name) {
       let st = cols.get(name);
-      if (!st) { st = { name, rows: new Map(), subs: new Set(), loaded: false, loading: null, pending: [], order: null, limit: 0, flushQ: false }; cols.set(name, st); }
+      // cur: okunan en son değişikliğin zamanı (sonraki okuma bundan sonrasını ister)
+      if (!st) { st = { name, rows: new Map(), subs: new Set(), loaded: false, loading: null, pending: [], order: null, limit: 0, flushQ: false, cur: null, q: null }; cols.set(name, st); }
       return st;
     }
     function snapCol(st) {
@@ -162,11 +194,83 @@
       }
       return out;
     }
+    // önbellekteki sürümden sonra değişenler: yeni ya da değişmiş satırlar ve silinenler; çoksa ya da sürüm yoksa null
+    async function fetchSince(st) {
+      const t = tsNum(st.cur);
+      if (!(t === t)) return null;
+      const since = new Date(Math.floor(t / 1000) - margin).toISOString();
+      const [a, b] = await Promise.all([
+        sb.from('docs').select(SEL).eq('col', st.name).gt('updated_at', since).limit(SINCE_MAX + 1),
+        sb.from('docs_gone').select('id,at').eq('col', st.name).gt('at', since).limit(SINCE_MAX + 1)
+      ]);
+      if (a.error) throw mapErr(a.error);
+      if (b.error) throw mapErr(b.error);
+      const rows = a.data || [], gone = b.data || [];
+      return rows.length > SINCE_MAX || gone.length > SINCE_MAX ? null : { rows, gone };
+    }
+    // dolu sınırlı pencereden satır silindiyse yerine gelecek eski satır bilinmez: baştan okunur
+    const needAll = (st, d) => st.limit && st.rows.size >= st.limit && d.gone.some(g => st.rows.has(String(g.id)));
+    function setRows(st, rows) {
+      st.rows = rows; st.cur = null;
+      for (const r of rows.values()) st.cur = later(st.cur, r.ver);
+    }
+    function merge(st, d) {
+      let ch = false;
+      for (const g of d.gone) { if (put(st, String(g.id), null, g.at, true)) ch = true; st.cur = later(st.cur, g.at); }
+      for (const r of d.rows) { if (put(st, String(r.id), r.data, r.updated_at, false)) ch = true; st.cur = later(st.cur, r.updated_at); }
+      return trim(st) || ch;
+    }
+    // sınırlı koleksiyon (en yeni N): sunucudaki sıraya göre fazlası atılır; alanı olmayan sunucudaki gibi en büyük sayılır (NULL)
+    function trim(st) {
+      if (!st.limit || !st.order || st.rows.size <= st.limit) return false;
+      const f = st.order.f, desc = st.order.dir === 'desc';
+      const val = r => (r.data && typeof r.data[f] === 'number' ? r.data[f] : Infinity);
+      const keep = new Set([...st.rows].sort((a, b) => { const x = val(a[1]), y = val(b[1]); return x === y ? 0 : (x < y) === desc ? 1 : -1; })
+        .slice(0, st.limit).map(e => e[0]));
+      for (const id of [...st.rows.keys()]) if (!keep.has(id)) st.rows.delete(id);
+      return true;
+    }
+    const cacheKey = st => ['c' + CACHE_V, st.name, st.order ? st.order.f + ' ' + st.order.dir : '', st.limit || ''].join('|');
+    // önbellekteki koleksiyon ya da null (yok, başka proje, eski, bozuk ya da zamanında okunamadı)
+    async function readCache(st) {
+      if (!cache) return null;
+      let c = null;
+      try {
+        const raw = await Promise.race([cache.get(cacheKey(st)), new Promise(r => setTimeout(r, CACHE_WAIT, null))]);
+        c = typeof raw === 'string' ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+      if (!c || c.v !== CACHE_V || c.scope !== scope || !c.cur || !Array.isArray(c.rows) || !(Date.now() - c.at < CACHE_MAX_AGE)) return null;
+      const rows = new Map();
+      for (const r of c.rows) if (Array.isArray(r) && typeof r[0] === 'string' && r[1] && typeof r[1] === 'object') rows.set(r[0], { data: r[1], ver: r[2] || null });
+      return { rows, cur: String(c.cur) };
+    }
+    function saveCache(st) {
+      if (!cache || !st.cur) return;
+      const rows = [];
+      for (const [id, r] of st.rows) rows.push([id, clean(r.data), r.ver]);
+      try { Promise.resolve(cache.set(cacheKey(st), JSON.stringify({ v: CACHE_V, scope, at: Date.now(), cur: st.cur, rows }))).catch(() => {}); }
+      catch (e) { /* yazılamadı: önbelleksiz devam */ }
+    }
     async function loadCol(st) {
-      const rows = await fetchCol(st);
+      // önce önbellek ve yalnızca değişenler; olmazsa hepsi baştan
+      const c = await readCache(st);
+      let d = null;
+      if (c) {
+        st.rows = c.rows; st.cur = c.cur;
+        try { d = await fetchSince(st); } catch (e) { d = null; }
+        if (d && needAll(st, d)) d = null;
+        if (d) merge(st, d);
+      }
+      if (!d) {
+        try { setRows(st, await fetchCol(st)); }
+        catch (e) { if (c) done(st); throw e; }   // çevrimdışı: son bilinen veriyle açılır, hata da bildirilir
+      }
+      done(st);
+      saveCache(st);
+    }
+    function done(st) {
       // yüklenirken gelen olaylar: yüklenen satırdan yeniyse uygulanır
       const pend = st.pending; st.pending = [];
-      st.rows = rows;
       for (const [id, data, ver, del] of pend) put(st, id, data, ver, del);
       st.loaded = true;
       flush(st);
@@ -190,14 +294,20 @@
           }
         });
     }
-    // bağlantı koptuysa kaçırılan değişiklikler için her şeyi yeniden oku
+    // bağlantı koptuysa kaçırılan değişiklikler: yalnızca değişenler, olmazsa her şey yeniden okunur
+    async function refresh(st) {
+      let d = null;
+      try { d = await fetchSince(st); } catch (e) { d = null; }
+      if (d && needAll(st, d)) d = null;
+      if (d) { if (merge(st, d)) flush(st); }
+      else { setRows(st, await fetchCol(st)); flush(st); }
+      saveCache(st);
+    }
     async function resync() {
       for (const st of cols.values()) {
         if (!st.loaded) continue;
-        try {
-          const rows = await fetchCol(st);
-          st.rows = rows; flush(st);
-        } catch (e) { /* bir sonraki bağlantıda */ }
+        st.q = (st.q || Promise.resolve()).then(() => refresh(st)).catch(() => { /* bir sonraki bağlantıda */ });
+        await st.q;
       }
       for (const [key, set] of docSubs) for (const s of set) s.reload && s.reload();
     }
@@ -304,5 +414,5 @@
     };
   }
 
-  window.YWSupa = { makeDb, hmacHex, mapErr, tsNum };
+  window.YWSupa = { makeDb, idbStore, hmacHex, mapErr, tsNum };
 })();

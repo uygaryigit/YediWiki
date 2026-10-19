@@ -16,6 +16,11 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - 0008 (`market_yenileme`: 5 ürün silindi, 7 ürün eklendi, toplam 25; yeni yuva `ayak`, users'ta `altk` kot / etek) 18 Ekim'de bağlayıcıyla uygulandı. Öncesinde canlı `users_norm` 0007 ile aynıydı, sonrası yereldekiyle aynı (md5). Silinen ürünlerin kubbesi sahibine iade edildi: yalnızca `deneme123` (Selçuklu Kapısı 900 + Güneş Paneli Aurası 800; harcama 9610 → 7910); takılı futbol topu ayağa taşındı.
   - 0009 (`ayakkabi_sapka`: 5 ürün, toplam 30; yeni yuvalar `ayakkabi` ve `bas`) 18 Ekim'de bağlayıcıyla uygulandı. Öncesinde canlı `users_norm` 0008 ile aynıydı, sonrası yereldekiyle aynı (md5).
   - 0010 (`voleybol_elbise`: Voleybol Forması `ust` → `elbise`; üstte takılı olan elbiseye taşınır, canlıda yoktu) 18 Ekim'de bağlayıcıyla uygulandı; `users_norm` değişmedi.
+  - 0011 (`artimli_yukleme`: `updated_at` tetikleyicide yazılır (`docs_surum`: her değişiklikte ilerler, aynı belgede geri gitmez, elle yazılan değer geçmez); silinenler `public.docs_gone`'da 45 gün (`docs_silinen`; yalnızca col, id, zaman; özel kayıtlar yazılmaz); dizin `(col, updated_at)`) 19 Ekim'de bağlayıcıyla uygulandı. Canlıda geri alınan denemeyle doğrulandı; advisors'ta yeni uyarı yok.
+- **Artımlı yükleme (19 Ekim):** Koleksiyonlar tarayıcıda saklanır (IndexedDB `yw-cache`, `idbStore`); sonraki açılışta ve canlı bağlantı yeniden kurulunca yalnızca `updated_at`'i önbellektekinden yeni olanlar (5 dk geriye pay) ve `docs_gone`'daki silinenler okunur (`fetchSince`, `merge`). Önceden her açılışta ve her yeniden bağlanmada her şey baştan iniyordu.
+  - Baştan okunur: önbellek yoksa, 20 günden eskiyse, başka projeninse (`scope`), değişiklik 500'den çoksa, `docs_gone` okunamazsa ya da dolu sınırlı pencereden (notlar ve yorumlar en yeni 1000, istekler 500) satır silindiyse (`needAll`).
+  - Veri önbellekten hemen gösterilmez, değişenler gelince açılır: eski önbellekte hesabı olmayan kullanıcı bir an hesapsız görünüp profil penceresi açılmasın diye. Ağ yoksa son bilinen veriyle açılır, hata da gösterilir.
+  - Özel kayıt (`private`) önbelleğe girmez. Gizlilik sayfasında yazıyor. Önbellek biçimi değişirse `CACHE_V` artırılır.
 - **Hesaplar:**
   - `yonetici@yediwiki.com`: yönetici, şifreyle girer.
   - `deneme123@std.yeditepe.edu.tr`: ortak deneme hesabı, şifreyle girer. 18 Ekim'de kullanıcının isteğiyle hediye kubbesine 90.000 eklendi (`gift` 10.000 → 100.000), ürünleri deneyebilsin diye.
@@ -146,10 +151,14 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
 
 1. **Drive seçiciyi dene:** yediwiki.com'da "Drive'dan seç" ile gerçek bir Google hesabından dosya seç; paylaşım ayarı ve önizleme.
 2. **Search Console:** birkaç gün sonra Sayfalar raporunda dizine eklenen ders sayısına bak; "Taranan, dizine eklenmeyen" çoksa nedenine bak.
-3. **Büyüme:** her ziyaretçi bütün kullanıcıları, son 1000 notu ve yorumu indiriyor (`subscribe`). Supabase ücretsiz planında aylık 5 GB çıkış; yüzlerce aktif kullanıcıya gelince sayfa başına yüklemeye geç. Resend ücretsiz planı günde 100 e-posta: açılışta kayıt bunu geçerse ücretli plan ya da ikinci sağlayıcı.
+3. **Büyüme:** tekrar gelenler ve yeniden bağlananlar 19 Ekim'den beri yalnızca değişenleri indiriyor (artımlı yükleme). Kalanlar:
+   - İlk açılış (yeni ziyaretçi, Google'dan gelen) yine bütün kullanıcıları, son 1000 notu ve yorumu indiriyor. Ana sayfa girişsiz ziyaretçiye de sıralamayı ve son yorumları gösterdiği için girişsizlere hafif yükleme ürün kararı ister.
+   - Notlar en yeni 1000 ile sınırlı: aşınca eski notlar ders sayfalarından düşer; o zaman ders sayfası kendi notlarını istemeli.
+   - Realtime ücretsiz planda en çok 200 eşzamanlı bağlantı ve ayda 2 milyon mesaj; her değişiklik açık her sekmeye gidiyor.
+   - Supabase ücretsiz planında aylık 5 GB çıkış. Resend ücretsiz planı günde 100 e-posta: açılışta kayıt bunu geçerse ücretli plan ya da ikinci sağlayıcı.
 4. **Yedek:** ücretsiz planda otomatik yedek yok.
 
-Supabase advisors (19 Ekim): performans temiz; güvenlikte yalnızca bilinçli tercihler (yw_private'ta politikasız RLS, istemcinin çağırdığı SECURITY DEFINER RPC'ler) ve sızdırılmış şifre denetimi (Pro planında).
+Supabase advisors (19 Ekim): performans temiz (0011'in iki dizini yeni sürüm yayına çıkana kadar "kullanılmıyor" görünür); güvenlikte yalnızca bilinçli tercihler (yw_private'ta politikasız RLS, istemcinin çağırdığı SECURITY DEFINER RPC'ler) ve sızdırılmış şifre denetimi (Pro planında).
 
 ## Çalışma kuralları
 
@@ -172,5 +181,5 @@ Supabase advisors (19 Ekim): performans temiz; güvenlikte yalnızca bilinçli t
 
 - **Supabase bağlayıcısı:** "Supabase YediWiki" (`mcp__Supabase_YediWiki__*`), `skip_elicitations=execute_sql,apply_migration` ile kurulu; şema değişikliği buradan yapılabilir.
 - **Yerel testler:** PostgreSQL 16 ister (`/usr/lib/postgresql/16/bin`). `supabase/tests/pg_yerel.sh` sunucuyu kurar ve başlatır.
-- **Beklenen sonuçlar:** `npm test` 1616/1616 ve 62/62 (`tests/t_seo.js`: site haritası, robots, worker verisi, yasal sayfalar, `worker/seo.js`), `npm run test:site` 172/172, `npm run test:db` 138/138.
+- **Beklenen sonuçlar:** `npm test` 1616/1616 ve 62/62 (`tests/t_seo.js`: site haritası, robots, worker verisi, yasal sayfalar, `worker/seo.js`), `npm run test:site` 191/191 (12. bölüm artımlı yükleme: sahte IndexedDB, yeniden bağlanma, `docs_gone` yokken baştan okuma, sınırlı pencere), `npm run test:db` 138/138.
 - **Worker'ı yerelde denemek:** `npx wrangler dev` (önce `npm run build`); yerelde Supabase'e ulaşılamazsa önizleme notsuz yazılır.

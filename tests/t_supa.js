@@ -26,7 +26,28 @@ function prep(html) {
 }
 const HTML = prep(HTML0);
 
-async function tab(be, { hash = '#/', path: urlPath = '/', html = HTML, session = null, name = 'sekme' } = {}) {
+// IndexedDB'nin sitenin kullandığı kadarı (open, createObjectStore, transaction, get, put); veriler `mem`de, sekmeler arasında ortak
+function fakeIdb(mem) {
+  const later = f => setTimeout(f, 1);
+  const db = {
+    createObjectStore() {},
+    transaction() {
+      const tx = {};
+      const req = fn => { const rq = {}; later(() => { rq.result = fn(); later(() => tx.oncomplete && tx.oncomplete()); }); return rq; };
+      tx.objectStore = () => ({ get: k => req(() => mem.get(k)), put: (v, k) => req(() => { mem.set(k, v); return k; }) });
+      return tx;
+    }
+  };
+  return {
+    open() {
+      const rq = {};
+      later(() => { rq.result = db; if (!mem.made) { mem.made = true; if (rq.onupgradeneeded) rq.onupgradeneeded(); } if (rq.onsuccess) rq.onsuccess(); });
+      return rq;
+    }
+  };
+}
+
+async function tab(be, { hash = '#/', path: urlPath = '/', html = HTML, session = null, name = 'sekme', idb = null } = {}) {
   const cl = makeClient(be);
   if (session) cl.st.session = session;
   const errors = [];
@@ -40,6 +61,7 @@ async function tab(be, { hash = '#/', path: urlPath = '/', html = HTML, session 
       w.scrollTo = () => {};
       w.TextEncoder = TextEncoder;
       w.Element.prototype.scrollIntoView = function () {};
+      if (idb) w.indexedDB = idb;
     }
   });
   const w = dom.window;
@@ -572,6 +594,95 @@ async function signup(t, be, local, prof) {
     noErr(A2, 'yol adresi');
 
     for (const t of [v, A, B, C, Dn, B2, F, G, H, A2]) t.close();
+
+    console.log('12) artımlı yükleme: tarayıcı önbelleği, yalnızca değişenler');
+    {
+      const mem = new Map();
+      const cols = (await be.pool.query("select distinct col from public.docs where col <> 'private'")).rows.map(r => r.col);
+      const inCols = c => c[1].filters.some(f => f[0] === 'col' && cols.includes(f[1]));
+      const fullReads = t => t.cl.st.calls.filter(c => c[0] === 'select' && c[1].table === 'docs' && !c[1].gt.length && !c[1].filters.some(f => f[0] === 'id') && inCols(c));
+      const sinceReads = t => t.cl.st.calls.filter(c => c[0] === 'select' && c[1].gt.length && inCols(c));
+      const I1 = await tab(be, { name: 'önbellek-1', idb: fakeIdb(mem) });
+      await I1.until(() => cols.every(n => [...mem.keys()].some(k => k.split('|')[1] === n)), 'koleksiyonlar tarayıcıya yazıldı: ' + cols.join(', '));
+      ok(fullReads(I1).length >= cols.length && !sinceReads(I1).length, 'ilk açılışta koleksiyonlar baştan okunur');
+      noErr(I1, 'önbellek: ilk açılış');
+      I1.close();
+
+      // iki açılış arasında: bir not değişir, bir yorum silinir
+      const nt = await q1(be, "select id from public.docs where col = 'notes' order by updated_at limit 1");
+      const cm = await q1(be, "select id from public.docs where col = 'comments' order by updated_at limit 1");
+      const nid = JSON.stringify(nt.id), cid = JSON.stringify(cm.id);
+      await be.pool.query(`update public.docs set data = jsonb_set(data, '{title}', '"Önbellek denemesi"') where col = 'notes' and id = $1`, [nt.id]);
+      await be.pool.query("delete from public.docs where col = 'comments' and id = $1", [cm.id]);
+      ok(await q1(be, "select 1 as x from public.docs_gone where col = 'comments' and id = $1", [cm.id]), 'silinen yorum docs_gone\'a yazıldı');
+      const I2 = await tab(be, { name: 'önbellek-2', idb: fakeIdb(mem) });
+      await I2.until(() => sinceReads(I2).length >= 2 * cols.length, 'ikinci açılışta yalnızca değişenler istendi');
+      await I2.until(() => I2.ev(`S.notes.get(${nid}).title`) === 'Önbellek denemesi', 'değişen not ikinci açılışta geldi');
+      ok(!I2.ev(`S.comments.has(${cid})`), 'silinen yorum önbellekten düştü');
+      eq(I2.ev('S.users.size'), +(await q1(be, "select count(*) as n from public.docs where col = 'users'")).n, 'kullanıcılar önbellekten tam');
+      eq(fullReads(I2).length, 0, 'ikinci açılışta hiçbir koleksiyon baştan okunmadı');
+      noErr(I2, 'önbellek: ikinci açılış');
+
+      // canlı bağlantı kopar, o sırada not değişir: bağlantı gelince yalnızca değişenler okunur
+      const ch = [...I2.cl.st.channels][0];
+      be.listeners.delete(ch.l); ch.cb('CHANNEL_ERROR');
+      await be.pool.query(`update public.docs set data = jsonb_set(data, '{title}', '"Kopukken değişti"') where col = 'notes' and id = $1`, [nt.id]);
+      await sleep(100);
+      eq(I2.ev(`S.notes.get(${nid}).title`), 'Önbellek denemesi', 'kopukken değişiklik gelmedi');
+      const n0 = I2.cl.st.calls.length;
+      be.listeners.add(ch.l); ch.cb('SUBSCRIBED');
+      await I2.until(() => I2.ev(`S.notes.get(${nid}).title`) === 'Kopukken değişti', 'kopukken değişen not bağlantı gelince geldi');
+      // boş koleksiyonun sürümü olmadığı için o yine baştan okunur (boş yanıt)
+      const again = I2.cl.st.calls.slice(n0).filter(c => c[0] === 'select' && (inCols(c) || c[1].filters.some(f => f[0] === 'id')));
+      const bad = again.filter(c => !c[1].gt.length && !c[1].filters.some(f => f[0] === 'id'));
+      ok(again.length && !bad.length, 'yeniden bağlanınca yalnızca değişenler okundu: ' + JSON.stringify(bad.map(c => c[1].filters)));
+      noErr(I2, 'önbellek: yeniden bağlanma');
+      I2.close();
+
+      // sunucuda docs_gone yoksa (göç uygulanmamış) koleksiyonlar eskisi gibi baştan okunur
+      be.failGone = true;
+      const I3 = await tab(be, { name: 'önbellek-3', idb: fakeIdb(mem) });
+      await I3.until(() => fullReads(I3).length >= cols.length, 'docs_gone okunamazsa baştan okunur');
+      ok(!I3.ev(`S.comments.has(${cid})`) && I3.ev(`S.notes.get(${nid}).title`) === 'Kopukken değişti', 'baştan okumada veri doğru');
+      noErr(I3, 'önbellek: yedek yol');
+      be.failGone = false;
+      I3.close();
+    }
+    {
+      // sınırlı pencere (en yeni N) ve değişmeyenlerin yeniden indirilmemesi: bağdaştırıcı tek başına
+      const w = new JSDOM(`<script>${fs.readFileSync(path.join(ROOT, 'site/supa.js'), 'utf8')}</script>`, { runScripts: 'dangerously' }).window;
+      const cl2 = makeClient(be), mem2 = new Map(), got = [];
+      const store = { get: async k => mem2.get(k), set: async (k, v) => { mem2.set(k, v); } };
+      const sbx = { rpc: cl2.client.rpc, from(t) { const b = cl2.client.from(t), th = b.then; b.then = (res, rej) => th.call(b, r => { got.push([t, (r.data || []).length]); return r; }).then(res, rej); return b; } };
+      const open = (scope = 'deneme') => new Promise(res => {
+        const db = w.YWSupa.makeDb(sbx, { cache: store, scope, margin: 0 });
+        db.collection('notes').orderBy('at', 'desc').limit(2).onSnapshot(s => res(s.docs.map(d => d.id).sort().join()));
+      });
+      const big = Date.now() + 1e9;
+      const add = (id, at) => be.pool.query("insert into public.docs (col, id, data) values ('notes', $1, jsonb_build_object('at', $2::bigint, 'title', $1::text))", [id, at]);
+      await add('pencere1', big + 1); await add('pencere2', big + 2); await add('pencere3', big + 3);
+      eq(await open(), 'pencere2,pencere3', 'pencere: en yeni iki not');
+      await sleep(20);
+      ok(mem2.has('c1|notes|at desc|2'), 'pencere önbellekte');
+      await add('pencere4', big + 4);
+      await be.pool.query(`update public.docs set data = jsonb_set(data, '{title}', '"eski not değişti"') where col = 'notes' and id = 'pencere1'`);
+      got.length = 0;
+      eq(await open(), 'pencere3,pencere4', 'yeni not pencereye girdi, en eskisi düştü');
+      const total = +(await q1(be, "select count(*) as n from public.docs where col = 'notes'")).n;
+      const docsGot = got.filter(g => g[0] === 'docs');
+      ok(docsGot.length === 1 && docsGot[0][1] <= 3 && docsGot[0][1] < total, `yalnızca değişenler indirildi: ${JSON.stringify(got)}, toplam ${total} not`);
+      await sleep(20);
+      await be.pool.query("delete from public.docs where col = 'notes' and id = 'pencere4'");
+      let n1 = cl2.st.calls.length;
+      eq(await open(), 'pencere2,pencere3', 'pencereden not silinince baştan okundu, boşluk doldu');
+      ok(cl2.st.calls.slice(n1).some(c => c[0] === 'select' && c[1].table === 'docs' && !c[1].gt.length), 'dolu pencereden silinen not: baştan okuma');
+      await sleep(20);
+      n1 = cl2.st.calls.length;
+      await open('baska');
+      ok(!cl2.st.calls.slice(n1).some(c => c[0] === 'select' && c[1].gt.length), 'başka projenin önbelleği kullanılmadı');
+      w.close();
+      await be.pool.query("delete from public.docs where col = 'notes' and id like 'pencere%'");
+    }
   } catch (e) {
     fail++; console.log('  ✗ beklenmeyen hata: ' + (e && e.stack || e));
   } finally {

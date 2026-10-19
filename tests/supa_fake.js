@@ -69,11 +69,12 @@ function makeClient(be, { delay = 2 } = {}) {
   }
 
   function from(table) {
-    if (table !== 'docs') throw new Error('yalnızca docs');
-    const q = { filters: [], order: [], limit: null, range: null, single: false };
+    if (table !== 'docs' && table !== 'docs_gone') throw new Error('yalnızca docs ve docs_gone');
+    const q = { table, filters: [], gt: [], order: [], limit: null, range: null, single: false };
     const b = {
       select() { return b; },
       eq(f, v) { if (!/^(col|id)$/.test(f)) throw new Error('alan ' + f); q.filters.push([f, v]); return b; },
+      gt(f, v) { if (!/^(updated_at|at)$/.test(f)) throw new Error('alan ' + f); q.gt.push([f, v]); return b; },
       order(f, o) { q.order.push([f, o && o.ascending === false ? 'desc' : 'asc']); return b; },
       limit(n) { q.limit = n; return b; },
       range(a, z) { q.range = [a, z]; return b; },
@@ -85,18 +86,21 @@ function makeClient(be, { delay = 2 } = {}) {
   async function run(q) {
     st.calls.push(['select', q]);
     try {
-      const where = q.filters.map(([f], i) => `${f} = $${i + 1}`).join(' and ');
+      if (be.failGone && q.table === 'docs_gone') return { data: null, error: { code: '42P01', message: 'relation "public.docs_gone" does not exist' } };
+      const n = q.filters.length;
+      const where = q.filters.map(([f], i) => `${f} = $${i + 1}`).concat(q.gt.map(([f], i) => `${f} > $${n + i + 1}`)).join(' and ');
       const ord = q.order.map(([f, d]) => {
         const m = /^data->(\w+)$/.exec(f);
         if (m) return `data->'${m[1]}' ${d}`;
         if (!/^(id|col)$/.test(f)) throw new Error('sıra ' + f);
         return `${f} ${d}`;
       }).join(', ');
-      let sql = "select id, data, to_json(updated_at) #>> '{}' as updated_at from public.docs" + (where ? ' where ' + where : '') + (ord ? ' order by ' + ord : '');
+      const sel = q.table === 'docs_gone' ? "id, to_json(at) #>> '{}' as at" : "id, data, to_json(updated_at) #>> '{}' as updated_at";
+      let sql = `select ${sel} from public.${q.table}` + (where ? ' where ' + where : '') + (ord ? ' order by ' + ord : '');
       const maxRows = 1000;   // PostgREST'in varsayılan üst sınırı
       if (q.range) sql += ` limit ${Math.min(maxRows, q.range[1] - q.range[0] + 1)} offset ${q.range[0]}`;
       else sql += ` limit ${Math.min(maxRows, q.limit || maxRows)}`;
-      const r = await asRole(c => c.query(sql, q.filters.map(x => x[1])));
+      const r = await asRole(c => c.query(sql, q.filters.concat(q.gt).map(x => x[1])));
       if (q.single) return r.rows.length > 1 ? { data: null, error: { code: 'PGRST116', message: 'multiple rows' } } : { data: r.rows[0] || null, error: null };
       return { data: r.rows, error: null };
     } catch (e) { return { data: null, error: pgErr(e) }; }
@@ -180,7 +184,7 @@ function makeClient(be, { delay = 2 } = {}) {
             new: del ? {} : { col: p.col, id: p.id, data: p.data, updated_at: p.updated_at }, old: { col: p.col, id: p.id } };
           later(() => { for (const h of ch.handlers) h(payload); });
         };
-        ch.l = l; be.listeners.add(l); st.channels.add(ch);
+        ch.l = l; ch.cb = cb; be.listeners.add(l); st.channels.add(ch);
         be.listen().then(() => later(() => cb && cb('SUBSCRIBED')));
         return ch;
       },
