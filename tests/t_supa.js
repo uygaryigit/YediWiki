@@ -150,11 +150,11 @@ async function signup(t, be, local, prof) {
     ok(v.ev('S.supa === true') && v.ev("typeof S.db.collection === 'function'"), 'site kipi açıldı');
     ok(!v.$('[data-r=acc]').hidden && /Giriş yap/.test(v.text('[data-r=acc]')), 'giriş düğmesi görünür');
     eq(v.ev('S.me.startsWith("l")'), true, 'girişsizken yerel kimlik');
-    await v.go('#/dersler');
+    await v.go('#/paylas');
     await v.until(() => v.$('.modal') && v.$('#au-lmail'), 'herkese açık olmayan sayfa giriş ister');
     ok(v.text('.modal-head h2') === 'Giriş yap' && !!v.$('.modal #au-lpw') && !!v.$('.modal .btn-go[type=submit]') && !!v.$('.modal .btn-new[data-r=to-signup]'), 'önce giriş ekranı: e-posta, şifre, yeşil Giriş yap, kırmızı Kayıt ol');
     { const kids = v.$$('.modal form > *'); ok(kids.indexOf(v.$('.modal .btn-go')) < kids.indexOf(v.$('.modal .btn-new')), 'Kayıt ol, Giriş yap’ın altında'); }
-    ok(/Notları, HocaÖlçer’i/.test(v.text('.modal .auth-why') || ''), 'neden giriş istendiği yazıyor');
+    ok(/Notları açmak/.test(v.text('.modal .auth-why') || ''), 'neden giriş istendiği yazıyor');
     ok(!!v.$('.modal [data-r=forgot]'), 'Şifremi unuttum bağlantısı');
     v.$('.modal [data-r=to-signup]').click(); await sleep(40);
     ok(v.text('.modal-head h2') === 'Kayıt ol' && !!v.$('#au-mail') && !!v.$('#au-pw'), 'Kayıt ol: okul e-postası ve şifre');
@@ -546,26 +546,53 @@ async function signup(t, be, local, prof) {
       eq(G.$('link[rel=canonical]').getAttribute('href'), 'https://yediwiki.com/ders/cse211', 'canonical ders adresi'); }
     eq(G.$('#main [data-g=share]').dataset.path, '/ders/cse211', 'Paylaş ders adresini verir');
     G.$('#main .tab[data-tab=yorumlar]').click(); await sleep(60);
-    ok(/giriş yapınca görünür/.test(G.text('#main [data-r=panel]')) && !G.$('#main [data-r=panel] textarea'), 'yorumlar girişle açılır');
+    { const p = G.$('#main [data-r=panel]');
+      ok(p.querySelector('[data-r=list]') && !p.querySelector('[data-r=locked]').hidden && p.querySelector('[data-r=form]').hidden, 'yorumlar girişsiz okunur, yazmak giriş ister'); }
     G.$('#main .tab[data-tab=hocalar]').click(); await sleep(60);
-    ok(/giriş yapınca görünür/.test(G.text('#main [data-r=panel]')), 'hocalar girişle açılır');
+    await G.until(() => G.$('#main [data-r=panel] .ho-view') && !/giriş yapınca görünür/.test(G.text('#main [data-r=panel]')), 'hocalar girişsiz açılır, kutu / liste seçilir');
     G.$('#main .tab[data-tab=notlar]').click(); await sleep(60);
-    await G.until(() => G.$('#main .note-title'), 'notlar sekmesine dönüldü');
-    { const href = G.$('#main .note-title').getAttribute('href'), url0 = G.w.location.pathname + G.w.location.hash;
+    await G.until(() => G.$('#main [data-r=list] .ncards.paper .ncard-link'), 'ders notları asılı not kağıdı olarak');
+    ok(!/aliveli|Ali Veli|Anonim/.test(G.text('#main [data-r=list]')), 'kartlarda paylaşan yazmaz');
+    G.$('#main .ho-view [data-v=list]').click(); await sleep(40);
+    ok(!!G.$('#main [data-r=list] .note-row') && !G.$('#main [data-r=list] .ncards'), 'Liste görünümü');
+    eq(G.ev("ls.get('noteView', '')"), 'list', 'not görünümü bu tarayıcıda kalır');
+    G.$('#main .ho-view [data-v=card]').click(); await sleep(40);
+    { const href = G.$('#main [data-r=list] .ncard-link').getAttribute('href'), nid = href.split('/').pop();
       await G.go(href); await sleep(80);
-      await G.until(() => G.$('.modal #au-lmail'), 'nota basınca giriş istenir');
-      eq(G.w.location.pathname + G.w.location.hash, url0, 'giriş istenirken ders sayfasında kalınır');
-      ok(!!G.$('#main .peek-cta'), 'önizleme arkada duruyor');
-      eq(G.ev('S.pendingHash'), href, 'girişten sonra nota gidilecek');
-      G.ev('closeAllModals()'); await sleep(40); }
+      await G.until(() => G.$('#main .nlock'), 'nota basınca not sayfası kilitli açılır');
+      ok(!G.$('.modal'), 'not sayfasında giriş penceresi kendiliğinden açılmaz');
+      eq(G.text('#main .page-head h1'), G.ev(`S.notes.get(${JSON.stringify(nid)}).title`), 'notun başlığı görünür');
+      ok(!G.$('#main .dview') && !G.$('#main iframe') && !G.$('#main .note-desc'), 'notun içi yazılmaz: Drive önizlemesi ve açıklama yok');
+      ok(!/drive\.google\.com\/(file|open|drive)|docs\.google\.com/.test(G.$('#main').innerHTML), 'Drive bağlantısı sayfada yok');
+      ok(!/Paylaşan/.test(G.text('#main .page-head')) && !G.$('#main [data-g=report-note]'), 'paylaşan ve Bildir yok');
+      ok(G.$('#main .nlock [data-g=peek-login]') && G.$('#main .nlock [data-g=peek-signup]') && G.$('#main .nlock .gl-padlock'), 'kilidin üstünde Giriş yap ve Kayıt ol');
+      G.$('#main [data-g=vote-up]').click(); await sleep(60);
+      await G.until(() => G.$('.modal #au-lmail'), 'oy vermeye çalışınca giriş istenir');
+      ok(/Notları açmak/.test(G.text('.modal .auth-why') || ''), 'oyda da giriş nedeni yazıyor');
+      G.ev('closeAllModals()'); await sleep(40);
+      await G.go('#/ders/CSE211');
+      await G.until(() => G.$('#main .peek-cta') && G.$('#main [data-r=list] .ncard-link'), 'ders önizlemesine dönüldü'); }
     G.$('#main .peek-cta [data-g=peek-signup]').click(); await sleep(60);
     ok(G.text('.modal-head h2') === 'Kayıt ol' && /KVKK Aydınlatma Metni/.test(G.text('.modal .auth-legal')) && G.$('.modal .auth-legal a[href="/kvkk"]') && G.$('.modal .auth-legal a[href="/kosullar"]'), 'Kayıt ol: koşullar ve KVKK bağlantısı');
     G.ev('closeAllModals()'); await sleep(40);
     ok(!!G.$('footer a[href="/kvkk"]') && !!G.$('footer a[href="/kosullar"]'), 'alt menüde KVKK ve kullanım koşulları');
     { const url0 = G.w.location.pathname + G.w.location.hash;
-      await G.go('#/dersler'); await sleep(80);
-      await G.until(() => G.$('.modal #au-lmail'), 'Dersler yine giriş ister');
-      eq(G.w.location.pathname + G.w.location.hash, url0, 'giriş istenince adres ders sayfasında kalır'); }
+      await G.go('#/paylas'); await sleep(80);
+      await G.until(() => G.$('.modal #au-lmail'), 'Not paylaş yine giriş ister');
+      eq(G.w.location.pathname + G.w.location.hash, url0, 'giriş istenince adres ders sayfasında kalır');
+      G.ev('closeAllModals()'); await sleep(40); }
+    // girişsiz gezilenler: HocaÖlçer, hoca sayfası (puanlamak giriş ister), dersler, arama, istekler
+    await G.go('#/hocaolcer');
+    await G.until(() => G.ev('curKey') === 'hocaolcer' && G.$('#main [data-r=list] .hcard, #main [data-r=list] .row-link') && !G.$('.modal'), 'HocaÖlçer girişsiz açılır');
+    { const hid = G.$('#main [data-r=list] .hcard, #main [data-r=list] .row-link').getAttribute('href').split('/').pop();
+      await G.go('#/hoca/' + hid + '?tab=notlar');
+      await G.until(() => G.ev('curKey') === 'hoca' && G.$('#main [data-r=rate]') && G.$('#main [data-r=panel] .ho-view') && !G.$('.modal'), 'hoca sayfası girişsiz açılır, notlarda kutu / liste');
+      G.$('#main [data-r=rate]').click(); await sleep(60);
+      await G.until(() => G.$('.modal #au-lmail'), 'puanlamaya çalışınca giriş istenir');
+      G.ev('closeAllModals()'); await sleep(40); }
+    for (const [h, k] of [['#/dersler', 'dersler'], ['#/ara?q=CSE', 'ara'], ['#/istekler', 'istekler']]) {
+      await G.go(h); await G.until(() => G.ev('curKey') === k && !G.$('.modal'), k + ' girişsiz açılır');
+    }
     noErr(G, 'önizleme');
     const H = await tab(be, { name: 'önizleme #', hash: '#/ders/MATH131' });
     await H.until(() => H.$('#main .peek-cta') && /Kalkulus anonim/.test(H.text('#main [data-r=list]') || ''), '#/ders/ adresiyle de önizleme');

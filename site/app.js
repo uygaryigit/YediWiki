@@ -155,6 +155,8 @@ const GL = (() => {
         + `<g class="flm"><g clip-path="url(#fc{id})"><rect x="0" y="8" width="48" height="42" fill="#EF4A2F"/>${band(21.5, '#FF7F27', 1)}${band(28.5, '#FFAE2E', 2)}${band(35.5, '#FFDD55', 3)}<ellipse class="fcore" cx="24" cy="41.5" rx="6.5" ry="4" fill="#FFF3B0"/></g>`
         + `<path d="${F}" fill="none" ${O}/><path d="M31 19.5c2.6 2.6 4 6 4.2 9.6" ${L}/></g>`;
     })(),
+    // asma kilit: girişsiz ziyaretçide notun önündeki kart
+    padlock: `<path d="M15.5 22v-5.5a8.5 8.5 0 0 1 17 0V22" fill="none" stroke="#1B1330" stroke-width="7.4" stroke-linecap="round"/><path d="M15.5 22v-5.5a8.5 8.5 0 0 1 17 0V22" fill="none" stroke="#B8C0D4" stroke-width="3" stroke-linecap="round"/><rect x="9" y="21" width="30" height="21" rx="5" fill="#FFC93C" ${O}/><path d="M24 28a2.8 2.8 0 0 1 1.6 5.1V37h-3.2v-3.9A2.8 2.8 0 0 1 24 28z" fill="#1B1330"/><path d="M13.5 26v10" ${L}/>`,
     megaphone: `<path d="M12 29.5 14 38h5l-1.2-8.5" fill="#2447D5" ${O}/><rect x="6" y="19" width="11" height="11" rx="3" fill="#FFB020" ${O}/><path d="M16 19.5 33 10v29l-17-9.5z" fill="#3D7BFF" ${O}/><ellipse cx="33" cy="24.5" rx="3.4" ry="14.5" fill="#FFE14D" ${O}/><path d="M19.5 20.5 29 15" ${L}/><path d="M39.5 18c1.8 1.8 2.8 4 2.8 6.5s-1 4.7-2.8 6.5M43.5 13.5c2.9 3 4.3 6.8 4.3 11s-1.4 8-4.3 11" fill="none" stroke="#FF4D6D" stroke-width="2.4" stroke-linecap="round"/>`,
     gradcap: `<path d="M12 21v9c0 3.5 5.4 6.5 12 6.5S36 33.5 36 30v-9l-12 5z" fill="#2B3C94" ${O}/><path d="M24 8 45 17 24 26 3 17z" fill="#3551C9" ${O}/><path d="M13.5 15.6 23 11.6" ${L}/><path d="M24 17l12.5 4.5V32" fill="none" stroke="#FFB020" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M34 31h5l1.2 7.5h-7.4z" fill="#FFB020" ${O}/><circle cx="24" cy="17" r="2.2" fill="#FFB020"/>`,
     paw: `<path d="M24 22.5c6 0 11.5 6.5 11.5 11.6 0 4-3 6.4-6.4 5.8-2.1-.4-3.4-1.6-5.1-1.6s-3 1.2-5.1 1.6c-3.4.6-6.4-1.8-6.4-5.8 0-5.1 5.5-11.6 11.5-11.6z" fill="#3B3B48" ${O}/>${toe(11.5, 20.5, -22)}${toe(19, 11.5, -8)}${toe(29, 11.5, 8)}${toe(36.5, 20.5, 22)}<path d="M19 29.4c1.4-1.6 3-2.4 5-2.4" fill="none" stroke="#7A7A88" stroke-width="2" stroke-linecap="round"/>`,
@@ -1270,7 +1272,7 @@ function detectTitle(raw) {
 function needAcc() {
   if (!guardWrite()) return false;
   if (hasAcc()) return true;
-  openAuth();
+  openAuth({ reason: true });
   return false;
 }
 function toggleLike(col, id) {
@@ -2103,10 +2105,10 @@ function weekNoteHtml() {
   const c = S.courses.get(n.cid) || {};
   return `<a class="week-note" href="#/not/${esc(n.id)}"><span class="wk-rib">${icon('star')}${esc(w.label)}</span><span class="wk-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`}</span><span class="wk-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span>${c.name ? `<span class="wk-cname">${esc(c.name)}</span>` : ''}</span><b class="wk-title">${esc(n.title)}</b><span class="meta"><span>${whoHtml(n.by, n.anon, n.nick)}</span>${voteBadge(n)}</span></span></a>`;
 }
-function fillMoreNotes(root, n, nid) {
+function fillMoreNotes(root, n, nid, peek = false) {
   const el = $('[data-r=more]', root); if (!el) return;
   const more = notesWhere(x => x.cid === n.cid && x.id !== nid && !isHidden(x)).sort(byHot).slice(0, 4);
-  const h = more.length ? `<h2 class="sub-h">${esc(codeOf(n.cid))} için diğer notlar</h2><ul class="ncards">${more.map(noteCard).join('')}</ul>` : '';
+  const h = more.length ? `<h2 class="sub-h">${esc(codeOf(n.cid))} için diğer notlar</h2><ul class="ncards paper">${more.map(x => noteCard(x, { peek })).join('')}</ul>` : '';
   if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; lazyPhotos(el); }
 }
 const BADGES = [
@@ -2560,15 +2562,32 @@ function startLane(root) {
     stop() { dead = true; clearTimeout(rt); if (raf) cancelAnimationFrame(raf); if (io) io.disconnect(); if (ro) ro.disconnect(); window.removeEventListener('resize', onResize); document.removeEventListener('visibilitychange', onVis); }
   };
 }
-function noteCard(n) {
-  if (isHidden(n) && !S.revealed.has(n.id)) return noteRow(n, { showCourse: true });
-  const type = noteType(n).name;
+function noteCard(n, { showCourse = true, peek = false } = {}) {
+  if (isHidden(n) && !S.revealed.has(n.id)) return noteRow(n, { showCourse });
+  const type = noteType(n).name, h = !showCourse && n.h && S.hocas.get(n.h);
   const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
   return `<li class="ncard"><a class="ncard-link" href="#/not/${esc(n.id)}">
     <span class="ncard-img">${photos.length ? `<img data-photo="${esc(photos[0])}" alt="">` : `${(() => { const di = driveInfo(n.drive) || { k: 'drive', name: 'Drive' }; return `<span class="ncard-drive k-${di.k}">${driveGlyph(di.k)}<b>${esc(di.name)}</b></span>`; })()}${driveThumbHtml(n.drive)}`}${photos.length > 1 ? `<span class="ncard-pages">${photos.length} sayfa</span>` : ''}</span>
-    <span class="ncard-body"><span class="ncard-top"><span class="code">${esc(codeOf(n.cid))}</span><span class="kind kind-${noteType(n).k}">${esc(type)}</span></span>
-      <span class="ncard-title">${esc(n.title)}</span>
-      <span class="meta"><span>${whoHtml(n.by, n.anon, n.nick)}</span><span>${esc(ago(n.at))}</span>${voteBadge(n)}</span></span></a></li>`;
+    <span class="ncard-body"><span class="ncard-top">${showCourse ? `<span class="code">${esc(codeOf(n.cid))}</span>` : n.tk ? `<span class="pill">${esc(termLabel(n.tk))}</span>` : ''}<span class="kind kind-${noteType(n).k}">${esc(type)}</span></span>
+      <span class="ncard-title">${esc(n.title)}</span>${h ? `<span class="ncard-hoca">${esc(hocaFull(h))}</span>` : ''}
+      <span class="meta">${peek ? '' : `<span>${whoHtml(n.by, n.anon, n.nick)}</span>`}<span>${esc(ago(n.at))}</span>${voteBadge(n)}</span></span></a></li>`;
+}
+/* Not listeleri: kutu (asılı not kağıtları) ya da liste; seçim bu tarayıcıda kalır (hocalarda olduğu gibi) */
+const noteView = () => (ls.get('noteView', 'card') === 'list' ? 'list' : 'card');
+function viewSegHtml(view) {
+  return `<div class="seg ho-view" role="group" aria-label="Görünüm"><button type="button" class="seg-btn" data-v="card" aria-pressed="${view === 'card'}">${icon('grid')}Kutu</button><button type="button" class="seg-btn" data-v="list" aria-pressed="${view === 'list'}">${icon('list')}Liste</button></div>`;
+}
+// Kutu / Liste düğmeleri: seçimi saklar, düğmeleri boyar, listeyi yeniden çizer
+function wireViewSeg(root, key, get, set, refresh) {
+  $$('.ho-view [data-v]', root).forEach(b => b.addEventListener('click', () => {
+    if (get() === b.dataset.v) return;
+    set(b.dataset.v); ls.set(key, b.dataset.v);
+    $$('.ho-view [data-v]', root).forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === b.dataset.v)));
+    refresh();
+  }));
+}
+function notesHtml(list, view, opts) {
+  return view === 'list' ? `<ul class="list">${list.map(n => noteRow(n, opts)).join('')}</ul>` : `<ul class="ncards paper">${list.map(n => noteCard(n, opts)).join('')}</ul>`;
 }
 function noteRow(n, { showCourse = false, peek = false } = {}) {
   if (isHidden(n) && !S.revealed.has(n.id)) return `<li><div class="is-hidden"><span>Bu not bildirimler nedeniyle gizlendi.</span><button type="button" class="btn btn-sm btn-ghost" data-g="reveal" data-id="${esc(n.id)}">Yine de göster</button></div></li>`;
@@ -2804,7 +2823,7 @@ function openAuth(opts = {}) {
   m.isAuth = true;
   const host = $('[data-r=host]', m.el);
   const setTitle = t => { const h = $('.modal-head h2', m.el); if (h) h.textContent = t; };
-  const why = () => (opts.reason ? '<p class="auth-why">Notları, HocaÖlçer’i ve Kubbe’yi görmek için giriş yap. Giriş yapınca kaldığın yerden devam edersin.</p>' : '');
+  const why = () => (opts.reason ? '<p class="auth-why">Notları açmak, not paylaşmak, oy vermek ve yorum yazmak için giriş yap. Giriş yapınca kaldığın yerden devam edersin.</p>' : '');
   /* Sitede: Kayıt ol (e-posta + şifre -> kod) ve Şifremi unuttum (e-posta + yeni şifre -> kod) aynı kod adımına gider */
   const pwField = (id, label) => `<div class="field"><label for="${id}">${label}</label><div class="pw-in"><input id="${id}" class="input" type="password" autocomplete="new-password" maxlength="72"><button type="button" class="pw-eye" data-r="pw-eye" aria-label="Şifreyi göster" aria-pressed="false">${icon('eye')}</button></div><p class="help">En az ${PW_MIN} karakter.</p></div>`;
   function wirePwEye() {
@@ -3458,7 +3477,8 @@ function commentsBlock(el, { tt, tid, ctx = '' }) {
 /* ================= Yönlendirme ================= */
 let lastGate = null, curKey = null, curWait = false, curUrl = '';
 // Herkese açık sayfalar: ana sayfa, Hakkında ve ders önizlemesi (giriş yapmamışa notların başlıkları görünür; nota, yoruma, hocalara girişle)
-const PUBLIC = new Set(['', 'hakkinda', 'ders']);
+// girişsiz de gezilir: notların içi kilitli (not sayfası bulanık), yazma işlemleri giriş ister (needAcc)
+const PUBLIC = new Set(['', 'hakkinda', 'ders', 'not', 'dersler', 'ara', 'hocaolcer', 'hoca', 'istekler']);
 async function tryLogin(mail, pw) {
   const em = String(mail || '').trim().toLowerCase();
   for (const [uid, u] of S.users) {
@@ -5360,7 +5380,7 @@ ROUTES[''] = function viewHome(root) {
       // Revaçta: oy ve tazelik (▼ alan aşağı iner, eksiye düşen burada görünmez); Yeni: son paylaşılanlar. Haftanın notu üstte, listede tekrar etmez.
       const shown = notesWhere(n => !isHidden(n)), wk = shown.length ? weekNote() : null;
       const notes = (ns === 'new' ? shown.sort((a, b) => b.at - a.at) : shown.filter(n => voteScore(n) >= 0).sort(byHot)).filter(n => !wk || n.id !== wk.n.id).slice(0, 6);
-      R('notes').innerHTML = notes.length || wk ? `${wk ? weekNoteHtml() : ''}${notes.length ? `<ul class="ncards${introCls()}">${notes.map(n => noteCard(n)).join('')}</ul>` : ''}`
+      R('notes').innerHTML = notes.length || wk ? `${wk ? weekNoteHtml() : ''}${notes.length ? `<ul class="ncards paper${introCls()}">${notes.map(n => noteCard(n)).join('')}</ul>` : ''}`
         : emptyHtml(ns === 'new' || !shown.length ? 'Henüz not paylaşılmadı' : 'Revaçta not yok', 'Notunu Google Drive’dan seç, ilk notu sen paylaş.', '<a class="btn btn-primary" href="#/paylas">Not paylaş</a>');
       lazyPhotos(R('notes'));
       const cms = commentsWhere(c => !isHidden(c)).sort((a, b) => b.at - a.at).slice(0, 3);
@@ -5652,7 +5672,6 @@ ROUTES['ders'] = function viewCourse(root, r) {
     panel.innerHTML = '';
     const peek = mode === 'peek';
     tabView = t === 'notlar' ? courseNotesTab(panel, cid, { peek })
-      : peek ? peekTab(panel, t === 'yorumlar' ? ['Yorumlar giriş yapınca görünür', 'Bu dersi alanların yorumlarını okumak ve kendi yorumunu yazmak için Yeditepe hesabınla giriş yap.'] : ['Hocalar giriş yapınca görünür', 'Bu dersi veren hocaları ve HocaÖlçer puanlarını görmek için Yeditepe hesabınla giriş yap.'])
       : t === 'yorumlar' ? commentsBlock(panel, { tt: 'course', tid: cid, ctx: 'course' }) : courseHocasTab(panel, cid);
     if (!first && tabView && tabView.refresh) tabView.refresh();
   }
@@ -5687,16 +5706,12 @@ ROUTES['ders'] = function viewCourse(root, r) {
     }
   };
 };
-/* Ders önizlemesi (giriş yapmamış ziyaretçi, Google): giriş çağrısı ve kapalı sekmeler */
+/* Ders önizlemesi (giriş yapmamış ziyaretçi, Google): not başlıkları, yorumlar ve hocalar açık; notun içi ve yazma işlemleri girişle */
 function peekCtaHtml() {
-  return `<div class="peek-cta"><div class="peek-txt"><b>Notları açmak, yorumları ve hoca puanlarını görmek için giriş yap.</b><span>YediWiki Yeditepe öğrencilerine açık; @std.yeditepe.edu.tr adresinle ücretsiz kayıt olursun.</span></div><div class="peek-btns"><button type="button" class="btn btn-go" data-g="peek-login">Giriş yap</button><button type="button" class="btn btn-new" data-g="peek-signup">Kayıt ol</button></div></div>`;
-}
-function peekTab(panel, [title, text]) {
-  panel.innerHTML = emptyHtml(title, text, '<button type="button" class="btn btn-primary" data-g="peek-login">Giriş yap</button>');
-  return {};
+  return `<div class="peek-cta"><div class="peek-txt"><b>Notları açmak, oy vermek ve yorum yazmak için giriş yap.</b><span>YediWiki Yeditepe öğrencilerine açık; @std.yeditepe.edu.tr adresinle ücretsiz kayıt olursun.</span></div><div class="peek-btns"><button type="button" class="btn btn-go" data-g="peek-login">Giriş yap</button><button type="button" class="btn btn-new" data-g="peek-signup">Kayıt ol</button></div></div>`;
 }
 function courseNotesTab(panel, cid, { peek = false } = {}) {
-  let type = 'all', term = 'all', sort = 'hot';
+  let type = 'all', term = 'all', sort = 'hot', view = noteView();
   panel.innerHTML = `
     <div data-r="reqs"></div>
     <div class="toolbar">
@@ -5704,6 +5719,7 @@ function courseNotesTab(panel, cid, { peek = false } = {}) {
       <div class="toolbar-end">
         <select class="select sm" data-r="term" aria-label="Dönem"></select>
         <select class="select sm" data-r="sort" aria-label="Sıralama"><option value="hot">Öne çıkan</option><option value="new">En yeni</option><option value="top">En çok oy alan</option></select>
+        ${viewSegHtml(view)}
       </div>
     </div>
     <div data-r="list"></div>`;
@@ -5715,6 +5731,7 @@ function courseNotesTab(panel, cid, { peek = false } = {}) {
   const tSel = $('[data-r=term]', panel);
   tSel.addEventListener('change', () => { term = tSel.value; api.refresh(); });
   $('[data-r=sort]', panel).addEventListener('change', e => { sort = e.target.value; api.refresh(); });
+  wireViewSeg(panel, 'noteView', () => view, v => { view = v; }, () => api.refresh());
   const api = {
     refresh() {
       const el = $('[data-r=list]', panel);
@@ -5729,36 +5746,42 @@ function courseNotesTab(panel, cid, { peek = false } = {}) {
       list.sort(sort === 'top' ? byScore : sort === 'new' ? (a, b) => b.at - a.at : byHot);
       if (!all.length) { el.innerHTML = emptyHtml('Bu derse henüz not paylaşılmadı', 'Notunu Google Drive’a yükleyip linkini paylaşabilirsin.', `<a class="btn btn-primary" href="#/paylas?ders=${esc(cid)}">${icon('up')}İlk notu paylaş</a>`); return; }
       if (!list.length) { el.innerHTML = emptyHtml('Bu seçimde not yok', 'Türü ya da dönemi değiştir.'); return; }
-      el.innerHTML = `<ul class="list">${list.map(n => noteRow(n, { peek })).join('')}</ul>`;
+      el.innerHTML = notesHtml(list, view, { showCourse: false, peek });
       lazyPhotos(el);
     }
   };
   return api;
 }
 function courseHocasTab(panel, cid) {
+  // görünüm HocaÖlçer'le ortak: kutu (hoca kartı) ya da liste
+  let view = ls.get('hocaView', 'card') === 'list' ? 'list' : 'card';
   panel.innerHTML = `
-    <div class="toolbar"><label class="search sm cb-wrap grow">${icon('search')}<input class="input" data-r="q" placeholder="Bu dersi veren hocayı bul ve değerlendir" aria-label="Hoca ara"></label></div>
+    <div class="toolbar"><label class="search sm cb-wrap grow">${icon('search')}<input class="input" data-r="q" placeholder="Bu dersi veren hocayı bul ve değerlendir" aria-label="Hoca ara"></label>${viewSegHtml(view)}</div>
     <div data-r="list"></div>`;
+  wireViewSeg(panel, 'hocaView', () => view, v => { view = v; }, () => api.refresh());
   const q = $('[data-r=q]', panel);
   combobox(q, {
     source: s => searchAll(s).filter(x => x.kind === 'hoca').slice(0, 8),
     onPick: it => { location.hash = `#/hoca/${it.id}?puanla=1&ders=${cid}`; }
   });
-  return {
+  const api = {
     refresh() {
       const el = $('[data-r=list]', panel);
       const m = hocasOfCourse(cid);
       if (!m.size) { el.innerHTML = emptyHtml('Bu derse bağlı hoca yok', 'Kadro listesinde bu dersi veren hoca görünmüyor. Not paylaşırken ya da hocayı puanlarken bu dersi seçersen hoca burada görünür.'); return; }
       const act = o => o.ratings + o.notes + o.grades + o.comments;
       const rows = [...m.entries()].sort((a, b) => act(b[1]) - act(a[1]) || b[1].son - a[1].son || hocaName(a[0]).localeCompare(hocaName(b[0]), 'tr'));
-      el.innerHTML = `<p class="fine mb">Dersi verenler Yeditepe’nin akademik kadro sayfalarındaki ders listelerinden; puanlar ve notlar öğrencilerden.</p><ul class="list">${rows.map(([hid, o]) => {
+      el.innerHTML = `<p class="fine mb">Dersi verenler Yeditepe’nin akademik kadro sayfalarındaki ders listelerinden; puanlar ve notlar öğrencilerden.</p><ul class="${view === 'list' ? 'list' : 'hcards'}">${rows.map(([hid, o]) => {
         const h = S.hocas.get(hid), st = hocaStats(h);
+        // kartta hocanın toplam puan sayısı zaten yazar; bu derse ait son dönem, not ve yorum sayısı kartın altına
+        if (view === 'card') return hocaCardHtml({ id: hid, h, st }, [o.son ? `son olarak ${yilAd(o.son)} döneminde verdi` : '', o.notes ? `${o.notes} not` : '', o.comments ? `${o.comments} yorum` : ''].filter(Boolean).join(', '));
         const bits = [o.son ? `son olarak ${yilAd(o.son)} döneminde verdi` : '', o.ratings ? `${o.ratings} puan` : '', o.notes ? `${o.notes} not` : '', o.comments ? `${o.comments} yorum` : ''].filter(Boolean).join(', ');
         return `<li><a class="row-link" href="#/hoca/${esc(hid)}"><span class="avatar">${esc(initials(h.name))}</span><span class="row-main"><span class="row-title">${esc(hocaFull(h))}</span><span class="row-sub">${esc(bits ? bits.charAt(0).toLocaleUpperCase('tr') + bits.slice(1) : '')}</span></span><span class="row-end">${st.cnt ? `<span class="minirate">${starsHtml(st.all, 'sm')}${fmt1(st.all)}</span>` : '<span>Puan yok</span>'}</span></a></li>`;
       }).join('')}</ul>`;
       applyWidths(el);
     }
   };
+  return api;
 }
 
 /* ================= HocaÖlçer ================= */
@@ -5769,7 +5792,7 @@ ROUTES['hocaolcer'] = function viewHocas(root) {
     <form class="search big ho-search" role="search" data-r="hs">${icon('search')}<input data-r="f" type="search" enterkeyhint="search" autocomplete="off" placeholder="Hoca adı ya da ders kodu, örn. CSE 211" aria-label="Hocalarda ara"></form>
     <div class="toolbar ho-bar"><select class="select sm" data-r="dept" aria-label="Fakülte"></select>
       <select class="select sm" data-r="sort" aria-label="Sıralama" hidden><option value="n">En çok puanlanan</option><option value="top">En yüksek puan</option><option value="az">A’dan Z’ye</option></select>
-      <div class="seg ho-view" role="group" aria-label="Görünüm"><button type="button" class="seg-btn" data-v="card" aria-pressed="true">${icon('grid')}Kutu</button><button type="button" class="seg-btn" data-v="list" aria-pressed="false">${icon('list')}Liste</button></div></div>
+      ${viewSegHtml('card')}</div>
     <div class="panel pt0" data-r="list"></div>
     ${CAT.hocas.size ? `<p class="fine ho-src">Hoca listesi Yeditepe’nin sitesindeki akademik kadro sayfalarından alındı: ${CAT.hocas.size} kişi, unvanı, fakültesi, bölümü ve verdiği dersler. Ders kodu yazınca o dersi verenler çıkar. Puanlar anonimdir.</p>` : ''}</div>`;
   const f = $('[data-r=f]', root), dSel = $('[data-r=dept]', root), sSel = $('[data-r=sort]', root);
@@ -5927,17 +5950,31 @@ function hocaCoursesTab(panel, hid) {
   };
 }
 function hocaNotesTab(panel, hid) {
-  panel.innerHTML = '<div data-r="list"></div>';
-  return {
+  let view = noteView();
+  panel.innerHTML = `<div class="toolbar">${viewSegHtml(view)}</div><div data-r="list"></div>`;
+  wireViewSeg(panel, 'noteView', () => view, v => { view = v; }, () => api.refresh());
+  const api = {
     refresh() {
       const el = $('[data-r=list]', panel);
       const list = notesWhere(n => n.h === hid).sort(byHot);
-      el.innerHTML = list.length ? `<ul class="list">${list.map(n => noteRow(n, { showCourse: true })).join('')}</ul>` : emptyHtml('Bu hocanın dersleri için not yok', 'Not paylaşırken hocayı seçersen burada da görünür.', '<a class="btn btn-primary" href="#/paylas?hoca=' + esc(hid) + '">Not paylaş</a>');
+      // girişsiz ziyaretçi not başlıklarını görür, paylaşanı görmez (ders önizlemesindeki gibi)
+      el.innerHTML = list.length ? notesHtml(list, view, { showCourse: true, peek: !hasAcc() }) : emptyHtml('Bu hocanın dersleri için not yok', 'Not paylaşırken hocayı seçersen burada da görünür.', '<a class="btn btn-primary" href="#/paylas?hoca=' + esc(hid) + '">Not paylaş</a>');
       lazyPhotos(el);
     }
   };
+  return api;
 }
 /* ================= Not sayfası ================= */
+/* Girişsiz ziyaretçide notun içi kilitli: yalnızca başlık açık. Sayfa bulanık durur (açıklama ve Drive bağlantısı yazılmaz;
+   Drive dosyasının ilk sayfası, not kartlarındaki küçük resmin aynısı bulanıklaştırılarak), üstünde giriş kartı. */
+function noteLockHtml(n) {
+  const e = S.supa ? driveEmbed(n.drive) : null;
+  return `<div class="nlock">
+    <div class="nlock-doc" aria-hidden="true"><span class="nlock-page"><b></b><i></i><i></i><i class="s"></i><b></b><i></i><i></i><i></i><i class="s"></i><i></i><i></i>${e && e.thumb ? `<img class="dthumb" src="${esc(e.thumb)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</span></div>
+    <div class="nlock-card">${gl('padlock', 'nlock-gl')}<b>Notun tamamını görmek için giriş yap</b><p>YediWiki Yeditepe öğrencilerine açık; @std.yeditepe.edu.tr adresinle ücretsiz kayıt olursun.</p>
+      <div class="peek-btns"><button type="button" class="btn btn-go" data-g="peek-login">Giriş yap</button><button type="button" class="btn btn-new" data-g="peek-signup">Kayıt ol</button></div></div>
+  </div>`;
+}
 ROUTES['not'] = function viewNote(root, r) {
   const nid = r.parts[1] || '';
   if (!okId(nid)) return ROUTES.__404(root);
@@ -5963,10 +6000,11 @@ ROUTES['not'] = function viewNote(root, r) {
     cm = commentsBlock($('[data-r=cm]', root), { tt: 'note', tid: nid });
   }
   function renderContent(n) {
-    const key = (isHidden(n) && !S.revealed.has(nid)) ? 'hidden' : 'shown';
+    const key = mode === 'lock' ? 'lock' : (isHidden(n) && !S.revealed.has(nid)) ? 'hidden' : 'shown';
     if (key === shownKey) return;
     shownKey = key;
     const el = $('[data-r=content]', root);
+    if (key === 'lock') { el.innerHTML = noteLockHtml(n); return; }
     if (key === 'hidden') { el.innerHTML = `<div class="empty mb2"><h3>Bu not bildirimler nedeniyle gizlendi</h3><p>Moderatör inceleyene kadar içerik kapalı tutuluyor.</p><button type="button" class="btn" data-g="reveal" data-id="${esc(nid)}">Yine de göster</button></div>`; return; }
     const drive = typeof n.drive === 'string' && /^https:\/\/(drive|docs)\.google\.com\//i.test(n.drive) ? n.drive : '';
     const photos = Array.isArray(n.photos) ? n.photos.filter(okId) : [];
@@ -5980,18 +6018,21 @@ ROUTES['not'] = function viewNote(root, r) {
   return {
     refresh() {
       const st = waitState();
-      const want = st !== 'ok' ? st : !S.loaded.notes ? 'loading' : S.notes.has(nid) ? 'ok' : 'missing';
+      // hesap durumu belli olmadan kilitli mi açık mı seçilmez (ders önizlemesindeki gibi)
+      const accWait = (S.supa && S.authPending) || !S.loaded.users;
+      const want = st !== 'ok' ? st : !S.loaded.notes || accWait ? 'loading' : !S.notes.has(nid) ? 'missing' : hasAcc() ? 'ok' : 'lock';
       if (want !== mode) { mode = want; renderMode(); }
-      if (mode !== 'ok') return;
+      if (mode !== 'ok' && mode !== 'lock') return;
+      const lock = mode === 'lock';
       const n = Object.assign({ id: nid }, S.notes.get(nid));
       const h = n.h && S.hocas.get(n.h);
       $('[data-r=crumb]', root).textContent = (codeOf(n.cid) + ' ' + courseName(n.cid)).trim();
-      $('[data-r=meta]', root).innerHTML = `${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}<span class="by-line">Paylaşan: ${avatarHtml(n.by, { anon: !!n.anon, cls: 'sm' })}${esc(displayName(n.by, n.anon, n.nick))}${isMine(n) ? ' (sen)' : ''}</span><span>${esc(ago(n.at))}</span>`;
+      $('[data-r=meta]', root).innerHTML = `${h ? `<a href="#/hoca/${esc(n.h)}">${esc(hocaFull(h))}</a>` : ''}${lock ? '' : `<span class="by-line">Paylaşan: ${avatarHtml(n.by, { anon: !!n.anon, cls: 'sm' })}${esc(displayName(n.by, n.anon, n.nick))}${isMine(n) ? ' (sen)' : ''}</span>`}<span>${esc(ago(n.at))}</span>`;
       const mv = myVote(n);
       $('[data-r=acts]', root).innerHTML = `<span class="vote-wrap">${voteHtml(n, { big: true })}<span class="vote-hint">${isMine(n) ? 'Notunun puanı' : mv > 0 ? 'İşine yaradı dedin' : mv < 0 ? 'İşe yaramadı dedin' : 'İşine yaradı mı?'}</span></span>
-        ${isMine(n) ? '' : `<button type="button" class="btn btn-ghost" data-g="report-note" data-id="${esc(nid)}">${icon('flag')}${reportedByMe(n) ? 'Bildirildi' : 'Bildir'}</button>`}
+        ${isMine(n) || lock ? '' : `<button type="button" class="btn btn-ghost" data-g="report-note" data-id="${esc(nid)}">${icon('flag')}${reportedByMe(n) ? 'Bildirildi' : 'Bildir'}</button>`}
         ${canManage(n) ? `<button type="button" class="btn btn-ghost" data-g="del-note" data-id="${esc(nid)}">${icon('trash')}Sil</button>` : ''}<button type="button" class="btn btn-ghost" data-g="share" data-title="${esc(n.title || 'Not')}" data-hash="#/not/${esc(nid)}">${icon('share')}Paylaş</button>`;
-      fillMoreNotes(root, n, nid);
+      fillMoreNotes(root, n, nid, lock);
       renderContent(n);
       if (cm) cm.refresh();
     }

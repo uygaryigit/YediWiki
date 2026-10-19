@@ -327,9 +327,13 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       await t.go('#/ders/CSE211');
       eq(t.$$('[data-r=panel] [data-r=sort] option').map(o => o.value).join(), 'hot,new,top', 'sıralama: öne çıkan, en yeni, en çok oy');
       eq(t.$('[data-r=panel] [data-r=sort]').value, 'hot', 'ders sayfasında öne çıkanlar önce');
+      ok(!!t.$('[data-r=panel] .ncards.paper .ncard-link') && t.$('[data-r=panel] .ho-view [data-v=card]').getAttribute('aria-pressed') === 'true', 'ders notları önce asılı not kağıdı (Kutu)');
+      t.$('[data-r=panel] .ho-view [data-v=list]').click(); await t.wait(60);
       ok(!!t.$('[data-r=panel] .note-row .vote .vup') && !t.$('[data-r=panel] [data-g=like-note]'), 'not listesinde oylama');
       t.$('[data-r=panel] .note-row [data-g=vote-up]').click(); await t.wait(120);
-      ok(t.$$('[data-r=panel] .note-row .vote.is-up').length === 1, 'listeden ▲ verildi'); }
+      ok(t.$$('[data-r=panel] .note-row .vote.is-up').length === 1, 'listeden ▲ verildi');
+      t.$('[data-r=panel] .ho-view [data-v=card]').click(); await t.wait(60);
+      ok(!!t.$('[data-r=panel] .ncards.paper') && !t.$('[data-r=panel] .note-row'), 'Kutu görünümüne dönüldü'); }
     eq(t.ev("[{ id: 'a', at: Date.now(), likes: {}, downs: { x: true, y: true } }, { id: 'b', at: Date.now() - 864e5, likes: {}, downs: {} }].sort(byHot).map(n => n.id).join()"), 'b,a', '▼ alan yeni not, eski nötr notun altına iner');
     eq(t.ev("[{ id: 'd', at: Date.now(), likes: {}, downs: {} }, { id: 'c', at: Date.now() - 3 * 864e5, likes: { a: true, b: true, c: true, d: true }, downs: {} }].sort(byHot).map(n => n.id).join()"), 'c,d', '▲ alan not yeni nota karşı öne çıkar');
     eq(t.ev("[{ id: 'e', at: Date.now() - 400 * 864e5, likes: { a: true, b: true }, downs: {} }, { id: 'f', at: Date.now() - 864e5, likes: { a: true }, downs: {} }].sort(byHot).map(n => n.id).join()"), 'f,e', 'eski not zamanla söner');
@@ -374,7 +378,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       eq(t.store.count('courses'), c0, 'katalog dersi için de kayıt açılmadı');
       eq(t.store.get('hocas/' + hid).ratings[t.me].c, 'DENT115', 'puan ders koduyla kaydedildi');
       await t.go('#/ders/DENT115?tab=hocalar');
-      ok(t.$$('[data-r=panel] .row-link').some(a => a.getAttribute('href') === '#/hoca/' + hid), 'hoca ders sayfasında görünüyor');
+      ok(t.$$('[data-r=panel] a').some(a => a.getAttribute('href') === '#/hoca/' + hid), 'hoca ders sayfasında görünüyor');
       await t.go('#/paylas?ders=CSE211');
       ok(t.$$('#sh-hoca option').length >= 5, 'hoca seçenekleri doluyor'); }
     noErr(t, 'HocaÖlçer formu');
@@ -398,7 +402,7 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
       await t.go('#/hoca/' + hid + '?tab=dersler');
       ok(/MATH 131/.test(t.text('[data-r=panel]')), 'ders hocanın Verdiği dersler sekmesinde');
       await t.go('#/ders/MATH131?tab=hocalar');
-      ok(t.$$('[data-r=panel] .row-link').some(a => a.getAttribute('href') === '#/hoca/' + hid), 'hoca dersin Hocalar sekmesinde');
+      ok(t.$$('[data-r=panel] a').some(a => a.getAttribute('href') === '#/hoca/' + hid), 'hoca dersin Hocalar sekmesinde');
       await t.go('#/ders/MATH131');
       ok(/Türev özeti/.test(t.text('[data-r=panel]')), 'not ders sayfasında'); }
     noErr(t, 'not ve hoca bağlantısı');
@@ -1257,8 +1261,14 @@ const noPlanChips = t => !t.$('[data-r=plans]') && !t.$('[data-r=els]') && !t.$(
     await t.go('#/hoca/' + hid + '?tab=dersler');
     ok(t.$$('[data-r=panel] .row-link').some(a => a.getAttribute('href') === '#/ders/' + cid) && t.text('[data-r=panel]').includes(`son: ${yil}-${yil + 1}`), 'verdiği dersler ve son dönem');
     await t.go('#/ders/' + cid + '?tab=hocalar');
-    const row = t.$$('[data-r=panel] .row-link').find(a => a.getAttribute('href') === '#/hoca/' + hid);
-    ok(row && /Son olarak \d{4}-\d{4} döneminde verdi/.test(row.textContent), 'dersi verenler sekmesinde: ' + (row && row.textContent));
+    const row = t.$$('[data-r=panel] a').find(a => a.getAttribute('href') === '#/hoca/' + hid);
+    ok(row && /son olarak \d{4}-\d{4} döneminde verdi/i.test(row.textContent), 'dersi verenler sekmesinde: ' + (row && row.textContent));
+    { const v0 = t.$('[data-r=panel] .ho-view [aria-pressed=true]').dataset.v, other = v0 === 'card' ? 'list' : 'card';
+      ok(!!t.$(v0 === 'card' ? '[data-r=panel] .hcards .hcard' : '[data-r=panel] .list .row-link'), 'Hocalar sekmesi seçili görünümde: ' + v0);
+      t.$(`[data-r=panel] .ho-view [data-v=${other}]`).click(); await t.wait(60);
+      ok(!!t.$(other === 'card' ? '[data-r=panel] .hcards .hcard' : '[data-r=panel] .list .row-link'), 'Hocalar sekmesi öbür görünüme geçti: ' + other);
+      eq(t.ev("ls.get('hocaView', '')"), other, 'hoca görünümü HocaÖlçer ile ortak, bu tarayıcıda kalır');
+      t.$(`[data-r=panel] .ho-view [data-v=${v0}]`).click(); await t.wait(60); }
     ok(/akademik kadro sayfalarındaki ders listelerinden/.test(t.text('[data-r=panel]')), 'kaynak notu');
     await t.go('#/hocaolcer');
     const hcs = () => t.$$('[data-r=list] .hcard, [data-r=list] .row-link');

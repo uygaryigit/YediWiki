@@ -213,7 +213,7 @@ a.code:hover{background:var(--marker);color:var(--marker-ink)}
 .panel{padding-top:24px;padding-bottom:56px}
 .sub-h{font-size:1.1rem;margin-bottom:12px}
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:16px}
-.toolbar-end{display:flex;gap:8px;margin-left:auto}
+.toolbar-end{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-left:auto}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:6px 12px;font-size:.85rem;font-weight:650;cursor:pointer}
 .chip:hover{border-color:var(--ink-3)}
@@ -1671,11 +1671,29 @@ a.pf-tag:hover,button.pf-tag:hover{background:var(--marker);color:var(--marker-i
 @media (max-width:900px){.home-main{grid-template-areas:"lead" "notes" "cmh" "cmb" "trend" "reqs"}.hm-trend{margin-bottom:40px}.hm-notes .ncards>li:nth-child(n+5){display:none}}
 @media (min-width:561px) and (max-width:900px){.hm-notes .ncards{grid-template-columns:repeat(4,minmax(0,1fr))}}
 /* ana sayfadaki asılı notlar sarı kareli not kağıdı: soluk sarı, ince mavi kareler */
-.hm-notes .ncard-link{--np:#FFF2BE;--np-grid:rgba(70,118,214,.17);background-color:var(--np);background-image:linear-gradient(var(--np-grid) 1px,transparent 1px),linear-gradient(90deg,var(--np-grid) 1px,transparent 1px);background-size:13px 13px;background-position:-1px -1px;border-color:#E9D27E;box-shadow:0 1px 0 rgba(120,90,10,.08),0 10px 20px -14px rgba(90,70,10,.5)}
-.hm-notes .ncard-img{background:color-mix(in srgb,#FFE680 22%,var(--surface-2))}
-.hm-notes .ncard-body{padding-left:4px}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hm-notes .ncard-link{--np:color-mix(in srgb,#FFE680 10%,var(--surface));--np-grid:rgba(143,165,255,.12);border-color:var(--line)}}
-:root[data-theme="dark"] .hm-notes .ncard-link{--np:color-mix(in srgb,#FFE680 10%,var(--surface));--np-grid:rgba(143,165,255,.12);border-color:var(--line)}
+.ncards.paper .ncard-link{--np:#FFF2BE;--np-grid:rgba(70,118,214,.17);background-color:var(--np);background-image:linear-gradient(var(--np-grid) 1px,transparent 1px),linear-gradient(90deg,var(--np-grid) 1px,transparent 1px);background-size:13px 13px;background-position:-1px -1px;border-color:#E9D27E;box-shadow:0 1px 0 rgba(120,90,10,.08),0 10px 20px -14px rgba(90,70,10,.5)}
+.ncards.paper .ncard-img{background:color-mix(in srgb,#FFE680 22%,var(--surface-2))}
+.ncards.paper .ncard-body{padding-left:4px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ncards.paper .ncard-link{--np:color-mix(in srgb,#FFE680 10%,var(--surface));--np-grid:rgba(143,165,255,.12);border-color:var(--line)}}
+:root[data-theme="dark"] .ncards.paper .ncard-link{--np:color-mix(in srgb,#FFE680 10%,var(--surface));--np-grid:rgba(143,165,255,.12);border-color:var(--line)}
+.ncard-hoca{font-size:.76rem;font-weight:650;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ncard-top .pill{font-size:.68rem;padding:1px 7px}
+/* Girişsiz ziyaretçide kilitli not: bulanık sayfa, üstünde giriş kartı */
+.nlock{position:relative;overflow:hidden;display:grid;place-items:center;min-height:440px;padding:32px 16px;margin-bottom:28px;border-radius:16px;border:1px solid var(--line,rgba(17,28,78,.12));background:var(--surface-2)}
+.nlock-doc{position:absolute;inset:0;filter:blur(9px);transform:scale(1.04);pointer-events:none;user-select:none}
+.nlock-page{position:absolute;left:50%;top:26px;bottom:-30px;width:min(600px,88%);transform:translateX(-50%);display:flex;flex-direction:column;gap:13px;padding:38px 34px;overflow:hidden;background:#fff;border-radius:6px;box-shadow:0 18px 40px -20px rgba(17,28,78,.45)}
+.nlock-page b{display:block;flex:none;height:15px;width:46%;margin-top:8px;border-radius:4px;background:#2B3A67}
+.nlock-page i{display:block;flex:none;height:9px;border-radius:4px;background:#9AA6C7}
+.nlock-page i.s{width:62%}
+.nlock-page .dthumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 0;background:#fff}
+.nlock-card{position:relative;z-index:1;display:grid;justify-items:center;gap:8px;max-width:400px;padding:22px 22px 20px;text-align:center;border-radius:18px;background:var(--surface);border:1px solid var(--line,rgba(17,28,78,.12));box-shadow:0 24px 50px -24px rgba(17,28,78,.55)}
+.nlock-card>b{font-size:1.06rem;line-height:1.3}
+.nlock-card>p{margin:0;color:var(--ink-2);font-size:.88rem}
+.nlock-card .peek-btns{margin-top:6px}
+.nlock-gl{width:52px;height:52px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nlock-page{background:#E9ECF5}}
+:root[data-theme="dark"] .nlock-page{background:#E9ECF5}
+@media (max-width:560px){.nlock{min-height:380px}.nlock-page{padding:26px 20px}}
 .req-card{--rq-line:rgba(255,255,255,.55);--rq-ink:#fff;--rq-sub:#FFE6E2;--rq-g1:#FF6B5C;--rq-g2:#E8343A;--rq-g3:#B3152B;--rq-glow:rgba(255,214,120,.5);position:relative;isolation:isolate;overflow:hidden;border-radius:22px;padding:16px 14px 14px;color:#fff;background:radial-gradient(85% 60% at 100% 0%,var(--rq-glow) 0%,transparent 62%),radial-gradient(130% 100% at 0% 0%,var(--rq-g1) 0%,var(--rq-g2) 48%,var(--rq-g3) 100%);border:1px solid #A3122A;box-shadow:0 22px 44px -24px rgba(170,20,35,.75),inset 0 1px 0 rgba(255,255,255,.28)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .req-card{--rq-g1:#E24A4E;--rq-g2:#AE1D30;--rq-g3:#6C0F22;--rq-glow:rgba(255,180,100,.26);border-color:#5E0C1C}}
 :root[data-theme="dark"] .req-card{--rq-g1:#E24A4E;--rq-g2:#AE1D30;--rq-g3:#6C0F22;--rq-glow:rgba(255,180,100,.26);border-color:#5E0C1C}
