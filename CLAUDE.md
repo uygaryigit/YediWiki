@@ -64,7 +64,7 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
   - `yediwiki.xyz`: Redirect Rule ile tüm istekler `https://yediwiki.com` + yol, 301.
   - Natro'dan gelen park kayıtları (A ve www CNAME) silindi; kök SPF TXT kaydı (Natro) duruyor.
 - **E-posta (14 Ekim):** Supabase Auth, Resend üzerinden gönderiyor (Resend → Supabase bağlantısı kullanıcı onayıyla kuruldu).
-  - Yöneticiye giden dondurma onayı (19 Ekim) Resend'den değil Cloudflare'den: Worker'daki `send_email` bağlaması (`wrangler.jsonc`, yalnızca Email Routing'de doğrulanmış uygaryigt@gmail.com'a).
+  - Yöneticiye giden dondurma onayı (19 Ekim) Resend'den değil Cloudflare'den: Worker'daki `send_email` bağlaması (`wrangler.jsonc`, yalnızca Email Routing'de doğrulanmış uygaryigt@gmail.com'a). 19 Ekim'de canlıda uçtan uca denendi: pg_net → `/api/dondurma` 200 `{"ok":true}`; yönetici adına içi boş bir deneme isteğiyle bir e-posta gitti, istek sonra silindi (bağlantısı geçersiz). Bilinmeyen belirteç 404, bozuk istek 400, GET 405.
   - Gönderen `YediWiki <iletisim@yediwiki.com>`, smtp.resend.com:465, kullanıcı `resend`; aynı kişiye en sık 60 saniyede bir e-posta.
   - Resend'de yediwiki.com doğrulandı (eu-west-1). DNS kayıtları Cloudflare'de: `resend._domainkey` TXT, `rsend` ve `send` CNAME (DNS only), `_dmarc` TXT.
   - "Magic link or OTP" ve "Confirm sign up" şablonları Türkçe; gövdede ve konuda `{{ .Token }}` (kod) var, bağlantı yok.
@@ -168,6 +168,7 @@ Projenin ayrıntısı README.md'de. Bu dosya kaldığımız yeri ve çalışma k
 
 ## Sıradaki işler
 
+0. **Kubbe düzeni (19 Ekim):** deneme e-postası ("Hesap dondurma onayı: @yonetici") gelen kutusuna mı, spam'e mi düştü, kullanıcıya sor. Gece sayımı (`kubbe-gece`) ilk kez 20 Ekim 04:00'te çalışacak: `cron.job_run_details`'e bak.
 1. **Drive seçiciyi dene:** yediwiki.com'da "Drive'dan seç" ile gerçek bir Google hesabından dosya seç; paylaşım ayarı ve önizleme.
 2. **Search Console:** birkaç gün sonra Sayfalar raporunda dizine eklenen ders sayısına bak; "Taranan, dizine eklenmeyen" çoksa nedenine bak.
 3. **Büyüme:** tekrar gelenler ve yeniden bağlananlar 19 Ekim'den beri yalnızca değişenleri indiriyor (artımlı yükleme). Kalanlar:
